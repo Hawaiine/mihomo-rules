@@ -1,14 +1,65 @@
 # ===========================================
-# Rule Name: PTChina
+# Rule Name: PT China
 # Author: Hawaiine
 # Updated: 2026-07-21 00:00:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 50
+# DOMAIN-SUFFIX: 1
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,agsvpt.cn
+  - DOMAIN,agsvpt.com
+  - DOMAIN,agsvpt.trackers.work
+  - DOMAIN,audiences.me
+  - DOMAIN,az1.halomt.com
+  - DOMAIN,az2.halomt.com
+  - DOMAIN,btschool.club
+  - DOMAIN,carpt.net
+  - DOMAIN,crabpt.vip
+  - DOMAIN,cspt.cc
+  - DOMAIN,cspt.top
+  - DOMAIN,cx1.manfuz.co
+  - DOMAIN,cx2.manfuz.co
+  - DOMAIN,dicmusic.com
+  - DOMAIN,hhanclub.net
+  - DOMAIN,hs1.holysalt.org
+  - DOMAIN,ipv4.open.cd
+  - DOMAIN,ipv6.agsvpt.cn
+  - DOMAIN,jpopsuki.eu
+  - DOMAIN,kp.m-team.cc
+  - DOMAIN,kufei.org
+  - DOMAIN,movie-pilot.org
+  - DOMAIN,okpt.net
+  - DOMAIN,open.cd
+  - DOMAIN,oshen.win
+  - DOMAIN,ourbits.club
+  - DOMAIN,pt.agsvpt.cn
+  - DOMAIN,pt.btschool.club
+  - DOMAIN,ptl.gs
+  - DOMAIN,ptlgs.org
+  - DOMAIN,pttime.org
+  - DOMAIN,qingwapt.com
+  - DOMAIN,raingfh.top
+  - DOMAIN,rousi.pro
+  - DOMAIN,rss.m-team.cc
+  - DOMAIN,rss.m-team.io
+  - DOMAIN,totheglory.im
+  - DOMAIN,tra1.m-team.cc
+  - DOMAIN,tra1.m-team.io
+  - DOMAIN,tra99.manfuz.co
+  - DOMAIN,tracker.agsvpt.cn
+  - DOMAIN,tracker.agsvpt.work
+  - DOMAIN,tracker.carpt.net
+  - DOMAIN,tracker.hhanclub.net
+  - DOMAIN,tracker.m-team.cc
+  - DOMAIN,tracker.m-team.io
+  - DOMAIN,tracker.open.cd
+  - DOMAIN,tracker.qingwapt.com
+  - DOMAIN,tracker.totheglory.im
+  - DOMAIN,www.open.cd
+  - DOMAIN-SUFFIX,nicept.net

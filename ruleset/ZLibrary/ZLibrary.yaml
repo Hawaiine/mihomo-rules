@@ -1,14 +1,56 @@
 # ===========================================
-# Rule Name: ZLibrary
+# Rule Name: Z-Library
 # Author: Hawaiine
 # Updated: 2026-07-21 00:00:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 41
 # DOMAIN-SUFFIX: 0
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,art1lib.com
+  - DOMAIN,articles.sk
+  - DOMAIN,b-ok.africa
+  - DOMAIN,b-ok.asia
+  - DOMAIN,b-ok.cc
+  - DOMAIN,b-ok.global
+  - DOMAIN,b-ok.org
+  - DOMAIN,book4you.org
+  - DOMAIN,bookfi.net
+  - DOMAIN,booksc.eu
+  - DOMAIN,booksc.me
+  - DOMAIN,booksc.org
+  - DOMAIN,booksc.xyz
+  - DOMAIN,bookshome.info
+  - DOMAIN,bookshome.net
+  - DOMAIN,bookshome.world
+  - DOMAIN,de1lib.org
+  - DOMAIN,dln1.ncdn.ec
+  - DOMAIN,go-to-library.sk
+  - DOMAIN,hk1lib.org
+  - DOMAIN,libsolutions.app
+  - DOMAIN,libsolutions.domains
+  - DOMAIN,libsolutions.net
+  - DOMAIN,ma1lib.org
+  - DOMAIN,sg1lib.org
+  - DOMAIN,singlelogin.app
+  - DOMAIN,singlelogin.me
+  - DOMAIN,singlelogin.re
+  - DOMAIN,singlelogin.rs
+  - DOMAIN,singlelogin.site
+  - DOMAIN,z-lib.fm
+  - DOMAIN,z-lib.gd
+  - DOMAIN,z-lib.gl
+  - DOMAIN,z-lib.org
+  - DOMAIN,z-lib.sk
+  - DOMAIN,z-library.se
+  - DOMAIN,z-library.sk
+  - DOMAIN,zh.go-to-library.sk
+  - DOMAIN,zlib.life
+  - DOMAIN,zlibcdn.com
+  - DOMAIN,zlibcdn2.com
+

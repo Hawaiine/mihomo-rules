@@ -4,11 +4,21 @@
 # Updated: 2026-07-21 00:00:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 10
 # DOMAIN-SUFFIX: 0
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,alpharatio.cc
+  - DOMAIN,beyondhd.me
+  - DOMAIN,blutopia.xyz
+  - DOMAIN,filelist.io
+  - DOMAIN,gazellegames.net
+  - DOMAIN,hdfans.org
+  - DOMAIN,iptorrents.com
+  - DOMAIN,pterclub.com
+  - DOMAIN,torrentleech.org
+  - DOMAIN,zhuque.in

@@ -1,11 +1,11 @@
-# 📦 ZLibrary 规则集
+# 📦 Z-Library 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
 | DOMAIN-KEYWORD | 0 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 0 |
+| DOMAIN | 41 |
 | DOMAIN-SUFFIX | 0 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: domain
-- **策略组**: ZLibrary
+- **策略组**: Z-Library

@@ -1,0 +1,38 @@
+# ===========================================
+# Rule Name: General AI
+# Author: Hawaiine
+# Updated: 2026-07-21 00:00:00
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 18
+# DOMAIN-SUFFIX: 5
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,codeium.com
+  - DOMAIN,codeiumdata.com
+  - DOMAIN,groq.com
+  - DOMAIN,hermes-agent.nousresearch.com
+  - DOMAIN,hf.co
+  - DOMAIN,hf.space
+  - DOMAIN,huggingface.co
+  - DOMAIN,kiro.dev
+  - DOMAIN,liveperson.net
+  - DOMAIN,lpsnmedia.net
+  - DOMAIN,minimax.io
+  - DOMAIN,mistral.ai
+  - DOMAIN,ollama.com
+  - DOMAIN,openclaw.ai
+  - DOMAIN,openrouter.ai
+  - DOMAIN,qoder.com
+  - DOMAIN,windsurf.build
+  - DOMAIN,windsurf.com
+  - DOMAIN-SUFFIX,api-inference.huggingface.co
+  - DOMAIN-SUFFIX,api.cohere.com
+  - DOMAIN-SUFFIX,api.mistral.ai
+  - DOMAIN-SUFFIX,api.openrouter.ai
+  - DOMAIN-SUFFIX,integrate.api.nvidia.com
+
