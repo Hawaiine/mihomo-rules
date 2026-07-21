@@ -203,6 +203,13 @@ def parse_loyalsoldier_yaml(content: str) -> list[CanonicalRule]:
                         param="",
                         source="loyalsoldier",
                     ))
+                elif rule_type in ("IP-CIDR", "IP-CIDR6"):
+                    rules.append(CanonicalRule(
+                        rule_type=rule_type,
+                        value=value,
+                        param="no-resolve",
+                        source="loyalsoldier",
+                    ))
                 else:
                     rules.append(CanonicalRule(
                         rule_type=rule_type,

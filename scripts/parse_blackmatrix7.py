@@ -221,7 +221,7 @@ def parse_blackmatrix7_yaml(content: str) -> list[CanonicalRule]:
         rules.append(CanonicalRule(
             rule_type=rule_type,
             value=value,
-            param=param,
+            param=param if param else ("no-resolve" if rule_type in ("IP-CIDR", "IP-CIDR6") else ""),
             source="blackmatrix7",
         ))
         clean_stats["after"] += 1
