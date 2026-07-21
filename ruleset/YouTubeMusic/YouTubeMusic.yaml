@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: YouTube Music
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 22:22:40
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 2
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 0
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -13,5 +13,3 @@
 # ===========================================
 payload:
   - DOMAIN,music.youtube.com
-  - DOMAIN,ymccloud.goog
-
