@@ -1,0 +1,8 @@
+upstream/
+.DS_Store
+*.swp
+*.bak
+.idea/
+.vscode/
+__pycache__/
+*.pyc
