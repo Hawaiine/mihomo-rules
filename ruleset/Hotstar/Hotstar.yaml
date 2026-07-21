@@ -1,14 +1,20 @@
 # ===========================================
 # Rule Name: Hotstar
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 22:39:08
 # DOMAIN-KEYWORD: 0
-# DOMAIN-REGEX: 0
+# DOMAIN-REGEX: 1
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN-SUFFIX: 5
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-REGEX,^hses[1-7]?\.akamaized\.net$
+  - DOMAIN-SUFFIX,hotstar-cdn.net
+  - DOMAIN-SUFFIX,hotstar-labs.com
+  - DOMAIN-SUFFIX,hotstar.com
+  - DOMAIN-SUFFIX,hotstarext.com
+  - DOMAIN-SUFFIX,hsprepack.akamaized.net

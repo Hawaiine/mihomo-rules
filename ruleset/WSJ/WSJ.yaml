@@ -1,14 +1,27 @@
 # ===========================================
 # Rule Name: WSJ
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 22:39:09
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN-SUFFIX: 13
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-SUFFIX,careerjournal.com
+  - DOMAIN-SUFFIX,collegejournal.com
+  - DOMAIN-SUFFIX,getwsj.com
+  - DOMAIN-SUFFIX,opinionjournal.com
+  - DOMAIN-SUFFIX,realestatejournal.com
+  - DOMAIN-SUFFIX,startupjournal.com
+  - DOMAIN-SUFFIX,wsj.com
+  - DOMAIN-SUFFIX,wsj.jobs
+  - DOMAIN-SUFFIX,wsj.net
+  - DOMAIN-SUFFIX,wsjmediakit.com
+  - DOMAIN-SUFFIX,wsjplus.com
+  - DOMAIN-SUFFIX,wsjshop.com
+  - DOMAIN-SUFFIX,wsjwine.com

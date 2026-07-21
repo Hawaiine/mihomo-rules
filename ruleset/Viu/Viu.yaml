@@ -1,14 +1,21 @@
 # ===========================================
 # Rule Name: Viu
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 22:39:09
 # DOMAIN-KEYWORD: 0
-# DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN-REGEX: 1
+# DOMAIN: 4
+# DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-REGEX,^ewcdn[0-9]+\.nowe\.com$
+  - DOMAIN,api.viu.now.com
+  - DOMAIN,d1k2us671qcoau.cloudfront.net
+  - DOMAIN,d2anahhhmp1ffz.cloudfront.net
+  - DOMAIN,dfp6rglgjqszk.cloudfront.net
+  - DOMAIN-SUFFIX,viu.com
+  - DOMAIN-SUFFIX,viu.tv

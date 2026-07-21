@@ -115,6 +115,7 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "YouTubeMusic": "YouTubeMusic",
     "iCloud": "iCloud",
     "iCloudPrivateRelay": "iCloudPrivateRelay",
+    "Twitter": "X",
 }
 
 # 反向映射：品牌名 → blackmatrix7 目录名
