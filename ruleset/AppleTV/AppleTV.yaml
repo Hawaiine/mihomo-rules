@@ -1,14 +1,22 @@
 # ===========================================
 # Rule Name: AppleTV
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 21:45:49
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 6
+# DOMAIN-SUFFIX: 1
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
-# PROCESS-NAME: 0
+# PROCESS-NAME: 1
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,hls-amt.itunes.apple.com
+  - DOMAIN,hls.itunes.apple.com
+  - DOMAIN,np-edge.itunes.apple.com
+  - DOMAIN,play-edge.itunes.apple.com
+  - DOMAIN,tv.applemusic.com
+  - DOMAIN,uts-api.itunes.apple.com
+  - DOMAIN-SUFFIX,tv.apple.com
+  - PROCESS-NAME,TV

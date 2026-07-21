@@ -165,6 +165,15 @@ def clean(line: str) -> tuple[str, str, str] | None:
     if not value:
         return None
 
+    # 域名校验
+    # DOMAIN-SUFFIX/DOMAIN 必须有 .（拒绝裸词，如 amazon）
+    if rule_type in ("DOMAIN-SUFFIX", "DOMAIN") and "." not in value:
+        return None
+
+    # DOMAIN-KEYWORD 不能是完整域名（如 abematv.akamaized.net）
+    if rule_type == "DOMAIN-KEYWORD" and "." in value:
+        return None
+
     return (rule_type, value, param)
 
 

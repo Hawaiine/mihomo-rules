@@ -3,14 +3,14 @@
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
-| DOMAIN-KEYWORD | 0 |
+| DOMAIN-KEYWORD | 2 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 0 |
-| DOMAIN-SUFFIX | 0 |
-| IP-CIDR | 0 |
-| IP-CIDR6 | 0 |
+| DOMAIN | 17 |
+| DOMAIN-SUFFIX | 1500 |
+| IP-CIDR | 10 |
+| IP-CIDR6 | 3 |
 | IP-ASN | 0 |
-| PROCESS-NAME | 0 |
+| PROCESS-NAME | 13 |
 
-- **behavior**: domain
+- **behavior**: classical
 - **策略组**: Apple
