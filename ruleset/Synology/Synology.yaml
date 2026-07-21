@@ -1,14 +1,33 @@
 # ===========================================
 # Rule Name: Synology
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
-# DOMAIN-KEYWORD: 0
+# Updated: 2026-07-21 22:17:42
+# DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 17
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-KEYWORD,synology
+  - DOMAIN,d2f0395ykn6hxb.cloudfront.net
+  - DOMAIN-SUFFIX,diskstation.me
+  - DOMAIN-SUFFIX,dscloud.biz
+  - DOMAIN-SUFFIX,dscloud.me
+  - DOMAIN-SUFFIX,dscloud.mobi
+  - DOMAIN-SUFFIX,dsmunas.com
+  - DOMAIN-SUFFIX,dsmunas.net
+  - DOMAIN-SUFFIX,dsmunas.org
+  - DOMAIN-SUFFIX,familyds.com
+  - DOMAIN-SUFFIX,familyds.net
+  - DOMAIN-SUFFIX,familyds.org
+  - DOMAIN-SUFFIX,i234.me
+  - DOMAIN-SUFFIX,myds.com
+  - DOMAIN-SUFFIX,quickconnect.to
+  - DOMAIN-SUFFIX,synodns.com
+  - DOMAIN-SUFFIX,synology.cn
+  - DOMAIN-SUFFIX,synology.com
+  - DOMAIN-SUFFIX,synology.me
