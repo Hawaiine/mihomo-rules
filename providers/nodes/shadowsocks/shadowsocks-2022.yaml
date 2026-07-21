@@ -1,0 +1,11 @@
+# ===========================================
+# Shadowsocks 2022 (新式 AEAD 2022 加密)
+# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# ===========================================
+- name: "ss-2022"
+  type: ss
+  server: server.example.com
+  port: 443
+  cipher: 2022-blake3-aes-256-gcm   # 2022 系列加密
+  password: "your-32-byte-base64-key"
+  udp: true

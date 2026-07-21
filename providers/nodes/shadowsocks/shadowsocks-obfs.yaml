@@ -1,0 +1,15 @@
+# ===========================================
+# Shadowsocks + Simple-Obfs 混淆
+# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# ===========================================
+- name: "ss-obfs"
+  type: ss
+  server: server.example.com
+  port: 443
+  cipher: aes-256-gcm
+  password: "your-password"
+  udp: true
+  plugin: obfs                      # 混淆插件
+  plugin-opts:
+    mode: tls                       # 混淆模式: tls / http
+    host: cloudflare.com            # 混淆域名

@@ -1,0 +1,17 @@
+# ===========================================
+# TUIC v5 + 多 Token
+# 参考: https://wiki.metacubex.one/en/config/proxies/tuic
+# ===========================================
+- name: "tuic-v5-multi"
+  type: tuic
+  server: server.example.com
+  port: 443
+  token:
+    - "your-token-1"
+    - "your-token-2"
+  udp: true
+  sni: server.example.com
+  skip-cert-verify: false
+  alpn:
+    - h3
+  max-udp-relay-packet-size: 1500  # 最大 UDP 中继包大小

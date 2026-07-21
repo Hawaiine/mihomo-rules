@@ -1,0 +1,15 @@
+# ===========================================
+# Hysteria v1 (旧协议, 兼容用)
+# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria
+# ===========================================
+- name: "hy1-legacy"
+  type: hysteria
+  server: server.example.com
+  port: 443
+  auth-str: "your-auth-password"    # 认证字符串
+  up: "50 Mbps"
+  down: "100 Mbps"
+  sni: server.example.com
+  skip-cert-verify: false
+  protocol: udp                     # 协议: udp / wechat-video / faketcp
+  obfs: "your-obfs-password"        # 混淆 (可选)

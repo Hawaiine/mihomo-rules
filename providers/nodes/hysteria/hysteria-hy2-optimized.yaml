@@ -1,0 +1,16 @@
+# ===========================================
+# Hysteria2 + QUIC 参数调优
+# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria2
+# ===========================================
+- name: "hy2-optimized"
+  type: hysteria2
+  server: server.example.com
+  port: 443
+  password: "your-password"
+  up: "100 Mbps"
+  down: "500 Mbps"
+  sni: server.example.com
+  skip-cert-verify: false
+  alpn:
+    - h3
+  # bbr-profile: "conservative"     # BBR 配置: standard / conservative / aggressive

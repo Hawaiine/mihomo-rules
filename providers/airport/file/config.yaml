@@ -1,0 +1,15 @@
+# ===========================================
+# 本地文件订阅配置示例
+# 适用: Mihomo / clash-meta proxy-providers
+# ===========================================
+
+# 本地订阅
+my_provider:
+  type: file
+  path: ./providers/my_provider.yaml
+  health-check:
+    enable: true
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300
+    lazy: true
+    expected-status: 204

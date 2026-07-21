@@ -1,0 +1,16 @@
+# ===========================================
+# Trojan + REALITY
+# 参考: https://wiki.metacubex.one/en/config/proxies/trojan
+# ===========================================
+- name: "trojan-reality"
+  type: trojan
+  server: server.example.com
+  port: 443
+  password: "your-password"
+  udp: true
+  tls: true
+  servername: yahoo.com
+  fingerprint: random
+  reality-opts:
+    public-key: "your-reality-public-key"
+    short-id: "your-short-id"

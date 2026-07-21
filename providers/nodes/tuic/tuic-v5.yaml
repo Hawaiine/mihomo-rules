@@ -1,0 +1,18 @@
+# ===========================================
+# TUIC v5 (推荐)
+# 参考: https://wiki.metacubex.one/en/config/proxies/tuic
+# ===========================================
+- name: "tuic-v5"
+  type: tuic
+  server: server.example.com
+  port: 443
+  token: "your-token"               # TUIC v5 认证 token
+  udp: true
+  sni: server.example.com
+  skip-cert-verify: false
+  alpn:
+    - h3
+  # congestion-controller: bbr      # 拥塞控制: cubic / bbr (默认 bbr)
+  # udp-relay-mode: native          # UDP 中继模式: native / quic
+  # heartbeat-interval: 10000       # 心跳间隔 (毫秒)
+  # request-timeout: 8000           # 请求超时 (毫秒)

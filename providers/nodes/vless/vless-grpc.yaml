@@ -1,0 +1,15 @@
+# ===========================================
+# VLESS + gRPC
+# 参考: https://wiki.metacubex.one/en/config/proxies/vless
+# ===========================================
+- name: "vless-grpc"
+  type: vless
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"
+  udp: true
+  tls: true
+  servername: cloudflare.com
+  network: grpc
+  grpc-opts:
+    grpc-service-name: "example"

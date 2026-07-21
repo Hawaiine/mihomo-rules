@@ -1,0 +1,32 @@
+# ===========================================
+# 地区过滤正则示例
+# 适用: Mihomo / clash-meta proxy-providers filter/exclude-filter
+# ===========================================
+
+# 香港节点
+hk_filter:
+  filter: "(?i)(香港|Hong.Kong|HongKong|HK|HKG|🇭🇰)"
+
+# 日本节点
+jp_filter:
+  filter: "(?i)(日本|Japan|JP|JPN|Tokyo|🇯🇵)"
+
+# 美国节点
+us_filter:
+  filter: "(?i)(美国|United.States|UnitedStates|US|USA|🇺🇸)"
+
+# 新加坡节点
+sg_filter:
+  filter: "(?i)(新加坡|Singapore|SG|SGP|🇸🇬)"
+
+# 台湾节点
+tw_filter:
+  filter: "(?i)(台湾|Taiwan|TW|TWN|🇹🇼)"
+
+# 排除测试/过期节点
+exclude_test:
+  exclude-filter: "(?i)(剩余|过期|GIA|CN2|IPv6)"
+
+# 全量节点（仅排除测试）
+all_except_test:
+  filter: "(?i)(^(?!(剩余|过期|GIA)).*$)"

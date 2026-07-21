@@ -1,0 +1,69 @@
+# ===========================================
+# 机场订阅配置示例
+# 适用: Mihomo / clash-meta proxy-providers
+# ===========================================
+
+# 主要订阅 (填写你的真实订阅链接)
+provider_main:
+  type: http
+  # 订阅链接 (替换为机场提供的真实地址)
+  url: "https://example.com/api/v1/client/subscribe?token=your_token_here"
+  # 更新间隔 (秒)
+  interval: 86400
+  # 本地缓存路径
+  path: ./providers/provider_main.yaml
+  # User-Agent 伪装 (可选)
+  header:
+    User-Agent:
+      - "clash.meta"
+  # 节点过滤 (可选, 正则匹配节点名)
+  filter: "(?i)(香港|Hong.Kong|HongKong|HK|HKG|日本|Japan|JP|JPN|美国|United.States|UnitedStates|US|新加坡|Singapore|SG|SGP|台湾|Taiwan|TW|TWN)"
+  # 排除节点 (可选, 正则)
+  exclude-filter: "(?i)(剩余|过期|GIA|CN2|IPv6)"
+  # 排除类型 (可选, 如 ss|http)
+  exclude-type: ""
+  # 健康检查
+  health-check:
+    enable: true
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300               # 5 分钟检查一次
+    timeout: 5000               # 超时时间 (毫秒)
+    lazy: true                  # 仅在有代理组引用时检查
+    expected-status: 204        # 期望的 HTTP 状态码
+
+  # 节点覆盖 (可选, 统一修改所有节点参数)
+  override:
+    udp: true                   # 启用 UDP
+    skip-cert-verify: true      # 跳过证书验证 (部分机场需要)
+    # tfo: false                # TCP Fast Open
+    # mptcp: false              # Multipath TCP
+    # down: "50 Mbps"           # 下行带宽限制
+    # up: "10 Mbps"             # 上行带宽限制
+    # ip-version: ipv4-prefer   # IP 版本偏好
+
+# 备用订阅 (可选, 用于故障转移)
+provider_backup:
+  type: http
+  url: "https://backup.example.com/subscribe?token=your_backup_token"
+  interval: 86400
+  path: ./providers/provider_backup.yaml
+  health-check:
+    enable: true
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300
+  filter: "(?i)(香港|HK|HKG|日本|JP|JPN|新加坡|SG|SGP|台湾|TW|TWN)"
+  exclude-filter: "(?i)(GIA|CN2|IPv6)"
+  override:
+    udp: true
+    skip-cert-verify: true
+
+# 直连节点 (可选, 用于测试)
+provider_direct:
+  type: http
+  url: "https://direct.example.com/subscribe"
+  interval: 86400
+  path: ./providers/provider_direct.yaml
+  health-check:
+    enable: true
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300

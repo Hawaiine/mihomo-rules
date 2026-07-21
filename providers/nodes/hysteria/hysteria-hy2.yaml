@@ -1,0 +1,15 @@
+# ===========================================
+# Hysteria2 基础 (推荐, 高速 UDP 协议)
+# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria2
+# ===========================================
+- name: "hy2-basic"
+  type: hysteria2
+  server: server.example.com
+  port: 443
+  password: "your-password"
+  up: "50 Mbps"                     # 上行带宽 (建议与实际情况匹配)
+  down: "200 Mbps"                  # 下行带宽
+  sni: server.example.com
+  skip-cert-verify: false
+  # obfs: salamander                # 混淆 (可选, 默认不启用)
+  # obfs-password: "obfs-password"

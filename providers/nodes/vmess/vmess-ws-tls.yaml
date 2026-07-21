@@ -1,0 +1,19 @@
+# ===========================================
+# VMess + WebSocket + TLS
+# 参考: https://wiki.metacubex.one/en/config/proxies/vmess
+# ===========================================
+- name: "vmess-ws-tls"
+  type: vmess
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"
+  alter-id: 0
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cloudflare.com
+  network: ws
+  ws-opts:
+    path: "/ws?ed=2048"
+    headers:
+      Host: cloudflare.com

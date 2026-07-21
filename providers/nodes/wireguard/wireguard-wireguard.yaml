@@ -1,0 +1,16 @@
+# ===========================================
+# WireGuard 基础
+# 参考: https://wiki.metacubex.one/en/config/proxies/wireguard
+# ===========================================
+- name: "wg-basic"
+  type: wireguard
+  server: server.example.com
+  port: 51820
+  ip:
+    - "10.0.0.2/32"                # 虚拟接口 IP (必须填写)
+  private-key: "your-private-key-base64"
+  public-key: "your-peer-public-key"
+  preshared-key: "your-preshared-key"  # 预共享密钥 (可选)
+  udp: true
+  # mtu: 1420                       # MTU (默认 1420)
+  # keepalive: 25                   # 心跳间隔 (秒)

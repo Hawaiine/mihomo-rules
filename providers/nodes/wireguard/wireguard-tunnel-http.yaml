@@ -1,0 +1,15 @@
+# ===========================================
+# WireGuard + Tunnel via HTTP Proxy
+# 参考: https://wiki.metacubex.one/en/config/proxies/wireguard
+# ===========================================
+- name: "wg-tunnel-http"
+  type: wireguard
+  server: server.example.com
+  port: 51820
+  ip:
+    - "10.0.0.3/32"
+  private-key: "your-private-key-base64"
+  public-key: "your-peer-public-key"
+  udp: true
+  remote-dns-resolve: true         # 远程 DNS 解析
+  dialer-proxy: "proxy"            # 通过指定代理连接 WG 端点

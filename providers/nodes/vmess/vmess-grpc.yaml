@@ -1,0 +1,18 @@
+# ===========================================
+# VMess + gRPC
+# 参考: https://wiki.metacubex.one/en/config/proxies/vmess
+# ===========================================
+- name: "vmess-grpc"
+  type: vmess
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"
+  alter-id: 0
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cloudflare.com
+  network: grpc
+  grpc-opts:
+    grpc-service-name: "example"
+    # grpc-mode: multi              # gRPC 多路复用模式

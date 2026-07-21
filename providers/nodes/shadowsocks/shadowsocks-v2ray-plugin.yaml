@@ -1,0 +1,18 @@
+# ===========================================
+# Shadowsocks + v2ray-plugin
+# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# ===========================================
+- name: "ss-v2ray"
+  type: ss
+  server: server.example.com
+  port: 443
+  cipher: chacha20-ietf-poly1305
+  password: "your-password"
+  udp: true
+  plugin: v2ray-plugin
+  plugin-opts:
+    mode: websocket                 # 传输模式: websocket / quic / grpc
+    tls: true                       # 启用 TLS
+    host: cloudflare.com
+    path: "/ws"
+    # mux: true                     # 多路复用

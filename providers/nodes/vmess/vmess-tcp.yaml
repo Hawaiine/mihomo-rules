@@ -1,0 +1,12 @@
+# ===========================================
+# VMess + TCP (基础)
+# 参考: https://wiki.metacubex.one/en/config/proxies/vmess
+# ===========================================
+- name: "vmess-tcp"
+  type: vmess
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"
+  alter-id: 0
+  cipher: auto
+  udp: true

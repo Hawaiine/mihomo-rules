@@ -1,0 +1,15 @@
+# ===========================================
+# TUIC v4 (旧版, 兼容用)
+# 参考: https://wiki.metacubex.one/en/config/proxies/tuic
+# ===========================================
+- name: "tuic-v4"
+  type: tuic
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"           # TUIC v4 使用 UUID
+  password: "your-password"
+  udp: true
+  sni: server.example.com
+  skip-cert-verify: false
+  alpn:
+    - h3

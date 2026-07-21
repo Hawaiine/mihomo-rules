@@ -1,0 +1,11 @@
+# ===========================================
+# Snell (Surge 协议) 基础
+# 参考: https://wiki.metacubex.one/en/config/proxies/
+# ===========================================
+- name: "snell-basic"
+  type: snell
+  server: server.example.com
+  port: 443
+  psk: "your-psk"                  # 预共享密钥
+  obfs: http                       # 混淆: http / tls (可选)
+  # obfs-host: cloudflare.com      # 混淆域名

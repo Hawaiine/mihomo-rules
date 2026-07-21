@@ -1,0 +1,11 @@
+# ===========================================
+# Shadowsocks Base (AEAD 加密)
+# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# ===========================================
+- name: "ss-base"
+  type: ss
+  server: server.example.com
+  port: 443
+  cipher: chacha20-ietf-poly1305    # 加密方式
+  password: "your-password"
+  udp: true

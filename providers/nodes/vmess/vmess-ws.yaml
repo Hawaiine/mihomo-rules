@@ -1,0 +1,17 @@
+# ===========================================
+# VMess + WebSocket
+# 参考: https://wiki.metacubex.one/en/config/proxies/vmess
+# ===========================================
+- name: "vmess-ws"
+  type: vmess
+  server: server.example.com
+  port: 443
+  uuid: "your-uuid-here"
+  alter-id: 0
+  cipher: auto
+  udp: true
+  network: ws
+  ws-opts:
+    path: "/ws"
+    headers:
+      Host: cloudflare.com

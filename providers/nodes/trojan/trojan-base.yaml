@@ -1,0 +1,15 @@
+# ===========================================
+# Trojan 基础
+# 参考: https://wiki.metacubex.one/en/config/proxies/trojan
+# ===========================================
+- name: "trojan-base"
+  type: trojan
+  server: server.example.com
+  port: 443
+  password: "your-password"
+  udp: true
+  sni: server.example.com          # TLS SNI
+  skip-cert-verify: false          # 是否跳过证书验证 (建议 false)
+  alpn:
+    - h2
+    - http/1.1

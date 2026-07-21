@@ -1,0 +1,15 @@
+# ===========================================
+# Hysteria v1 + 端口跳跃
+# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria
+# ===========================================
+- name: "hy1-hop"
+  type: hysteria
+  server: server.example.com
+  ports: 443-8443
+  hop-interval: 30
+  auth-str: "your-auth-password"
+  up: "50 Mbps"
+  down: "100 Mbps"
+  sni: server.example.com
+  skip-cert-verify: true
+  protocol: udp
