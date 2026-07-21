@@ -1,14 +1,54 @@
 # ===========================================
 # Rule Name: Netflix
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
-# DOMAIN-KEYWORD: 0
-# DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# Updated: 2026-07-21 22:14:48
+# DOMAIN-KEYWORD: 2
+# DOMAIN-REGEX: 4
+# DOMAIN: 3
+# DOMAIN-SUFFIX: 30
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
-# PROCESS-NAME: 0
+# PROCESS-NAME: 1
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-KEYWORD,apiproxy-device-prod-nlb-
+  - DOMAIN-KEYWORD,netflixdnstest
+  - DOMAIN-REGEX,(^|\.)apiproxy-device-prod-nlb-.+\.amazonaws\.com$
+  - DOMAIN-REGEX,(^|\.)apiproxy-website-nlb-prod-.+\.amazonaws\.com$
+  - DOMAIN-REGEX,(^|\.)dualstack\.apiproxy-.+\.amazonaws\.com$
+  - DOMAIN-REGEX,(^|\.)dualstack\.ichnaea-web-.+\.amazonaws\.com$
+  - DOMAIN,e13252.dscg.akamaiedge.net
+  - DOMAIN,h-netflix.online-metrix.net
+  - DOMAIN,netflix.com.edgesuite.net
+  - DOMAIN-SUFFIX,cookielaw.org
+  - DOMAIN-SUFFIX,fast.com
+  - DOMAIN-SUFFIX,flxvpn.net
+  - DOMAIN-SUFFIX,netflix.ca
+  - DOMAIN-SUFFIX,netflix.com
+  - DOMAIN-SUFFIX,netflix.com.au
+  - DOMAIN-SUFFIX,netflix.com.edgesuite.net
+  - DOMAIN-SUFFIX,netflix.net
+  - DOMAIN-SUFFIX,netflixdnstest0.com
+  - DOMAIN-SUFFIX,netflixdnstest1.com
+  - DOMAIN-SUFFIX,netflixdnstest10.com
+  - DOMAIN-SUFFIX,netflixdnstest2.com
+  - DOMAIN-SUFFIX,netflixdnstest3.com
+  - DOMAIN-SUFFIX,netflixdnstest4.com
+  - DOMAIN-SUFFIX,netflixdnstest5.com
+  - DOMAIN-SUFFIX,netflixdnstest6.com
+  - DOMAIN-SUFFIX,netflixdnstest7.com
+  - DOMAIN-SUFFIX,netflixdnstest8.com
+  - DOMAIN-SUFFIX,netflixdnstest9.com
+  - DOMAIN-SUFFIX,netflixinvestor.com
+  - DOMAIN-SUFFIX,netflixstudios.com
+  - DOMAIN-SUFFIX,netflixtechblog.com
+  - DOMAIN-SUFFIX,nflxext.com
+  - DOMAIN-SUFFIX,nflximg.com
+  - DOMAIN-SUFFIX,nflximg.net
+  - DOMAIN-SUFFIX,nflxsearch.net
+  - DOMAIN-SUFFIX,nflxso.net
+  - DOMAIN-SUFFIX,nflxvideo.net
+  - DOMAIN-SUFFIX,onetrust.com
+  - DOMAIN-SUFFIX,us-west-2.amazonaws.com
+  - PROCESS-NAME,com.netflix.mediaclient

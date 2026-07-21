@@ -1,14 +1,23 @@
 # ===========================================
 # Rule Name: LineTV
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-21 22:14:48
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 3
+# DOMAIN-SUFFIX: 5
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
-# PROCESS-NAME: 0
+# PROCESS-NAME: 1
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,d17lx9ucc6k9fc.cloudfront.net
+  - DOMAIN,d3pgb93pk7bvxj.cloudfront.net
+  - DOMAIN,d3vm9lcxb6xcm4.cloudfront.net
+  - DOMAIN-SUFFIX,chocotv.com.tw
+  - DOMAIN-SUFFIX,d3c7rimkq79yfu.cloudfront.net
+  - DOMAIN-SUFFIX,line-cdn.net
+  - DOMAIN-SUFFIX,line-scdn.net
+  - DOMAIN-SUFFIX,linetv.tw
+  - PROCESS-NAME,com.linecorp.linetv

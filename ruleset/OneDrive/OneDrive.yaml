@@ -1,14 +1,32 @@
 # ===========================================
 # Rule Name: OneDrive
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
-# DOMAIN-KEYWORD: 0
+# Updated: 2026-07-21 22:14:48
+# DOMAIN-KEYWORD: 3
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN-SUFFIX: 13
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
-# PROCESS-NAME: 0
+# PROCESS-NAME: 2
 # ===========================================
-payload: []
+payload:
+  - DOMAIN-KEYWORD,1drv
+  - DOMAIN-KEYWORD,onedrive
+  - DOMAIN-KEYWORD,skydrive
+  - DOMAIN-SUFFIX,1drv.com
+  - DOMAIN-SUFFIX,livefilestore.com
+  - DOMAIN-SUFFIX,microsoftpersonalcontent.com
+  - DOMAIN-SUFFIX,oneclient.sfx.ms
+  - DOMAIN-SUFFIX,onedrive.com
+  - DOMAIN-SUFFIX,onedrive.live.com
+  - DOMAIN-SUFFIX,photos.live.com
+  - DOMAIN-SUFFIX,sharepoint.com
+  - DOMAIN-SUFFIX,sharepointonline.com
+  - DOMAIN-SUFFIX,skydrive.wns.windows.com
+  - DOMAIN-SUFFIX,spoprod-a.akamaihd.net
+  - DOMAIN-SUFFIX,storage.live.com
+  - DOMAIN-SUFFIX,storage.msn.com
+  - PROCESS-NAME,OneDrive
+  - PROCESS-NAME,OneDriveUpdater
