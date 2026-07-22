@@ -1,14 +1,18 @@
 # ===========================================
 # Rule Name: Telasa
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-22 11:40:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
-payload: []
+payload:
+  - DOMAIN,d2lmsumy47c8as.cloudfront.net
+  - DOMAIN-SUFFIX,kddi-video.com
+  - DOMAIN-SUFFIX,telasa.jp
+  - DOMAIN-SUFFIX,videopass.jp

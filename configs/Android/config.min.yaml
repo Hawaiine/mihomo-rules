@@ -1375,12 +1375,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KKTV/KKTV.yaml"
     interval: 86400
     path: ./ruleset/KKTV.yaml
-  KaraokeDam:
+  karaokeDAM:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KaraokeDam/KaraokeDam.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/karaokeDAM/karaokeDAM.yaml"
     interval: 86400
-    path: ./ruleset/KaraokeDam.yaml
+    path: ./ruleset/karaokeDAM.yaml
   LanCIDR:
     type: http
     behavior: classical

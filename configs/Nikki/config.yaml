@@ -1609,12 +1609,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/KKTV.yaml
 
-  KaraokeDam:
+  karaokeDAM:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KaraokeDam/KaraokeDam.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/karaokeDAM/karaokeDAM.yaml"
     interval: 86400
-    path: ./ruleset/KaraokeDam.yaml
+    path: ./ruleset/karaokeDAM.yaml
 
   LanCIDR:
     type: http
@@ -2124,7 +2124,7 @@ rules:
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,KKTV,KKTV
-                                                    # - RULE-SET,KaraokeDam,Karaoke@DAM
+                                                    # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,Lemino,Lemino
                                                     # - RULE-SET,LiTV,Li TV
                                                     # - RULE-SET,LineTV,Line TV
