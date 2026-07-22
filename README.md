@@ -225,25 +225,25 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 ## 📊 规则集统计
 
-| 分类 | 数量 | 说明 |
-|------|------|------|
-| 基础规则集 | 8 | Direct / Proxy / Reject / Private / LanCIDR / CNCIDR / Telegram / Applications |
-|106 品牌规则集 | 106 | 流媒体 / AI / 社交 / 云服务 / 游戏 / 电商 / 金融 等 |
-| **YAML 文件** | **105** | |
-| **规则条目** | **32 万+** | DOMAIN + DOMAIN-SUFFIX + DOMAIN-KEYWORD + IP-CIDR + IP-CIDR6 + PROCESS-NAME |
+| 分类 | 数量 | 规则数 | 说明 |
+|------|:----:|:------:|------|
+| 基础规则集 | 7 | 312,828 | Reject(167K) · Direct(112K) · Proxy(27K) · CNCIDR(5.8K) · Private · Applications · LanCIDR |
+| 品牌规则集 | 99 | 13,290 | 流媒体 / AI / 社交 / 云服务 / 游戏 / 电商 / 音乐 / 金融 |
+| **合计** | **106** | **326,118** | DOMAIN + DOMAIN-SUFFIX + DOMAIN-KEYWORD + IP-CIDR + IP-CIDR6 + PROCESS-NAME + IP-ASN |
 
-###106 品牌分类
+### 品牌分类统计
 
-| 类别 | 品牌 |
-|------|------|
-| 🎬 流媒体 | Netflix · Disney+ · HBO · PrimeVideo · Hulu · YouTube · Abema · Bahamut · Bilibili · DAZN · F1TV · DMMTV · Hotstar · Hulu · KKTV · LiTV · LineTV · MyTVSuper · MyVideo · NowE · PrimeVideo · RakutenTV · Telasa · Tubi · TVer · UNext · VideoMarket · Viu · WOWOW · CatchPlay · Lemino · FridayVideo |
-| 🤖 AI | OpenAI · Anthropic · GoogleAI · Perplexity · Manus · Poe · Cursor |
-| 📱 社交 | X(Twitter) · Instagram · Facebook · Discord · Telegram · Reddit · TikTok · Threads · Bluesky · Messenger · WhatsApp · Pinterest · Pixiv · Threads |
-| ☁️ 云服务 | GitHub · Cloudflare · Microsoft · Google · OneDrive · Docker · Synology · AWS · iCloud · iCloudPrivateRelay |
-| 🎮 游戏 | Steam · Nintendo · Niconico |
-| 🛍️ 电商 | Amazon · PayPal |
-| 🎵 音乐 | Spotify · YouTube Music · Deezer · Tidal · Qobuz · Podcast · Mora · MusicJp |
-| 🏢 企业 | Apple · AppleTV · SiriAI · GoogleAI · GeneralAI · Microsoft · OneDrive · ZLibrary |
+| 类别 | 品牌数 | 规则数 | 品牌 |
+|------|:-----:|:------:|------|
+| 🎬 流媒体 | 43 | 876 | Netflix · Disney · HBO · Prime Video · Hulu · YouTube · AbemaTV · Bahamut · Bilibili · DAZN · F1 TV · DMM TV · D Anime Store · Fuji TV · Game Japan · HOY TV · Hami Video · Hotstar · KKTV · LiTV · LINE TV · MyTVSuper · My Video · Now E · Rakuten TV · Telasa · Tubi · TVer · U-NEXT · Video Market · Viu · WOWOW · CATCHPLAY+ · Lemino · friDay video · Music Japan · Reads Japan · Mora · Podcast · Radiko · Niconico · Karaoke@DAM |
+| 🤖 AI | 9 | 135 | OpenAI · Anthropic · Google AI · General AI · Perplexity · Manus · Poe · Cursor · Siri AI |
+| 📱 社交 | 13 | 920 | X · Instagram · Facebook · Discord · Telegram · Reddit · TikTok · Threads · Bluesky · Messenger · WhatsApp · Pinterest · Pixiv |
+| ☁️ 云服务 | 10 | 2,148 | GitHub · Cloudflare · Microsoft · Google · OneDrive · Docker · Synology · AWS · iCloud · iCloud Private Relay |
+| 🎮 游戏 | 2 | 204 | Steam · Nintendo |
+| 🛍️ 电商 | 2 | 485 | Amazon · PayPal |
+| 🎵 音乐 | 6 | 76 | Spotify · YouTube Music · Deezer · Tidal · Qobuz · Musixmatch |
+| 🏢 企业 | 4 | 1,602 | Apple · Apple TV · Z-Library · MetaBrainz |
+| 🏦 金融 | 7 | 6,844 | Bank · PT · PT China · Porn China · Porn · WSJ · Wallpaper |
 
 ## 🤝 贡献指南
 
