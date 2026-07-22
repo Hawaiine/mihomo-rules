@@ -482,7 +482,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
-  - name: "Friday Video"
+  - name: "friDay video"
     type: select
     proxies:
       - DIRECT
@@ -1294,12 +1294,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Facebook/Facebook.yaml"
     interval: 86400
     path: ./ruleset/Facebook.yaml
-  FridayVideo:
+  friDayvideo:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/FridayVideo/FridayVideo.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
     interval: 86400
-    path: ./ruleset/FridayVideo.yaml
+    path: ./ruleset/friDayvideo.yaml
   FujiTV:
     type: http
     behavior: domain
