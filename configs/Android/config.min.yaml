@@ -622,7 +622,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV.png"
-  - name: "Line TV"
+  - name: "LINE TV"
     type: select
     proxies:
       - DIRECT
@@ -1399,7 +1399,7 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LiTV/LiTV.yaml"
     interval: 86400
     path: ./ruleset/LiTV.yaml
-  LineTV:
+  LINETV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LineTV/LineTV.yaml"

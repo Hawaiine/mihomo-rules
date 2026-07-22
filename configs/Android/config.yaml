@@ -753,7 +753,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV.png"
 
-  - name: "Line TV"
+  - name: "LINE TV"
     type: select
     proxies:
       - DIRECT
@@ -1633,7 +1633,7 @@ rule-providers:
     interval: 86400
     path: ./ruleset/LiTV.yaml
 
-  LineTV:
+  LINETV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LineTV/LineTV.yaml"
@@ -2123,7 +2123,7 @@ rules:
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,Lemino,Lemino
                                                     # - RULE-SET,LiTV,Li TV
-                                                    # - RULE-SET,LineTV,Line TV
+                                                    # - RULE-SET,LINETV,LINE TV
                                                     # - RULE-SET,Manus,Manus
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,MetaBrainz,MetaBrainz

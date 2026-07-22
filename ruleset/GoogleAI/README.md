@@ -1,4 +1,4 @@
-# 📦 GoogleAI 规则集
+# 📦 Google AI 规则集
 
 ## 📊 统计
 | 类型 | 数量 |

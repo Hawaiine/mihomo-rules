@@ -1,4 +1,4 @@
-# 📦 HamiVideo 规则集
+# 📦 Hami Video 规则集
 
 ## 📊 统计
 | 类型 | 数量 |

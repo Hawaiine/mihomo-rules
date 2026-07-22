@@ -1,4 +1,4 @@
-# 📦 MyTVSuper 规则集
+# 📦 myTV Super 规则集
 
 ## 📊 统计
 | 类型 | 数量 |

@@ -1,4 +1,4 @@
-# 📦 PrimeVideo 规则集
+# 📦 Prime Video 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
