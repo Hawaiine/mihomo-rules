@@ -12,5 +12,5 @@
 | IP-ASN | 0 |
 | PROCESS-NAME | 0 |
 
-- **behavior**: classical
+- **behavior**: domain
 - **策略组**: Telasa
