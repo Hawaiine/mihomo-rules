@@ -12,8 +12,8 @@
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN,podcasts.apple.com
   - DOMAIN,lastfm.freetls.fastly.net
+  - DOMAIN,podcasts.apple.com
   - DOMAIN,ws.audioscrobbler.com
   - DOMAIN-SUFFIX,himalaya.com
   - DOMAIN-SUFFIX,last.fm
