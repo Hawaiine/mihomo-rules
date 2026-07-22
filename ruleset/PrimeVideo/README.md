@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: domain
-- **策略组**: PrimeVideo
+- **策略组**: Prime Video

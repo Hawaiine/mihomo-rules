@@ -13,4 +13,4 @@
 | PROCESS-NAME | 1 |
 
 - **behavior**: classical
-- **策略组**: AppleTV
+- **策略组**: Apple TV

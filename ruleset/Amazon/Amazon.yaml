@@ -2,23 +2,16 @@
 # Rule Name: Amazon
 # Author: Hawaiine
 # Updated: 2026-07-21 21:45:49
-# DOMAIN-KEYWORD: 1
-# DOMAIN-REGEX: 1
-# DOMAIN: 10
-# DOMAIN-SUFFIX: 210
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 5
+# DOMAIN-SUFFIX: 157
 # IP-CIDR: 15
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 1
 # ===========================================
 payload:
-  - DOMAIN-KEYWORD,avoddashs
-  - DOMAIN-REGEX,.+\.awsdns-[0-9][0-9]\.(co\.uk|com|net|org)$
-  - DOMAIN,d1v5ir2lpwr8os.cloudfront.net
-  - DOMAIN,d22qjgkvxw22r6.cloudfront.net
-  - DOMAIN,d25xi40x97liuc.cloudfront.net
-  - DOMAIN,d27xxe7juh1us6.cloudfront.net
-  - DOMAIN,dmqdd6hw24ucf.cloudfront.net
   - DOMAIN,images-eu.ssl-images-amazon.com
   - DOMAIN,images-fe.ssl-images-amazon.com
   - DOMAIN,images-na.ssl-images-amazon.com
@@ -38,11 +31,6 @@ payload:
   - DOMAIN-SUFFIX,aboutamazon.jp
   - DOMAIN-SUFFIX,aboutamazon.pl
   - DOMAIN-SUFFIX,aboutamazon.sg
-  - DOMAIN-SUFFIX,acmvalidations.com
-  - DOMAIN-SUFFIX,acmvalidationsaws.com
-  - DOMAIN-SUFFIX,aesworkshops.com
-  - DOMAIN-SUFFIX,aiv-cdn.net
-  - DOMAIN-SUFFIX,aiv-delivery.net
   - DOMAIN-SUFFIX,alexa.com
   - DOMAIN-SUFFIX,alexafund.cn
   - DOMAIN-SUFFIX,alexafund.com.cn
@@ -86,15 +74,7 @@ payload:
   - DOMAIN-SUFFIX,amazon.sg
   - DOMAIN-SUFFIX,amazonalexavoxcon.com
   - DOMAIN-SUFFIX,amazonauthorinsights.com
-  - DOMAIN-SUFFIX,amazonaws-china.com
-  - DOMAIN-SUFFIX,amazonaws.biz
-  - DOMAIN-SUFFIX,amazonaws.co.uk
-  - DOMAIN-SUFFIX,amazonaws.com
   - DOMAIN-SUFFIX,amazonaws.com.cn
-  - DOMAIN-SUFFIX,amazonaws.info
-  - DOMAIN-SUFFIX,amazonaws.net
-  - DOMAIN-SUFFIX,amazonaws.org
-  - DOMAIN-SUFFIX,amazonaws.tv
   - DOMAIN-SUFFIX,amazonbusiness.cn
   - DOMAIN-SUFFIX,amazonbusiness.com.cn
   - DOMAIN-SUFFIX,amazonbusiness.org
@@ -103,7 +83,6 @@ payload:
   - DOMAIN-SUFFIX,amazonchoice.com.cn
   - DOMAIN-SUFFIX,amazonchoices.cn
   - DOMAIN-SUFFIX,amazonchoices.com.cn
-  - DOMAIN-SUFFIX,amazoncognito.com
   - DOMAIN-SUFFIX,amazondevicesupport.com
   - DOMAIN-SUFFIX,amazonfctours.com
   - DOMAIN-SUFFIX,amazonianblog.com
@@ -124,62 +103,27 @@ payload:
   - DOMAIN-SUFFIX,amazonprimevideo.com.cn
   - DOMAIN-SUFFIX,amazonprimevideos.com
   - DOMAIN-SUFFIX,amazonsdi.com
-  - DOMAIN-SUFFIX,amazonses.com
   - DOMAIN-SUFFIX,amazonstudiosguilds.com
   - DOMAIN-SUFFIX,amazontools.com
   - DOMAIN-SUFFIX,amazontours.com
   - DOMAIN-SUFFIX,amazontrust.com
   - DOMAIN-SUFFIX,amazonuniversity.jobs
   - DOMAIN-SUFFIX,amazonvideo.cc
-  - DOMAIN-SUFFIX,amazonvideo.com
   - DOMAIN-SUFFIX,amazonvideodirect.com
   - DOMAIN-SUFFIX,amazonworkdocs.cn
-  - DOMAIN-SUFFIX,amazonworkdocs.com
   - DOMAIN-SUFFIX,amazonworkdocs.com.cn
-  - DOMAIN-SUFFIX,amplifyapp.com
-  - DOMAIN-SUFFIX,amplifyframework.com
   - DOMAIN-SUFFIX,amzn.asia
   - DOMAIN-SUFFIX,amzn.com
   - DOMAIN-SUFFIX,amzn.to
-  - DOMAIN-SUFFIX,amzndns.co.uk
-  - DOMAIN-SUFFIX,amzndns.com
-  - DOMAIN-SUFFIX,amzndns.net
-  - DOMAIN-SUFFIX,amzndns.org
   - DOMAIN-SUFFIX,amznl.com
   - DOMAIN-SUFFIX,assoc-amazon.cn
   - DOMAIN-SUFFIX,associates-amazon.com
   - DOMAIN-SUFFIX,audible.com
   - DOMAIN-SUFFIX,avodmp4s3ww-a.akamaihd.net
-  - DOMAIN-SUFFIX,aws-iot-hackathon.com
-  - DOMAIN-SUFFIX,aws.com
-  - DOMAIN-SUFFIX,aws.dev
-  - DOMAIN-SUFFIX,awsapprunner.com
-  - DOMAIN-SUFFIX,awsapps.com
-  - DOMAIN-SUFFIX,awsautopilot.com
-  - DOMAIN-SUFFIX,awsautoscaling.com
-  - DOMAIN-SUFFIX,awsbraket.com
   - DOMAIN-SUFFIX,awscloud.com
-  - DOMAIN-SUFFIX,awscommandlineinterface.com
-  - DOMAIN-SUFFIX,awsedstart.com
-  - DOMAIN-SUFFIX,awseducate.com
-  - DOMAIN-SUFFIX,awseducate.net
-  - DOMAIN-SUFFIX,awseducate.org
-  - DOMAIN-SUFFIX,awsglobalaccelerator.com
-  - DOMAIN-SUFFIX,awsloft-johannesburg.com
-  - DOMAIN-SUFFIX,awsloft-stockholm.com
-  - DOMAIN-SUFFIX,awssecworkshops.com
-  - DOMAIN-SUFFIX,awsstatic.com
-  - DOMAIN-SUFFIX,awsthinkbox.com
-  - DOMAIN-SUFFIX,awstrack.me
   - DOMAIN-SUFFIX,awstrust.com
-  - DOMAIN-SUFFIX,awswaf.com
   - DOMAIN-SUFFIX,boxofficemojo.com
-  - DOMAIN-SUFFIX,cdkworkshop.com
-  - DOMAIN-SUFFIX,cloudfront.com
-  - DOMAIN-SUFFIX,cloudfront.net
-  - DOMAIN-SUFFIX,containersonaws.com
   - DOMAIN-SUFFIX,createspace.com
-  - DOMAIN-SUFFIX,elasticbeanstalk.com
   - DOMAIN-SUFFIX,gameon-masters.com
   - DOMAIN-SUFFIX,gdansk-amazon.com
   - DOMAIN-SUFFIX,images-amazon.com
@@ -205,24 +149,20 @@ payload:
   - DOMAIN-SUFFIX,kindleoasisnews.com
   - DOMAIN-SUFFIX,kindleproject.com
   - DOMAIN-SUFFIX,llnwd.net
-  - DOMAIN-SUFFIX,media-amazon.com
   - DOMAIN-SUFFIX,media-imdb.com
   - DOMAIN-SUFFIX,prime-video.com
   - DOMAIN-SUFFIX,primeday.cn
   - DOMAIN-SUFFIX,primeday.com.cn
   - DOMAIN-SUFFIX,primeday.info
   - DOMAIN-SUFFIX,primevideo.cc
-  - DOMAIN-SUFFIX,primevideo.com
   - DOMAIN-SUFFIX,primevideo.info
   - DOMAIN-SUFFIX,primevideo.org
   - DOMAIN-SUFFIX,primevideo.tv
   - DOMAIN-SUFFIX,prod.service.minerva.devices.a2z.com
-  - DOMAIN-SUFFIX,pv-cdn.net
   - DOMAIN-SUFFIX,seattlespheres.com
   - DOMAIN-SUFFIX,siege-amazon.com
   - DOMAIN-SUFFIX,ss2.us
   - DOMAIN-SUFFIX,ssl-images-amazon.com
-  - DOMAIN-SUFFIX,thinkboxsoftware.com
   - DOMAIN-SUFFIX,ueberamazon.de
   - DOMAIN-SUFFIX,wfm.com
   - DOMAIN-SUFFIX,wholecitiesfoundation.org

@@ -4,12 +4,12 @@
 # Updated: 2026-07-21 21:45:49
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
-# DOMAIN: 17
-# DOMAIN-SUFFIX: 1500
+# DOMAIN: 11
+# DOMAIN-SUFFIX: 1451
 # IP-CIDR: 10
 # IP-CIDR6: 3
 # IP-ASN: 0
-# PROCESS-NAME: 13
+# PROCESS-NAME: 12
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,smp-device
@@ -20,16 +20,10 @@ payload:
   - DOMAIN,appleworldwidedeveloper.sc.omtrdc.net
   - DOMAIN,beatselectronicsllc.tt.omtrdc.net
   - DOMAIN,configuration-lb.ls-apple.com.akadns.net
-  - DOMAIN,hls-amt.itunes.apple.com
-  - DOMAIN,hls.itunes.apple.com
   - DOMAIN,notary-submissions-prod.s3-accelerate.amazonaws.com
   - DOMAIN,notary-submissions-prod.s3.us-west-2.amazonaws.com
-  - DOMAIN,np-edge.itunes.apple.com
   - DOMAIN,p-events-delivery.akamaized.net
-  - DOMAIN,play-edge.itunes.apple.com
   - DOMAIN,push-apple.com.akadns.net
-  - DOMAIN,tv.applemusic.com
-  - DOMAIN,uts-api.itunes.apple.com
   - DOMAIN,www-cdn.icloud.com.akadns.net
   - DOMAIN-SUFFIX,100beatscheap.com
   - DOMAIN-SUFFIX,12diasdepresentesdeitunes.com
@@ -100,7 +94,6 @@ payload:
   - DOMAIN-SUFFIX,appl4e.com
   - DOMAIN-SUFFIX,appla.com
   - DOMAIN-SUFFIX,appldnld.apple.com
-  - DOMAIN-SUFFIX,apple-cloudkit.com
   - DOMAIN-SUFFIX,apple-darwin.com
   - DOMAIN-SUFFIX,apple-darwin.net
   - DOMAIN-SUFFIX,apple-darwin.org
@@ -112,7 +105,6 @@ payload:
   - DOMAIN-SUFFIX,apple-hk.com
   - DOMAIN-SUFFIX,apple-imac.com
   - DOMAIN-SUFFIX,apple-inc.net
-  - DOMAIN-SUFFIX,apple-livephotoskit.com
   - DOMAIN-SUFFIX,apple-mapkit.com
   - DOMAIN-SUFFIX,apple-online.com
   - DOMAIN-SUFFIX,apple-pay.com
@@ -288,7 +280,6 @@ payload:
   - DOMAIN-SUFFIX,applemusic.wang
   - DOMAIN-SUFFIX,applemusicconnect.com
   - DOMAIN-SUFFIX,applemusicfestival.com
-  - DOMAIN-SUFFIX,applemx-icloud.com
   - DOMAIN-SUFFIX,applenews.berlin
   - DOMAIN-SUFFIX,applenews.hamburg
   - DOMAIN-SUFFIX,applenews.tv
@@ -409,7 +400,6 @@ payload:
   - DOMAIN-SUFFIX,appule.com
   - DOMAIN-SUFFIX,appye.com
   - DOMAIN-SUFFIX,apyle.com
-  - DOMAIN-SUFFIX,apzones.com
   - DOMAIN-SUFFIX,asto.re
   - DOMAIN-SUFFIX,aucheapbeats.com
   - DOMAIN-SUFFIX,audiobeatsau.com
@@ -739,7 +729,6 @@ payload:
   - DOMAIN-SUFFIX,casquemonsterbeatsbydre2013.com
   - DOMAIN-SUFFIX,casquesbeatsaudio.com
   - DOMAIN-SUFFIX,catalina.hk
-  - DOMAIN-SUFFIX,cdn-apple.com
   - DOMAIN-SUFFIX,cheap-beats-by-dre.net
   - DOMAIN-SUFFIX,cheap-beatsbydre.com
   - DOMAIN-SUFFIX,cheapbagshoes.com
@@ -991,44 +980,6 @@ payload:
   - DOMAIN-SUFFIX,ibookpartner.com
   - DOMAIN-SUFFIX,ibooksauthor.com
   - DOMAIN-SUFFIX,ichat.co.in
-  - DOMAIN-SUFFIX,icloud-content.com
-  - DOMAIN-SUFFIX,icloud-isupport.com
-  - DOMAIN-SUFFIX,icloud-sandbox.com
-  - DOMAIN-SUFFIX,icloud.ch
-  - DOMAIN-SUFFIX,icloud.com
-  - DOMAIN-SUFFIX,icloud.de
-  - DOMAIN-SUFFIX,icloud.ee
-  - DOMAIN-SUFFIX,icloud.fi
-  - DOMAIN-SUFFIX,icloud.fr
-  - DOMAIN-SUFFIX,icloud.hu
-  - DOMAIN-SUFFIX,icloud.ie
-  - DOMAIN-SUFFIX,icloud.is
-  - DOMAIN-SUFFIX,icloud.jp
-  - DOMAIN-SUFFIX,icloud.lv
-  - DOMAIN-SUFFIX,icloud.om
-  - DOMAIN-SUFFIX,icloud.org
-  - DOMAIN-SUFFIX,icloud.pt
-  - DOMAIN-SUFFIX,icloud.ro
-  - DOMAIN-SUFFIX,icloud.se
-  - DOMAIN-SUFFIX,icloud.si
-  - DOMAIN-SUFFIX,icloud.sk
-  - DOMAIN-SUFFIX,icloud.vn
-  - DOMAIN-SUFFIX,icloudads.net
-  - DOMAIN-SUFFIX,icloudbox.net
-  - DOMAIN-SUFFIX,icloudbrowser.net
-  - DOMAIN-SUFFIX,icloude.com
-  - DOMAIN-SUFFIX,icloudhome.com
-  - DOMAIN-SUFFIX,icloudmail.net
-  - DOMAIN-SUFFIX,icloudmusic.net
-  - DOMAIN-SUFFIX,icloudnet.net
-  - DOMAIN-SUFFIX,icloudo.com
-  - DOMAIN-SUFFIX,icloudo.de
-  - DOMAIN-SUFFIX,icloudo.net
-  - DOMAIN-SUFFIX,icloudos.de
-  - DOMAIN-SUFFIX,icloudos.net
-  - DOMAIN-SUFFIX,icloudpay.net
-  - DOMAIN-SUFFIX,icloudsecure.net
-  - DOMAIN-SUFFIX,icloudsetup.com
   - DOMAIN-SUFFIX,ids-apple.com
   - DOMAIN-SUFFIX,idvd.eu
   - DOMAIN-SUFFIX,ig.apple.com
@@ -1060,7 +1011,6 @@ payload:
   - DOMAIN-SUFFIX,indiaipad.com
   - DOMAIN-SUFFIX,insidemacintosh.com
   - DOMAIN-SUFFIX,ioffergift.com
-  - DOMAIN-SUFFIX,ios-icloud.com
   - DOMAIN-SUFFIX,iosinthecar.com
   - DOMAIN-SUFFIX,ipa-iphone.net
   - DOMAIN-SUFFIX,ipad.co.kr
@@ -1278,7 +1228,6 @@ payload:
   - DOMAIN-SUFFIX,mask.icloud.com
   - DOMAIN-SUFFIX,mbeats-tech.com
   - DOMAIN-SUFFIX,mbheadphone.com
-  - DOMAIN-SUFFIX,me.com
   - DOMAIN-SUFFIX,mesu.apple.com
   - DOMAIN-SUFFIX,micstl.com
   - DOMAIN-SUFFIX,mmonsterheadphones.net
@@ -1355,9 +1304,7 @@ payload:
   - DOMAIN-SUFFIX,mybeatsbydreuk.com
   - DOMAIN-SUFFIX,mybeatscheapbydre.com
   - DOMAIN-SUFFIX,myferrariheadphones.com
-  - DOMAIN-SUFFIX,myicloud.net
   - DOMAIN-SUFFIX,myipod.net
-  - DOMAIN-SUFFIX,mylcloud.net
   - DOMAIN-SUFFIX,mzstatic.com
   - DOMAIN-SUFFIX,namemybeats.com
   - DOMAIN-SUFFIX,neborder.com
@@ -1489,7 +1436,6 @@ payload:
   - DOMAIN-SUFFIX,truedepth3d.com
   - DOMAIN-SUFFIX,tryrating.com
   - DOMAIN-SUFFIX,tteshop.com
-  - DOMAIN-SUFFIX,tv.apple.com
   - DOMAIN-SUFFIX,tvappstore.net
   - DOMAIN-SUFFIX,ubnw.net
   - DOMAIN-SUFFIX,ukipad.com
@@ -1523,7 +1469,6 @@ payload:
   - DOMAIN-SUFFIX,wwwapple.com
   - DOMAIN-SUFFIX,wwwapple.net
   - DOMAIN-SUFFIX,wwwapplemusic.com
-  - DOMAIN-SUFFIX,wwwicloud.com
   - DOMAIN-SUFFIX,wwwipodlounge.com
   - DOMAIN-SUFFIX,wwwitunes.com
   - DOMAIN-SUFFIX,wwwlapple.com
@@ -1555,5 +1500,4 @@ payload:
   - PROCESS-NAME,Music
   - PROCESS-NAME,netbiosd
   - PROCESS-NAME,trustd
-  - PROCESS-NAME,TV
   - PROCESS-NAME,WeatherWidget

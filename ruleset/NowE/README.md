@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: domain
-- **策略组**: NowE
+- **策略组**: Now E

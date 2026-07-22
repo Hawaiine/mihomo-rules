@@ -1,4 +1,4 @@
-# 📦 My Video 规则集
+# 📦 MyVideo 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: domain
-- **策略组**: My Video
+- **策略组**: MyVideo

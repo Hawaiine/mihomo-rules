@@ -13,4 +13,4 @@
 | PROCESS-NAME | 1 |
 
 - **behavior**: classical
-- **策略组**: LineTV
+- **策略组**: LINE TV
