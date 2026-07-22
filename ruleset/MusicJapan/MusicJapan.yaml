@@ -1,15 +1,16 @@
 # ===========================================
-# Rule Name: D Anime Store
+# Rule Name: Music Japan
 # Author: Hawaiine
-# Updated: 2026-07-22 11:35:00
+# Updated: 2026-07-22 11:25:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN,animestore.docomo.ne.jp
+  - DOMAIN-SUFFIX,music-book.jp
+  - DOMAIN-SUFFIX,music.jp

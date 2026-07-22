@@ -673,7 +673,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "Music JP"
+  - name: "Music Japan"
     type: select
     proxies:
       - DIRECT
@@ -1435,12 +1435,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Mora/Mora.yaml"
     interval: 86400
     path: ./ruleset/Mora.yaml
-  MusicJp:
+  MusicJapan:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MusicJp/MusicJp.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MusicJapan/MusicJapan.yaml"
     interval: 86400
-    path: ./ruleset/MusicJp.yaml
+    path: ./ruleset/MusicJapan.yaml
   Musixmatch:
     type: http
     behavior: domain
