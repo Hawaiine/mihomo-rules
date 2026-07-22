@@ -34,6 +34,8 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "ZLibrary": "Z-Library",
     "iCloudPrivateRelay": "iCloud Private Relay",
     "GeneralAI": "General AI",
+    "DMMTV": "DMM TV",
+    "RakutenTV": "Rakuten TV",
 }
 
 

@@ -169,6 +169,8 @@ V2FLY_BRAND_MAP: dict[str, str] = {
     "poe": "Poe",
     "category-porn": "Porn",
     "google-deepmind": "GoogleAI",
+    "dmm": "DMMTV",
+    "rakuten": "RakutenTV",
     "radiko": "Radiko",
     "tmdb": "TMDB",
     "tidal": "Tidal",
