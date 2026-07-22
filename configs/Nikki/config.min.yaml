@@ -11,7 +11,7 @@ keep-alive-idle: 600
 find-process-mode: off
 external-controller: 0.0.0.0:9090
 secret: "your-api-secret-here"
-external-ui: ./zashboard
+external-ui: ./ui
 external-ui-name: zashboard
 external-ui-url: "https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip"
 profile:
