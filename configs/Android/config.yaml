@@ -353,6 +353,13 @@ proxy-groups:
     interval: 300
 
   - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - DIRECT
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
 
   - name: "AWS"
     type: select
@@ -425,6 +432,24 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
+  - name: "Hotstar"
+    type: select
+    proxies:
+      - DIRECT
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
+  - name: "Disney"
+    type: select
+    proxies:
+      - DIRECT
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
   - name: "Instagram"
     type: select
     proxies:
@@ -664,15 +689,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord-2.png"
-  - name: "Disney"
-    type: select
-    proxies:
-      - DIRECT
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
   - name: "Docker"
     type: select
     proxies:
@@ -743,15 +759,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo-1.png"
-  - name: "Hotstar"
-    type: select
-    proxies:
-      - DIRECT
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
   - name: "Hulu"
     type: select
     proxies:
@@ -1870,6 +1877,8 @@ rule-providers:
                                                     # - RULE-SET,SiriAI,Siri AI
                                                     # - RULE-SET,iCloud,iCloud
                                                     # - RULE-SET,Apple,Apple
+                                                    # - RULE-SET,Hotstar,Hotstar
+                                                    # - RULE-SET,Disney,Disney
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,Threads,Threads
@@ -1897,7 +1906,6 @@ rule-providers:
                                                     # - RULE-SET,DMMTV,DMM TV
                                                     # - RULE-SET,Deezer,Deezer
                                                     # - RULE-SET,Discord,Discord
-                                                    # - RULE-SET,Disney,Disney
                                                     # - RULE-SET,Docker,Docker
                                                     # - RULE-SET,F1TV,F1 TV
                                                     # - RULE-SET,FujiTV,Fuji TV
@@ -1906,7 +1914,6 @@ rule-providers:
                                                     # - RULE-SET,HBO,HBO
                                                     # - RULE-SET,HOYTV,HOY TV
                                                     # - RULE-SET,HamiVideo,Hami Video
-                                                    # - RULE-SET,Hotstar,Hotstar
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,KKTV,KKTV
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM

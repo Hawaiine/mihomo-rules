@@ -157,10 +157,28 @@ def parse_rule_line(line: str, source: str = "") -> CanonicalRule | None:
     # 尝试匹配标准格式
     m = RULE_LINE_RE.match(line)
     if m:
+        rule_type = m.group("type").upper()
+        value = m.group("value")
+        param = (m.group("param") or "").strip()
+        
+        # DOMAIN-REGEX 的值可能包含逗号，需要重新解析
+        if rule_type == "DOMAIN-REGEX":
+            # 从原始行提取完整值
+            line_stripped = line.lstrip("-– ").strip()
+            first_comma = line_stripped.find(",")
+            if first_comma >= 0:
+                rest = line_stripped[first_comma + 1:].strip()
+                # 分割 value 和 param
+                if "#" in rest:
+                    value = rest[:rest.index("#")].strip()
+                else:
+                    value = rest
+                    param = ""
+        
         return CanonicalRule(
-            rule_type=m.group("type").upper(),
-            value=normalize_value(m.group("value")),
-            param=(m.group("param") or "").strip(),
+            rule_type=rule_type,
+            value=normalize_value(value),
+            param=param,
             source=source,
         )
 

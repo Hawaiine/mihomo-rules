@@ -230,16 +230,15 @@ def extract_system_groups(config_path):
                 system_count += 1
                 if system_count > len(SYSTEM_GROUPS):
                     result.pop()
-                    result.append('')
                     break
         result_str = '\n'.join(result)
         # 确保系统组完整（🐟 漏网之鱼 可能缺少属性）
         if '  - name: "🐟 漏网之鱼"\n\n' in result_str:
             result_str = result_str.replace(
                 '  - name: "🐟 漏网之鱼"\n\n',
-                '  - name: "🐟 漏网之鱼"\n    type: select\n    proxies:\n      - DIRECT\n      - "♻️ 自动选择"\n      - "🔧 手动切换"\n    use:\n      - provider1\n\n'
+                '  - name: "🐟 漏网之鱼"\n    type: select\n    proxies:\n      - DIRECT\n      - "♻️ 自动选择"\n      - "🔧 手动切换"\n    use:\n      - provider1\n'
             )
-        return result_str
+        return result_str.rstrip('\n') + '\n'
     except Exception:
         return ''
 
@@ -371,8 +370,11 @@ def gen_rules(brand_info, variant):
     return '\n'.join(lines)
 
 
-def assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules):
+def assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules, variant='full'):
     """拼接完整 config"""
+    if 'min' in variant:
+        # min 版：sections 之间单换行（system_groups 本身已带尾部换行）
+        return system_config + system_groups + proxy_groups + '\n' + rule_providers + '\n' + rules
     return system_config + system_groups + '\n' + proxy_groups + '\n' + rule_providers + '\n' + rules
 
 
@@ -429,12 +431,16 @@ def main():
         system_config = extract_system_config(str(config_path))
         system_groups = extract_system_groups(str(config_path))
         rules = gen_rules(brand_info, variant)
-        output = assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules)
+        output = assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules, variant)
         
         # 写入 /tmp 用于 diff
         tmp_path = Path(f'/tmp/{variant}.yaml')
         write_if_changed(tmp_path, output)
+        # 自动复制到 configs/
+        import shutil
+        shutil.copy2(str(tmp_path), str(config_path))
         print(f'[+] 生成 /tmp/{variant}.yaml')
+        print(f'    → 已同步到 {config_path}')
     
     print('\n=== 完成 ===')
     print('请对比 diff 后确认覆盖')

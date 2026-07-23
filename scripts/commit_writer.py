@@ -318,10 +318,8 @@ def write_ruleset(
     # 检查是否有实质性变化（跳过仅时间戳的噪音变更）
     if diff.strip():
         meaningful_lines = [l for l in diff.split('\n')
-                          if l and not l.startswith('@@') and not l.startswith('---')
-                          and not l.startswith('+++') and not l.startswith('diff')
-                          and not l.startswith('index') and not l.startswith('new file')
-                          and not l.startswith('deleted')
+                          if l and (l.startswith('-') or l.startswith('+'))
+                          and not l.startswith('---') and not l.startswith('+++')
                           and 'Updated:' not in l]
         if not meaningful_lines:
             stats['has_changes'] = False

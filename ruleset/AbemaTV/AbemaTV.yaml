@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: AbemaTV
 # Author: Hawaiine
-# Updated: 2026-07-21 21:45:49
+# Updated: 2026-07-23 17:47:38
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 22
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -12,6 +12,7 @@
 # PROCESS-NAME: 0
 # ===========================================
 payload:
+  - DOMAIN,abema.tv
   - DOMAIN-SUFFIX,abema-tv.com
   - DOMAIN-SUFFIX,abema.io
   - DOMAIN-SUFFIX,abema.tv

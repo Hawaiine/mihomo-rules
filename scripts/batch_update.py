@@ -370,23 +370,21 @@ def main():
                                         if line in existing_seen:
                                             continue
                                         existing_seen.add(line)
-                                        parts = line.split(',')
-                                        if len(parts) >= 2:
-                                            rule_type = parts[0].strip()
-                                            val = parts[1].strip()
-                                            # 精确匹配 TYPE+VALUE，避免 substring 误判
-                                            if not any(r.rule_type == rule_type and r.value == val
-                                                      for r in merged_rules):
-                                                cr = parse_rule_line(line, 'manual')
-                                                if cr:
-                                                    manual_rules.append(cr)
+                                        # 用 parse_rule_line 解析（自动处理 YAML 前缀）
+                                        cr = parse_rule_line(line, 'manual')
+                                        if cr is None:
+                                            continue
+                                        # 精确匹配 TYPE+VALUE
+                                        if not any(r.rule_type == cr.rule_type and r.value == cr.value
+                                                  for r in merged_rules):
+                                            manual_rules.append(cr)
                             from lib.canonical import sort_rules
                             all_rules = sort_rules(merged_rules + manual_rules)
                             # 去重（sort_rules 只排序，不去重）
                             seen_keys = set()
                             deduped = []
                             for r in all_rules:
-                                key = f"{r.rule_type}|{r.value}"
+                                key = f"{r.rule_type}|{r.value.lower()}"
                                 if key not in seen_keys:
                                     seen_keys.add(key)
                                     deduped.append(r)

@@ -186,6 +186,19 @@ def update_yaml(yaml_path, kept_rules, removed_rules, child_name):
             if stripped not in removed_rules:
                 new_lines.append(line)
     
+    # 检查是否只有时间戳变化
+    if new_lines != lines:
+        # 忽略 Updated: 行比较
+        new_filtered = [l for l in new_lines if 'Updated:' not in l]
+        old_filtered = [l for l in lines if 'Updated:' not in l]
+        if new_filtered == old_filtered:
+            print(f'  ↪ 仅时间戳变化，跳过: {yaml_path.name}')
+            return
+    
+    if new_lines == lines:
+        print(f'  ↪ 无变化，跳过: {yaml_path.name}')
+        return
+    
     with open(yaml_path, 'w') as f:
         f.writelines(new_lines)
     

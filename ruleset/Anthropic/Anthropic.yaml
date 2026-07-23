@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Anthropic
 # Author: Hawaiine
-# Updated: 2026-07-21 21:49:12
+# Updated: 2026-07-23 18:36:16
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 1
-# DOMAIN-SUFFIX: 8
+# DOMAIN-SUFFIX: 7
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -20,4 +20,3 @@ payload:
   - DOMAIN-SUFFIX,claudemcpclient.com
   - DOMAIN-SUFFIX,claudemcpcontent.com
   - DOMAIN-SUFFIX,claudeusercontent.com
-  - DOMAIN-SUFFIX,servd-anthropic-website.b-cdn.net

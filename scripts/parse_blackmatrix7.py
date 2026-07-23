@@ -222,7 +222,7 @@ def parse_blackmatrix7_yaml(content: str) -> list[CanonicalRule]:
             # 域名/IP 类统一小写
             value = normalize_value(value)
         elif rule_type.startswith("PROCESS-"):
-            # 进程名保持原样
+            # 进程名保持原样（去重由 all_rules 层 lowercase key 处理）
             pass
         elif rule_type.startswith("DST-") or rule_type.startswith("SRC-"):
             # 端口保持原样
