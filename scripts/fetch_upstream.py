@@ -17,17 +17,19 @@ from typing import NamedTuple
 UPSTREAM_REPOS = {
     "v2fly": {
         "url": "https://github.com/v2fly/domain-list-community.git",
+        "branch": "master",
         "local_dir": "v2fly",
         "data_dir": "data",  # 仓库内数据目录
     },
     "loyalsoldier": {
         "url": "https://github.com/Loyalsoldier/clash-rules.git",
-        "branch": "release",
+        "branch": "master",
         "local_dir": "loyalsoldier",
         "data_dir": "",  # 文件在仓库根目录
     },
     "blackmatrix7": {
         "url": "https://github.com/blackmatrix7/ios_rule_script.git",
+        "branch": "master",
         "local_dir": "blackmatrix7",
         "data_dir": "rule/Clash",  # 仓库内数据目录
     },

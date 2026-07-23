@@ -315,6 +315,23 @@ def write_ruleset(
             error="",
         )
 
+    # 检查是否有实质性变化（跳过仅时间戳的噪音变更）
+    if diff.strip():
+        meaningful_lines = [l for l in diff.split('\n')
+                          if l and not l.startswith('@@') and not l.startswith('---')
+                          and not l.startswith('+++') and not l.startswith('diff')
+                          and not l.startswith('index') and not l.startswith('new file')
+                          and not l.startswith('deleted')
+                          and 'Updated:' not in l]
+        if not meaningful_lines:
+            stats['has_changes'] = False
+            return WriteResult(
+                success=True,
+                diff="",
+                stats=stats,
+                error="",
+            )
+
     # 写入 YAML
     yaml_ok, yaml_err = atomic_write(yaml_content, yaml_path)
     if not yaml_ok:
@@ -389,8 +406,10 @@ def main():
             print(f"\n  Diff:")
             for line in result.diff.split("\n")[:20]:
                 print(f"    {line}")
-            if len(result.diff.split("\n")) > 20:
-                print(f"    ... 还有 {len(result.diff.split('\n'))-20} 行")
+            lines = result.diff.split("\n")
+            if len(lines) > 20:
+                remaining = len(lines) - 20
+                print(f"    ... 还有 {remaining} 行")
         print(f"\n  YAML 内容预览:")
         yaml_content = generate_yaml(brand_name, rules)
         for line in yaml_content.split("\n")[:15]:

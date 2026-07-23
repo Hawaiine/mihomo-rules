@@ -1,0 +1,93 @@
+name: 每日规则同步
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 06:00 Beijing = 22:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 拉取 mihomo-rules 仓库
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🎨 拉取 Oasisic-Icons 仓库
+        uses: actions/checkout@v7
+        with:
+          repository: Hawaiine/Oasisic-Icons
+          path: Oasisic-Icons
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: pip install pyyaml
+
+      - name: 🔄 执行同步（8 步串联）
+        run: python3 scripts/batch_update.py --no-commit
+        env:
+          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: 🔍 检查变更
+        id: check
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "🔄 检测到变更"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "⏸️ 无变更，跳过提交"
+          fi
+
+      - name: 📤 提交并推送
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "mihomo-bot"
+          git config user.email "bot@mihomo-rules"
+          git add ruleset/ configs/ scripts/
+          git commit -m "🔄 每日自动同步 $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          git pull --rebase origin ${{ github.ref_name }}
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: ⚠️ 工作流异常通知
+        if: failure() && env.MIHOMO_DISCORD_WEBHOOK != ''
+        env:
+          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 -c "
+          import urllib.request, json, os
+          wh = os.environ['MIHOMO_DISCORD_WEBHOOK']
+          url = os.environ['RUN_URL']
+          payload = {
+            'embeds': [{
+              'title': '⚠️ 同步工作流异常',
+              'color': 15844367,
+              'fields': [
+                {'name': '💥 状态', 'value': '工作流提前终止，请查看日志'},
+                {'name': '🔗 Actions', 'value': f'[查看日志]({url})'},
+              ],
+              'footer': {'text': 'mihomo-rules 自动同步'}
+            }]
+          }
+          data = json.dumps(payload).encode('utf-8')
+          req = urllib.request.Request(wh, data=data, headers={'Content-Type': 'application/json'})
+          urllib.request.urlopen(req, timeout=10)
+          " 2>/dev/null || true

@@ -27,6 +27,7 @@ SUB_PARENT = {
     'YouTubeMusic': 'YouTube',
     'AWS': 'Amazon',
     'PrimeVideo': 'Amazon',
+    'Hotstar': 'Disney',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
     'Instagram': 'Facebook',
@@ -227,10 +228,18 @@ def extract_system_groups(config_path):
             result.append(line)
             if '- name:' in line:
                 system_count += 1
-                if system_count >= len(SYSTEM_GROUPS):
+                if system_count > len(SYSTEM_GROUPS):
+                    result.pop()
                     result.append('')
                     break
-        return '\n'.join(result)
+        result_str = '\n'.join(result)
+        # 确保系统组完整（🐟 漏网之鱼 可能缺少属性）
+        if '  - name: "🐟 漏网之鱼"\n\n' in result_str:
+            result_str = result_str.replace(
+                '  - name: "🐟 漏网之鱼"\n\n',
+                '  - name: "🐟 漏网之鱼"\n    type: select\n    proxies:\n      - DIRECT\n      - "♻️ 自动选择"\n      - "🔧 手动切换"\n    use:\n      - provider1\n\n'
+            )
+        return result_str
     except Exception:
         return ''
 
@@ -305,7 +314,7 @@ def gen_rules(brand_info, variant):
     if is_full:
         lines.append('                                                    # ----- 1. 拦截 (最高优先级) -----')
     lines.append('  - RULE-SET,Reject,🛑 全球拦截')
-    
+
     # 段 2: 品牌分流
     if is_full:
         lines.append('')
@@ -315,7 +324,7 @@ def gen_rules(brand_info, variant):
         lines.append('                                                    # 全量 97 品牌, 按需取消注释即可')
         for bi in brand_info:
             lines.append(f'                                                    # - RULE-SET,{bi["key"]},{bi["sg"]}')
-    
+    # min 版：无品牌 RULE-SET（provider 已配置，按需自行添加）
     # 段 3: 应用程序直连
     lines.append('')
     if is_full:

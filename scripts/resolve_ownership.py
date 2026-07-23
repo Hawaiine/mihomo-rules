@@ -21,6 +21,7 @@ SUB_PARENT = {
     'YouTubeMusic': 'YouTube',
     'AWS': 'Amazon',
     'PrimeVideo': 'Amazon',
+    'Hotstar': 'Disney',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
     'Instagram': 'Facebook',
