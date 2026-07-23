@@ -62,7 +62,7 @@ def send_discord(title, color, fields, add_run_link=True):
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "footer": {
                 "text": "mihomo-rules · 每日自动同步",
-                "icon_url": "https://avatars.githubusercontent.com/u/152380613?v=4"
+                "icon_url": "https://github.com/Hawaiine.png"
             },
             "thumbnail": {
                 "url": "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Mihomo/Mihomo.png"
@@ -87,21 +87,32 @@ def send_discord(title, color, fields, add_run_link=True):
         log(f'⚠️ Discord 通知失败: {e}')
 
 
-def send_success(stats, elapsed):
+def send_success(stats, elapsed, updated_brands=None):
     """✅ 成功通知"""
     commit_short = GITHUB_SHA[:7] if GITHUB_SHA else '?'
+    fields = [
+        {"name": "📊 品牌统计", "value": f"99 品牌 | {stats.get('rules_total', '?')} 条规则", "inline": True},
+        {"name": "🔄 变更数", "value": str(stats.get('brands_updated', 0)), "inline": True},
+        {"name": "➕ 新增规则", "value": f"+{stats.get('rules_added', 0)} 条", "inline": True},
+        {"name": "➖ 移除规则", "value": f"-{stats.get('rules_removed', 0)} 条", "inline": True},
+        {"name": "⚙️ Config 更新", "value": f"{stats.get('configs_updated', 0)} 个", "inline": True},
+        {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
+        {"name": "🆔 提交", "value": f"`{commit_short}`", "inline": True},
+    ]
+    # 变更品牌 top10
+    if updated_brands:
+        top = updated_brands[:10]
+        if len(updated_brands) > 10:
+            top.append(f"等 {len(updated_brands) - 10} 个")
+        fields.insert(1, {
+            "name": "📝 变更品牌",
+            "value": " · ".join(top),
+            "inline": False,
+        })
     send_discord(
         "✅ 规则集同步成功",
         5763719,
-        [
-            {"name": "📊 品牌统计", "value": f"99 品牌 | {stats.get('rules_total', '?')} 条规则", "inline": True},
-            {"name": "🔄 变更品牌", "value": str(stats.get('brands_updated', 0)), "inline": True},
-            {"name": "➕ 新增规则", "value": f"+{stats.get('rules_added', 0)} 条", "inline": True},
-            {"name": "➖ 移除规则", "value": f"-{stats.get('rules_removed', 0)} 条", "inline": True},
-            {"name": "⚙️ Config 更新", "value": f"{stats.get('configs_updated', 0)} 个", "inline": True},
-            {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
-            {"name": "🆔 提交", "value": f"`{commit_short}`", "inline": True},
-        ]
+        fields,
     )
 
 
@@ -462,10 +473,26 @@ def main():
                 except ValueError:
                     pass
 
+        # 提取变更品牌名列表（从 git diff --name-only）
+        updated_brands = []
+        result_names = subprocess.run(
+            ['git', 'diff', '--name-only', '--', 'ruleset/'],
+            cwd=ROOT, capture_output=True, text=True
+        )
+        for line in result_names.stdout.strip().split('\n'):
+            parts = line.strip().split('/')
+            if len(parts) >= 2 and parts[0] == 'ruleset':
+                brand = parts[1]
+                if brand not in updated_brands:
+                    updated_brands.append(brand)
+        # 去重保序
+        seen = set()
+        updated_brands = [b for b in updated_brands if not (b in seen or seen.add(b))]
+
         # 8. 提交 + 推送（仅非 CI 模式）
         if no_commit:
             log('🧪 CI 模式，跳过提交，由 workflow 处理')
-            send_success(stats, elapsed)
+            send_success(stats, elapsed, updated_brands)
         else:
             commit_msg = f"🔄 每日自动同步 {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(['git', 'add', '-A'], cwd=ROOT)
@@ -476,7 +503,7 @@ def main():
             if push.returncode != 0:
                 rollback('git push', push.stderr[:200])
             log('✅ 提交并推送成功')
-            send_success(stats, elapsed)
+            send_success(stats, elapsed, updated_brands)
 
     except Exception as e:
         rollback('未知', f'{type(e).__name__}: {str(e)[:200]}')
