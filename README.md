@@ -202,8 +202,51 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 2️⃣106 品牌    Netflix/Bilibili 等（按需取消注释，放在国内前避免被GEOIP截胡）
 3️⃣ 直连    Applications(DIRECT) + LanCIDR/Private(DIRECT, 硬直连不可改)
 4️⃣ 国内IP  CNCIDR + GEOIP,CN → DIRECT
-5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
-6️⃣ 兜底    MATCH
+| 5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
+| 6️⃣ 兜底    MATCH
+```
+
+---
+
+## 📐 配置与命名约定
+
+### 命名两线
+
+每个品牌有两套名字，**不是**六处相同：
+
+| 线 | 用途 | 规则 | 示例 |
+|----|------|------|------|
+| **技术 ID**（无空格） | 目录名、文件名、rule-providers key、url/path 中的 Brand 段、RULE-SET 第一段 | `ruleset/<ID>/<ID>.yaml` | `AppleTV`、`PrimeVideo`、`myTVSuper` |
+| **显示名**（可有空格/符号） | 策略组名、`# Rule Name`、README 标题、RULE-SET 第二段 | `STRATEGY_GROUP_MAP` 中定义，无则 = ID | `Apple TV`、`Prime Video`、`myTV Super` |
+
+**RULE-SET 拼法：** `RULE-SET,<技术ID>,<显示名>`
+
+正确：`RULE-SET,AppleTV,Apple TV`
+错误：`RULE-SET,Apple TV,Apple TV`（第二段可以有空格，第一段不能）
+
+### 三套顺序（不同序是预期，集合不能变）
+
+| 区块 | 顺序规则 | 说明 |
+|------|---------|------|
+| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 系统组 11 个固定在前 |
+| **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
+| **rule-providers** | 7 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
+
+### 格式约定
+
+| 变体 | `rules:` 前 | `rules:` 后 |
+|------|------------|------------|
+| **full**（`config.yaml`） | 空行（与 `rule-providers` 段分隔） | 直接跟注释，无多余空行 |
+| **min**（`config.min.yaml`） | 无空行（紧接 `rule-providers` 段） | 直接跟规则，无多余空行 |
+
+### 校验与幂等
+
+```bash
+# 全量校验（10 项检查，失败 exit≠0）
+python3 scripts/verify_configs.py
+
+# 生成配置（幂等，无实质变化会 [=] 跳过）
+python3 scripts/generate_config.py
 ```
 
 ## 📋 近期更新
