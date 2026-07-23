@@ -362,12 +362,16 @@ def assemble_config(system_config, system_groups, proxy_groups, rule_providers, 
 
 
 def write_if_changed(path, content):
-    """幂等写入：无变化不写入"""
+    """幂等写入：无变化不写入（跳过 Updated: 时间戳噪音）"""
     path = Path(path)
     if path.exists():
         with open(path) as f:
-            if f.read() == content:
-                return False
+            existing = f.read()
+        # 比较时跳过 # Updated: 行
+        def strip_updated(t):
+            return '\n'.join(l for l in t.split('\n') if 'Updated:' not in l)
+        if strip_updated(existing) == strip_updated(content):
+            return False
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, 'w') as f:
         f.write(content)
@@ -418,12 +422,15 @@ def main():
         
         # 写入 /tmp 用于 diff
         tmp_path = Path(f'/tmp/{variant}.yaml')
-        write_if_changed(tmp_path, output)
-        # 自动复制到 configs/
-        import shutil
-        shutil.copy2(str(tmp_path), str(config_path))
-        print(f'[+] 生成 /tmp/{variant}.yaml')
-        print(f'    → 已同步到 {config_path}')
+        changed = write_if_changed(tmp_path, output)
+        if changed:
+            # 有实质变化才复制到 configs/
+            import shutil
+            shutil.copy2(str(tmp_path), str(config_path))
+            print(f'[+] 生成 /tmp/{variant}.yaml')
+            print(f'    → 已同步到 {config_path}')
+        else:
+            print(f'[=] 无变化，跳过: {variant}')
     
     print('\n=== 完成 ===')
     print('请对比 diff 后确认覆盖')
