@@ -25,16 +25,7 @@ SYSTEM_GROUPS = [
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
 ]
 
-SUB_PARENT = {
-    'AppleTV': 'Apple', 'SiriAI': 'Apple', 'iCloud': 'Apple',
-    'GoogleAI': 'Google', 'YouTube': 'Google', 'YouTubeMusic': 'YouTube',
-    'AWS': 'Amazon', 'PrimeVideo': 'Amazon',
-    'Hotstar': 'Disney',
-    'OneDrive': 'Microsoft', 'GitHub': 'Microsoft',
-    'Instagram': 'Facebook', 'Messenger': 'Facebook',
-    'WhatsApp': 'Facebook', 'Threads': 'Facebook',
-    'iCloudPrivateRelay': 'iCloud',
-}
+from lib.ownership_map import SUB_PARENT
 
 # 从 commit_writer.py 加载
 def load_sg_map():
