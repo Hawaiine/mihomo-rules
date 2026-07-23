@@ -1,7 +1,7 @@
 # ===========================================
 # Rule Name: Apple
 # Author: Hawaiine
-# Updated: 2026-07-23 19:59:44
+# Updated: 2026-07-24 06:47:30
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
 # DOMAIN: 11
@@ -1491,13 +1491,13 @@ payload:
   - IP-CIDR6,2a01:b740::/32,no-resolve
   - PROCESS-NAME,apsd
   - PROCESS-NAME,com.apple.geod
-  - PROCESS-NAME,com.apple.Maps
-  - PROCESS-NAME,CoreLocationAgent
+  - PROCESS-NAME,com.apple.maps
+  - PROCESS-NAME,corelocationagent
   - PROCESS-NAME,findmydevice-user-agent
   - PROCESS-NAME,fmfd
-  - PROCESS-NAME,LookupViewService
+  - PROCESS-NAME,lookupviewservice
   - PROCESS-NAME,mapspushd
-  - PROCESS-NAME,Music
+  - PROCESS-NAME,music
   - PROCESS-NAME,netbiosd
   - PROCESS-NAME,trustd
-  - PROCESS-NAME,WeatherWidget
+  - PROCESS-NAME,weatherwidget

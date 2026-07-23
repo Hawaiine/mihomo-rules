@@ -1,13 +1,13 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-07-23 19:59:44
+# Updated: 2026-07-24 06:47:30
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
 # DOMAIN: 107
 # DOMAIN-SUFFIX: 709
 # IP-CIDR: 2
-# IP-CIDR6: 5
+# IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 6
 # ===========================================
@@ -835,9 +835,9 @@ payload:
   - DOMAIN-SUFFIX,zynamics.com
   - IP-CIDR,173.194.0.0/16,no-resolve
   - IP-CIDR,74.125.0.0/16,no-resolve
-  - PROCESS-NAME,BackupandSync
+  - PROCESS-NAME,backupandsync
   - PROCESS-NAME,com.android.vending
   - PROCESS-NAME,com.google.android.gms
   - PROCESS-NAME,com.google.android.gsf
   - PROCESS-NAME,com.google.android.play.games
-  - PROCESS-NAME,GoogleDriveFS.exe
+  - PROCESS-NAME,googledrivefs.exe
