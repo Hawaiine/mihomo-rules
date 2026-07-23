@@ -1771,6 +1771,7 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
     interval: 86400
     path: ./ruleset/myTVSuper.yaml
+rules:
   - RULE-SET,Reject,🛑 全球拦截
 
   - RULE-SET,Applications,DIRECT

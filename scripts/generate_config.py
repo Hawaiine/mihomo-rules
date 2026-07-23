@@ -308,6 +308,7 @@ def gen_rules(brand_info, variant):
     is_nikki = 'nikki' in variant
     
     lines = []
+    lines.append('rules:')
     
     # 段 1: 拦截
     if is_full:
@@ -375,7 +376,7 @@ def assemble_config(system_config, system_groups, proxy_groups, rule_providers, 
     if 'min' in variant:
         # min 版：sections 之间单换行（system_groups 本身已带尾部换行）
         return system_config + system_groups + proxy_groups + '\n' + rule_providers + '\n' + rules
-    return system_config + system_groups + '\n' + proxy_groups + '\n' + rule_providers + '\n' + rules
+    return system_config + system_groups + '\n' + proxy_groups + '\n' + rule_providers + '\n\n' + rules
 
 
 def write_if_changed(path, content):
