@@ -41,6 +41,7 @@
 | 📊 **增量清洗** | 只处理本次同步变更过的品牌，非全量文件扫描 |
 | 🛡️ **格式校验** | 对 DOMAIN/DOMAIN-SUFFIX 域名格式做校验，异常报警不丢弃 |
 | 🔍 **异常量级检测** | 品牌规则量突增超过历史倍数时，CI 日志 + Discord 双通道报警 |
+| 🎯 **全球直连** | 新增策略组「🎯 全球直连」，rules/组内直连统一走别名，providers 拉取仍 DIRECT |
 | 🌐 **国内加速** | 内置 DNSPod/阿里 DNS 优先，国内 CDN 加速 geoip/geosite 数据库下载 |
 | 📝 **失败归档** | 失败 Action 保留排障线索 |
 
@@ -176,7 +177,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 ### 地区过滤 provider
 
-配置文件内置 5 个地区过滤 provider，填入与 `provider1` 相同的订阅地址即可自动归类节点：
+配置文件内置 21 个地区过滤 provider，填入与 `provider1` 相同的订阅地址即可自动归类节点：
 
 | Provider | Filter | 对应策略组 |
 |----------|--------|-----------|

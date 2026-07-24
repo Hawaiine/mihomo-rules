@@ -269,6 +269,198 @@ proxy-providers:
       url: https://cp.cloudflare.com/generate_204
       interval: 300
 
+  provider_kr:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_kr.yaml
+    proxy: DIRECT
+    filter: "(?i)(韩国|Korea|KR|KOR|Seoul|🇰🇷)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_gb:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_gb.yaml
+    proxy: DIRECT
+    filter: "(?i)(英国|UK|GB|GBR|London|England|🇬🇧)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_de:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_de.yaml
+    proxy: DIRECT
+    filter: "(?i)(德国|Germany|DE|DEU|Frankfurt|Munich|🇩🇪)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_fr:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_fr.yaml
+    proxy: DIRECT
+    filter: "(?i)(法国|France|FR|FRA|Paris|🇫🇷)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_ca:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_ca.yaml
+    proxy: DIRECT
+    filter: "(?i)(加拿大|Canada|CA|CAN|Toronto|Vancouver|🇨🇦)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_au:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_au.yaml
+    proxy: DIRECT
+    filter: "(?i)(澳大利亚|Australia|AU|AUS|Sydney|Melbourne|🇦🇺)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_in:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_in.yaml
+    proxy: DIRECT
+    filter: "(?i)(印度|India|IN|IND|Mumbai|Bangalore|🇮🇳)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_tr:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_tr.yaml
+    proxy: DIRECT
+    filter: "(?i)(土耳其|Turkey|TR|TUR|Istanbul|🇹🇷)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_ar:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_ar.yaml
+    proxy: DIRECT
+    filter: "(?i)(阿根廷|Argentina|AR|ARG|Buenos Aires|🇦🇷)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_br:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_br.yaml
+    proxy: DIRECT
+    filter: "(?i)(巴西|Brazil|BR|BRA|São Paulo|🇧🇷)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_ru:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_ru.yaml
+    proxy: DIRECT
+    filter: "(?i)(俄罗斯|Russia|RU|RUS|Moscow|St Petersburg|🇷🇺)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_my:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_my.yaml
+    proxy: DIRECT
+    filter: "(?i)(马来|Malaysia|MY|MYS|Kuala Lumpur|🇲🇾)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_th:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_th.yaml
+    proxy: DIRECT
+    filter: "(?i)(泰国|Thailand|TH|THA|Bangkok|🇹🇭)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_vn:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_vn.yaml
+    proxy: DIRECT
+    filter: "(?i)(越南|Vietnam|VN|VNM|Ho Chi Minh|🇻🇳)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_ph:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_ph.yaml
+    proxy: DIRECT
+    filter: "(?i)(菲律宾|Philippines|PH|PHL|Manila|🇵🇭)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
+  provider_id:
+    type: http
+    url: "此处填入你的订阅链接"
+    interval: 86400
+    path: ./providers/provider_id.yaml
+    proxy: DIRECT
+    filter: "(?i)(印尼|Indonesia|ID|IDN|Jakarta|🇮🇩)"
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com/generate_204
+      interval: 300
+
 proxy-groups:
   - name: "♻️ 自动选择"
     type: url-test
@@ -278,6 +470,22 @@ proxy-groups:
       - "🇺🇸 美国节点"
       - "🇸🇬 新加坡节点"
       - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
     url: "https://cp.cloudflare.com/generate_204"
     interval: 300
     tolerance: 50
@@ -286,43 +494,160 @@ proxy-groups:
   - name: "🇭🇰 香港节点"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
     use:
       - provider_hk
 
   - name: "🇯🇵 日本节点"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
     use:
       - provider_jp
 
   - name: "🇺🇸 美国节点"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
     use:
       - provider_us
 
   - name: "🇸🇬 新加坡节点"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
     use:
       - provider_sg
 
   - name: "🇹🇼 台湾节点"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
     use:
       - provider_tw
+
+  - name: "🇰🇷 韩国节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_kr
+
+  - name: "🇬🇧 英国节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_gb
+
+  - name: "🇩🇪 德国节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_de
+
+  - name: "🇫🇷 法国节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_fr
+
+  - name: "🇨🇦 加拿大节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_ca
+
+  - name: "🇦🇺 澳大利亚节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_au
+
+  - name: "🇮🇳 印度节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_in
+
+  - name: "🇹🇷 土耳其节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_tr
+
+  - name: "🇦🇷 阿根廷节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_ar
+
+  - name: "🇧🇷 巴西节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_br
+
+  - name: "🇷🇺 俄罗斯节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_ru
+
+  - name: "🇲🇾 马来西亚节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_my
+
+  - name: "🇹🇭 泰国节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_th
+
+  - name: "🇻🇳 越南节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_vn
+
+  - name: "🇵🇭 菲律宾节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_ph
+
+  - name: "🇮🇩 印尼节点"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+    use:
+      - provider_id
 
   - name: "🛑 全球拦截"
     type: select
     proxies:
       - DIRECT
       - REJECT
+
+  - name: "🎯 全球直连"
+    type: select
+    proxies:
+      - DIRECT
 
   - name: "🔧 手动切换"
     type: select
@@ -355,7 +680,7 @@ proxy-groups:
   - name: "🐟 漏网之鱼"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -364,7 +689,7 @@ proxy-groups:
   - name: "AWS"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -373,7 +698,7 @@ proxy-groups:
   - name: "Prime Video"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -382,7 +707,7 @@ proxy-groups:
   - name: "Amazon"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -391,7 +716,7 @@ proxy-groups:
   - name: "iCloud Private Relay"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -399,7 +724,7 @@ proxy-groups:
   - name: "Apple TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -408,7 +733,7 @@ proxy-groups:
   - name: "Siri AI"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -417,7 +742,7 @@ proxy-groups:
   - name: "iCloud"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -426,7 +751,7 @@ proxy-groups:
   - name: "Apple"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -435,7 +760,7 @@ proxy-groups:
   - name: "Hotstar"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -444,7 +769,7 @@ proxy-groups:
   - name: "Disney"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -453,7 +778,7 @@ proxy-groups:
   - name: "Instagram"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -462,7 +787,7 @@ proxy-groups:
   - name: "Messenger"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -471,7 +796,7 @@ proxy-groups:
   - name: "Threads"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -480,7 +805,7 @@ proxy-groups:
   - name: "WhatsApp"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -489,7 +814,7 @@ proxy-groups:
   - name: "Facebook"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -498,7 +823,7 @@ proxy-groups:
   - name: "YouTube Music"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -507,7 +832,7 @@ proxy-groups:
   - name: "Google AI"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -516,7 +841,7 @@ proxy-groups:
   - name: "YouTube"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -525,7 +850,7 @@ proxy-groups:
   - name: "Google"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -534,7 +859,7 @@ proxy-groups:
   - name: "GitHub"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -543,7 +868,7 @@ proxy-groups:
   - name: "OneDrive"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -552,7 +877,7 @@ proxy-groups:
   - name: "Microsoft"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -561,7 +886,7 @@ proxy-groups:
   - name: "AbemaTV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -570,7 +895,7 @@ proxy-groups:
   - name: "Anthropic"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -579,7 +904,7 @@ proxy-groups:
   - name: "Bahamut"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -588,7 +913,7 @@ proxy-groups:
   - name: "Bangumi"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -596,7 +921,7 @@ proxy-groups:
   - name: "Bank"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -604,7 +929,7 @@ proxy-groups:
   - name: "Bilibili"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -613,7 +938,7 @@ proxy-groups:
   - name: "Bluesky"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -622,7 +947,7 @@ proxy-groups:
   - name: "CATCHPLAY+"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -631,7 +956,7 @@ proxy-groups:
   - name: "Cloudflare"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -640,7 +965,7 @@ proxy-groups:
   - name: "Cursor"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -648,7 +973,7 @@ proxy-groups:
   - name: "D Anime Store"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -656,7 +981,7 @@ proxy-groups:
   - name: "DAZN"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -665,7 +990,7 @@ proxy-groups:
   - name: "DMM TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -674,7 +999,7 @@ proxy-groups:
   - name: "Deezer"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -683,7 +1008,7 @@ proxy-groups:
   - name: "Discord"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -692,7 +1017,7 @@ proxy-groups:
   - name: "Docker"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -701,7 +1026,7 @@ proxy-groups:
   - name: "F1 TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -710,7 +1035,7 @@ proxy-groups:
   - name: "Fuji TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -718,7 +1043,7 @@ proxy-groups:
   - name: "Game Japan"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -726,7 +1051,7 @@ proxy-groups:
   - name: "General AI"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -735,7 +1060,7 @@ proxy-groups:
   - name: "HBO"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -744,7 +1069,7 @@ proxy-groups:
   - name: "HOY TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -753,7 +1078,7 @@ proxy-groups:
   - name: "Hami Video"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -762,7 +1087,7 @@ proxy-groups:
   - name: "Hulu"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -771,7 +1096,7 @@ proxy-groups:
   - name: "KKTV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -780,7 +1105,7 @@ proxy-groups:
   - name: "Karaoke@DAM"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -788,7 +1113,7 @@ proxy-groups:
   - name: "LINE TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -797,7 +1122,7 @@ proxy-groups:
   - name: "Lemino"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -805,7 +1130,7 @@ proxy-groups:
   - name: "LiTV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -814,7 +1139,7 @@ proxy-groups:
   - name: "Manus"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -822,7 +1147,7 @@ proxy-groups:
   - name: "MetaBrainz"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -830,7 +1155,7 @@ proxy-groups:
   - name: "Mora"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -838,7 +1163,7 @@ proxy-groups:
   - name: "Music Japan"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -846,7 +1171,7 @@ proxy-groups:
   - name: "Musixmatch"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -854,7 +1179,7 @@ proxy-groups:
   - name: "MyVideo"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -863,7 +1188,7 @@ proxy-groups:
   - name: "NHK"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -871,7 +1196,7 @@ proxy-groups:
   - name: "Netflix"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -880,7 +1205,7 @@ proxy-groups:
   - name: "Niconico"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -889,7 +1214,7 @@ proxy-groups:
   - name: "Nintendo"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -898,7 +1223,7 @@ proxy-groups:
   - name: "Now E"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -907,7 +1232,7 @@ proxy-groups:
   - name: "OpenAI"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -916,7 +1241,7 @@ proxy-groups:
   - name: "PT"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -924,7 +1249,7 @@ proxy-groups:
   - name: "PT China"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -932,7 +1257,7 @@ proxy-groups:
   - name: "PayPal"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -941,7 +1266,7 @@ proxy-groups:
   - name: "Perplexity"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -950,7 +1275,7 @@ proxy-groups:
   - name: "Pinterest"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -959,7 +1284,7 @@ proxy-groups:
   - name: "Pixiv"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -968,7 +1293,7 @@ proxy-groups:
   - name: "Podcast"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -977,7 +1302,7 @@ proxy-groups:
   - name: "Poe"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -986,7 +1311,7 @@ proxy-groups:
   - name: "Porn"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -994,7 +1319,7 @@ proxy-groups:
   - name: "Porn China"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1002,7 +1327,7 @@ proxy-groups:
   - name: "Qobuz"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1011,7 +1336,7 @@ proxy-groups:
   - name: "Radiko"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1019,7 +1344,7 @@ proxy-groups:
   - name: "Rakuten TV"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1027,7 +1352,7 @@ proxy-groups:
   - name: "Reads Japan"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1035,7 +1360,7 @@ proxy-groups:
   - name: "Reddit"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1044,7 +1369,7 @@ proxy-groups:
   - name: "Spotify"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1053,7 +1378,7 @@ proxy-groups:
   - name: "Steam"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1062,7 +1387,7 @@ proxy-groups:
   - name: "Synology"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1071,7 +1396,7 @@ proxy-groups:
   - name: "TMDB"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1080,7 +1405,7 @@ proxy-groups:
   - name: "TVer"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1089,7 +1414,7 @@ proxy-groups:
   - name: "Telasa"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1097,7 +1422,7 @@ proxy-groups:
   - name: "Telegram"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1106,7 +1431,7 @@ proxy-groups:
   - name: "Tidal"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1115,7 +1440,7 @@ proxy-groups:
   - name: "TikTok"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1124,7 +1449,7 @@ proxy-groups:
   - name: "Tubi"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1132,7 +1457,7 @@ proxy-groups:
   - name: "Twitch"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1141,7 +1466,7 @@ proxy-groups:
   - name: "U-NEXT"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1149,7 +1474,7 @@ proxy-groups:
   - name: "Video Market"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1158,7 +1483,7 @@ proxy-groups:
   - name: "Viu"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1167,7 +1492,7 @@ proxy-groups:
   - name: "WOWOW"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1175,7 +1500,7 @@ proxy-groups:
   - name: "WSJ"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1183,7 +1508,7 @@ proxy-groups:
   - name: "Wallpaper"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1192,7 +1517,7 @@ proxy-groups:
   - name: "X"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1201,7 +1526,7 @@ proxy-groups:
   - name: "Z-Library"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1210,7 +1535,7 @@ proxy-groups:
   - name: "friDay video"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1219,7 +1544,7 @@ proxy-groups:
   - name: "myTV Super"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
     use:
@@ -1972,16 +2297,16 @@ rules:
                                                     # - RULE-SET,myTVSuper,myTV Super
 
                                                     # ----- 3. 应用程序直连 (进程匹配, 如迅雷/QQ/微信等不走代理) -----
-  - RULE-SET,Applications,DIRECT
+  - RULE-SET,Applications,🎯 全球直连
 
                                                     # ----- 4. 局域网 & 直连 -----
-  - RULE-SET,LanCIDR,DIRECT
-  - RULE-SET,Private,DIRECT
-  - RULE-SET,Direct,DIRECT
+  - RULE-SET,LanCIDR,🎯 全球直连
+  - RULE-SET,Private,🎯 全球直连
+  - RULE-SET,Direct,🎯 全球直连
 
                                                     # ----- 5. 国内 IP (GeoIP 放最后, 兜底国内流量) -----
-  - RULE-SET,CNCIDR,DIRECT
-  - GEOIP,CN,DIRECT
+  - RULE-SET,CNCIDR,🎯 全球直连
+  - GEOIP,CN,🎯 全球直连
 
                                                     # ----- 6. 代理 (国际流量) -----
   - RULE-SET,Proxy,🔧 手动切换

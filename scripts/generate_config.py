@@ -19,6 +19,9 @@ BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCI
 
 from lib.ownership_map import SUB_PARENT
 
+# 🎯 全球直连别名（无引号，供 rules 直接拼接；groups 中自行加引号）
+GLOBAL_DIRECT_PROXY = '🎯 全球直连'
+
 # 基础 provider 配置
 BASE_PROVIDERS = {
     'Reject':       'domain',
@@ -32,8 +35,29 @@ BASE_PROVIDERS = {
 
 # 系统组名称列表
 SYSTEM_GROUPS = [
-    '♻️ 自动选择', '🇭🇰 香港节点', '🇯🇵 日本节点', '🇺🇸 美国节点',
-    '🇸🇬 新加坡节点', '🇹🇼 台湾节点', '🛑 全球拦截', '🔧 手动切换',
+    '♻️ 自动选择',
+    '🇭🇰 香港节点',
+    '🇯🇵 日本节点',
+    '🇺🇸 美国节点',
+    '🇸🇬 新加坡节点',
+    '🇹🇼 台湾节点',
+    '🇰🇷 韩国节点',
+    '🇬🇧 英国节点',
+    '🇩🇪 德国节点',
+    '🇫🇷 法国节点',
+    '🇨🇦 加拿大节点',
+    '🇦🇺 澳大利亚节点',
+    '🇮🇳 印度节点',
+    '🇹🇷 土耳其节点',
+    '🇦🇷 阿根廷节点',
+    '🇧🇷 巴西节点',
+    '🇷🇺 俄罗斯节点',
+    '🇲🇾 马来西亚节点',
+    '🇹🇭 泰国节点',
+    '🇻🇳 越南节点',
+    '🇵🇭 菲律宾节点',
+    '🇮🇩 印尼节点',
+    '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
 ]
 
@@ -191,8 +215,9 @@ def extract_icons(config_path, sg_map):
     return icons
 
 
-def extract_system_groups(config_path):
-    """从现有 config 提取系统组 YAML 文本（含 proxy-groups: 标题）"""
+def extract_system_groups(config_path, compact=False):
+    """从现有 config 提取系统组 YAML 文本（含 proxy-groups: 标题）
+    compact=True 时移除相邻组之间的空行（min 版使用）"""
     if not os.path.exists(config_path):
         return ''
     try:
@@ -207,6 +232,10 @@ def extract_system_groups(config_path):
         result = []
         system_count = 0
         for line in lines:
+            # 跳过重复的 proxy-groups: 行（模板中可能出现连续两行）
+            if line.strip() == 'proxy-groups:' and system_count == 0:
+                if result and result[-1].strip() == 'proxy-groups:':
+                    continue
             result.append(line)
             if '- name:' in line:
                 system_count += 1
@@ -218,15 +247,29 @@ def extract_system_groups(config_path):
         if '  - name: "🐟 漏网之鱼"\n\n' in result_str:
             result_str = result_str.replace(
                 '  - name: "🐟 漏网之鱼"\n\n',
-                '  - name: "🐟 漏网之鱼"\n    type: select\n    proxies:\n      - DIRECT\n      - "♻️ 自动选择"\n      - "🔧 手动切换"\n    use:\n      - provider1\n'
+                '  - name: "🐟 漏网之鱼"\n    type: select\n    proxies:\n      - "🎯 全球直连"\n      - "♻️ 自动选择"\n      - "🔧 手动切换"\n    use:\n      - provider1\n'
             )
+        # compact 模式：移除相邻组之间的空行
+        if compact:
+            lines = result_str.split('\n')
+            compact_lines = []
+            for i, line in enumerate(lines):
+                if line.strip() == '':
+                    if i > 0 and i < len(lines) - 1:
+                        prev = lines[i - 1].strip() if i > 0 else ''
+                        nxt = lines[i + 1].strip() if i < len(lines) - 1 else ''
+                        if prev.startswith('proxy-groups:') or nxt.startswith('- name:'):
+                            continue
+                compact_lines.append(line)
+            result_str = '\n'.join(compact_lines)
         return result_str.rstrip('\n') + '\n'
     except Exception:
         return ''
 
 
-def extract_system_config(config_path):
-    """提取系统配置（从文件开头到 proxy-providers 结束）"""
+def extract_system_config(config_path, compact=False):
+    """提取系统配置（从文件开头到 proxy-groups 结束）
+    compact=True 时移除 proxy-providers 段中 provider 块之间的空行和重复注释（min 版使用）"""
     if not os.path.exists(config_path):
         return ''
     try:
@@ -234,8 +277,41 @@ def extract_system_config(config_path):
             content = f.read()
         idx = content.find('proxy-groups:')
         if idx >= 0:
-            return content[:idx]
-        return content
+            result = content[:idx]
+        else:
+            result = content
+        if compact and 'proxy-providers:' in result:
+            # 在 proxy-providers 段中移除 provider 块之间的空行和重复注释
+            pp_start = result.find('proxy-providers:')
+            before_pp = result[:pp_start]
+            pp_section = result[pp_start:]
+            # 移除重复的 "地区过滤提供者" 注释块（连续相同的注释行）
+            pp_section = re.sub(
+                r'(                                                    # ----- 地区过滤提供者[^\n]*\n'
+                r'                                                    # 启用后[^\n]*\n'
+                r')'
+                r'                                                    # ----- 地区过滤提供者[^\n]*\n',
+                r'\1',
+                pp_section
+            )
+            # 移除 provider 块之间的空行（空行后紧跟缩进 2 空格的 key）
+            pp_section = re.sub(r'\n\n(  \w+:)', r'\n\1', pp_section)
+            result = before_pp + pp_section
+        elif 'proxy-providers:' in result:
+            # 非 compact 模式：仍然移除重复注释（P1 bug），保留空行
+            pp_start = result.find('proxy-providers:')
+            before_pp = result[:pp_start]
+            pp_section = result[pp_start:]
+            pp_section = re.sub(
+                r'(                                                    # ----- 地区过滤提供者[^\n]*\n'
+                r'                                                    # 启用后[^\n]*\n'
+                r')'
+                r'                                                    # ----- 地区过滤提供者[^\n]*\n',
+                r'\1',
+                pp_section
+            )
+            result = before_pp + pp_section
+        return result
     except Exception:
         return ''
 
@@ -249,7 +325,7 @@ def gen_proxy_groups(brand_info, icons):
         lines.append(f'  - name: "{bi["sg"]}"')
         lines.append('    type: select')
         lines.append('    proxies:')
-        lines.append('      - DIRECT')
+        lines.append(f'      - \"{GLOBAL_DIRECT_PROXY}\"')
         lines.append('      - "♻️ 自动选择"')
         lines.append('      - "🔧 手动切换"')
         lines.append('    use:')
@@ -313,14 +389,14 @@ def gen_rules(brand_info, variant):
     if is_full:
         if is_nikki:
             lines.append('                                                    # ----- 3. 应用程序直连 (Nikki 跳过: find-process-mode: off, 进程规则无效) -----')
-            lines.append('                                                    # - RULE-SET,Applications,DIRECT')
+            lines.append(f'                                                    # - RULE-SET,Applications,{GLOBAL_DIRECT_PROXY}')
         else:
             lines.append('                                                    # ----- 3. 应用程序直连 (进程匹配, 如迅雷/QQ/微信等不走代理) -----')
-            lines.append('  - RULE-SET,Applications,DIRECT')
+            lines.append(f'  - RULE-SET,Applications,{GLOBAL_DIRECT_PROXY}')
     else:
         # min 版
         if not is_nikki:
-            lines.append('  - RULE-SET,Applications,DIRECT')
+            lines.append(f'  - RULE-SET,Applications,{GLOBAL_DIRECT_PROXY}')
         # Nikki min 跳过 Applications
     
     # 段 4: 局域网 & 直连
@@ -328,17 +404,17 @@ def gen_rules(brand_info, variant):
         lines.append('')
     if is_full:
         lines.append('                                                    # ----- 4. 局域网 & 直连 -----')
-    lines.append('  - RULE-SET,LanCIDR,DIRECT')
-    lines.append('  - RULE-SET,Private,DIRECT')
-    lines.append('  - RULE-SET,Direct,DIRECT')
+    lines.append(f'  - RULE-SET,LanCIDR,{GLOBAL_DIRECT_PROXY}')
+    lines.append(f'  - RULE-SET,Private,{GLOBAL_DIRECT_PROXY}')
+    lines.append(f'  - RULE-SET,Direct,{GLOBAL_DIRECT_PROXY}')
     
     # 段 5: 国内 IP
     if is_full:
         lines.append('')
     if is_full:
         lines.append('                                                    # ----- 5. 国内 IP (GeoIP 放最后, 兜底国内流量) -----')
-    lines.append('  - RULE-SET,CNCIDR,DIRECT')
-    lines.append('  - GEOIP,CN,DIRECT')
+    lines.append(f'  - RULE-SET,CNCIDR,{GLOBAL_DIRECT_PROXY}')
+    lines.append(f'  - GEOIP,CN,{GLOBAL_DIRECT_PROXY}')
     
     # 段 6: 代理
     if is_full:
@@ -421,8 +497,9 @@ def main():
     }
     
     for variant, (config_path, platform) in variants.items():
-        system_config = extract_system_config(str(config_path))
-        system_groups = extract_system_groups(str(config_path))
+        is_min = 'min' in variant
+        system_config = extract_system_config(str(config_path), compact=is_min)
+        system_groups = extract_system_groups(str(config_path), compact=is_min)
         rules = gen_rules(brand_info, variant)
         output = assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules, variant)
         

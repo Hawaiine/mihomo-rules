@@ -18,10 +18,31 @@ VARIANTS = ['android_full', 'android_min', 'nikki_full', 'nikki_min']
 # 基础 provider (7)
 BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR'}
 
-# 系统组 (11)
+# 系统组 (28)
 SYSTEM_GROUPS = [
-    '♻️ 自动选择', '🇭🇰 香港节点', '🇯🇵 日本节点', '🇺🇸 美国节点',
-    '🇸🇬 新加坡节点', '🇹🇼 台湾节点', '🛑 全球拦截', '🔧 手动切换',
+    '♻️ 自动选择',
+    '🇭🇰 香港节点',
+    '🇯🇵 日本节点',
+    '🇺🇸 美国节点',
+    '🇸🇬 新加坡节点',
+    '🇹🇼 台湾节点',
+    '🇰🇷 韩国节点',
+    '🇬🇧 英国节点',
+    '🇩🇪 德国节点',
+    '🇫🇷 法国节点',
+    '🇨🇦 加拿大节点',
+    '🇦🇺 澳大利亚节点',
+    '🇮🇳 印度节点',
+    '🇹🇷 土耳其节点',
+    '🇦🇷 阿根廷节点',
+    '🇧🇷 巴西节点',
+    '🇷🇺 俄罗斯节点',
+    '🇲🇾 马来西亚节点',
+    '🇹🇭 泰国节点',
+    '🇻🇳 越南节点',
+    '🇵🇭 菲律宾节点',
+    '🇮🇩 印尼节点',
+    '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
 ]
 
@@ -132,9 +153,9 @@ def check_rules_blank_line_before(lines, variant):
     return False
 
 def check_proxy_groups_count(lines, variant):
-    """proxy-groups 总数 = 110 (11 系统 + 99 品牌)"""
+    """proxy-groups 总数 = 127 (28 系统 + 99 品牌)"""
     names = extract_proxy_group_names(lines)
-    expected = 11 + len(ALL_BRANDS)
+    expected = 28 + len(ALL_BRANDS)
     if len(names) != expected:
         print(f'  FAIL: {variant} — proxy-groups={len(names)}, expected {expected}')
         return False
@@ -150,7 +171,7 @@ def check_rule_providers_count(lines, variant):
     return True
 
 def check_system_groups_first(names, variant):
-    """前 11 组必须是系统组"""
+    """前 28 组必须是系统组"""
     for i, sg in enumerate(SYSTEM_GROUPS):
         if i >= len(names) or names[i] != sg:
             print(f'  FAIL: {variant} — system group #{i} expected "{sg}", got "{names[i] if i < len(names) else "N/A"}"')
@@ -159,7 +180,7 @@ def check_system_groups_first(names, variant):
 
 def check_brand_set_equality(names, variant):
     """品牌组集合必须与 BRAND_DISPLAYS 全等"""
-    brand_names = set(names[11:])  # skip 11 system groups
+    brand_names = set(names[28:])  # skip 28 system groups
     only_old = brand_names - BRAND_DISPLAYS
     only_new = BRAND_DISPLAYS - brand_names
     if only_old or only_new:
@@ -173,7 +194,7 @@ def check_brand_set_equality(names, variant):
 
 def check_sub_parent_order(names, variant):
     """子品牌必须在父品牌前"""
-    brand_names = names[11:]
+    brand_names = names[28:]
     for child, parent in SUB_PARENT.items():
         child_display = get_display(child)
         parent_display = get_display(parent)
@@ -191,7 +212,7 @@ def check_naming_consistency(lines, variant):
     providers = extract_rule_provider_keys(lines)
     provider_set = set(providers)
     names = extract_proxy_group_names(lines)
-    brand_names = names[11:]  # skip system groups
+    brand_names = names[28:]  # skip 28 system groups
 
     errors = []
     for line in lines:
@@ -203,7 +224,7 @@ def check_naming_consistency(lines, variant):
                 errors.append(f'  RULE-SET,{pkey},{sg} — provider key "{pkey}" not in rule-providers')
             if sg not in brand_names and sg not in SYSTEM_GROUPS:
                 # 可能是 DIRECT/REJECT
-                if sg not in ('DIRECT', 'REJECT', '🛑 全球拦截', '🔧 手动切换', '🐟 漏网之鱼'):
+                if sg not in ('DIRECT', 'REJECT', '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换', '🐟 漏网之鱼'):
                     errors.append(f'  RULE-SET,{pkey},{sg} — strategy group "{sg}" not in proxy-groups')
 
     if errors:
@@ -274,7 +295,7 @@ def check_full_comment_order(lines, variant):
     if 'full' not in variant:
         return True  # min 版无注释，跳过
     names = extract_proxy_group_names(lines)
-    brand_names = names[11:]  # skip system groups
+    brand_names = names[28:]  # skip 28 system groups
 
     # 提取 # - RULE-SET 注释行中的策略组名
     commented_sgs = []
@@ -329,6 +350,165 @@ def check_min_rules_no_blank_lines(lines, variant):
     return True
 
 
+def check_proxy_groups_key_once(lines, variant):
+    """全文 proxy-groups: 出现次数 = 1"""
+    count = sum(1 for line in lines if line.strip().startswith('proxy-groups:'))
+    if count != 1:
+        print(f'  FAIL: {variant} — proxy-groups: appears {count} times, expected 1')
+        return False
+    return True
+
+
+def check_min_proxy_groups_no_blank_lines(lines, variant):
+    """min 版 proxy-groups 中相邻 - name: 块之间无空行"""
+    if 'full' in variant:
+        return True
+    in_groups = False
+    prev_blank = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('proxy-groups:'):
+            in_groups = True
+            continue
+        if in_groups:
+            if stripped == '':
+                prev_blank = True
+                continue
+            if not line.startswith(' ') and not line.startswith('#'):
+                break  # 退出 proxy-groups 段
+            if stripped.startswith('- name:'):
+                if prev_blank:
+                    print(f'  FAIL: {variant} — blank line before "- name: {stripped}" in proxy-groups')
+                    return False
+            prev_blank = False
+    return True
+
+
+def check_min_proxy_providers_no_blank_lines(lines, variant):
+    """min 版 proxy-providers 中相邻顶级 provider key 之间无空行"""
+    if 'full' in variant:
+        return True
+    in_providers = False
+    prev_blank = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('proxy-providers:'):
+            in_providers = True
+            continue
+        if in_providers:
+            if stripped == '':
+                # 跳过注释行后的空行
+                prev_blank = True
+                continue
+            if not line.startswith(' '):
+                break  # 退出 proxy-providers 段
+            m = re.match(r'^  (\w+)', line)
+            if m:
+                if prev_blank:
+                    print(f'  FAIL: {variant} — blank line before provider "{m.group(1)}" in proxy-providers')
+                    return False
+            prev_blank = False
+    return True
+
+
+def check_rules_no_quoted_strategy(lines, variant):
+    """rules 激活行出站策略名不得有引号（如 ,"🎯 全球直连" 应为 ,🎯 全球直连）"""
+    in_rules = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('rules:'):
+            in_rules = True
+            continue
+        if in_rules:
+            if not stripped or stripped.startswith('#'):
+                continue
+            if not stripped.startswith('- '):
+                break
+            # 检查激活行（非注释）是否包含 ,"🎯 或 ,"🛑
+            if stripped.startswith('- RULE-SET,') or stripped.startswith('- GEOIP,') or stripped.startswith('- MATCH,'):
+                if ',"🎯' in stripped or ',"🛑' in stripped or ',"🐟' in stripped or ',"🔧' in stripped:
+                    print(f'  FAIL: {variant} — quoted strategy name in rule: {stripped}')
+                    return False
+    return True
+
+
+
+def check_no_literal_direct_in_rules(lines, variant):
+    """rules 段中出站规则不得出现字面 DIRECT"""
+    in_rules = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('rules:'):
+            in_rules = True
+            continue
+        if in_rules:
+            if stripped and stripped != '' and not line.startswith(' ') and not line.startswith('#') and not stripped.startswith('-'):
+                break
+            if stripped.startswith('#'):
+                continue
+            if stripped.startswith('- ') and ',DIRECT' in stripped:
+                # Check if it's a RULE-SET or GEOIP rule (not a proxy-groups entry)
+                parts = stripped.split(',', 2)
+                if len(parts) >= 3 and parts[2].strip() == 'DIRECT':
+                    print(f'  FAIL: {variant} — literal DIRECT in rules: {stripped}')
+                    return False
+    return True
+
+
+def check_use_provider_exists(lines, variant):
+    """每个 use 引用的 provider 必须在 proxy-providers 段有定义"""
+    # Collect all provider keys from proxy-providers
+    providers = set()
+    in_providers = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('proxy-providers:'):
+            in_providers = True
+            continue
+        if in_providers:
+            if stripped == '':
+                continue
+            if not line.startswith(' ') and not line.startswith('#'):
+                break
+            m = re.match(r'^\s{2}(\w+)', line)
+            if m:
+                providers.add(m.group(1))
+
+    # Collect all use references from proxy-groups (only unquoted provider keys)
+    use_refs = set()
+    in_groups = False
+    in_use = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('proxy-groups:'):
+            in_groups = True
+            continue
+        if in_groups:
+            if stripped == '':
+                in_use = False
+                continue
+            if not line.startswith(' ') and not line.startswith('#'):
+                break
+            if stripped == 'use:':
+                in_use = True
+                continue
+            if in_use and stripped.startswith('- '):
+                val = stripped[2:].strip()
+                # Only accept bare provider keys (no quotes), skip group name refs
+                if val and not val.startswith('"') and not val.startswith("'"):
+                    use_refs.add(val)
+
+    # Check every use reference exists in providers
+    missing = []
+    for ref in sorted(use_refs):
+        if ref not in providers:
+            missing.append(ref)
+            print(f'  FAIL: {variant} — use reference "{ref}" not defined in proxy-providers')
+
+    if missing:
+        return False
+    return True
+
 def check_cross_variant_rules(configs, all_lines):
     """同平台 full vs min 激活规则列表必须全等"""
     platforms = {
@@ -353,7 +533,7 @@ def check_cross_variant_rules(configs, all_lines):
 
 def print_order_summary(names, variant):
     """打印品牌组顺序摘要"""
-    brand_names = names[11:]
+    brand_names = names[28:]  # skip 28 system groups
     print(f'  ORDER: {variant} — {len(brand_names)} brands')
     # 显示前 5 和后 5
     print(f'    first 5: {brand_names[:5]}')
@@ -416,6 +596,11 @@ def main():
             ('rule-providers base order', check_rule_providers_base_order(lines, variant)),
             ('full comment RULE-SET order', check_full_comment_order(lines, variant)),
             ('min rules no blank lines', check_min_rules_no_blank_lines(lines, variant)),
+            ('no literal DIRECT in rules', check_no_literal_direct_in_rules(lines, variant)),
+            ('proxy-groups: key once', check_proxy_groups_key_once(lines, variant)),
+            ('min proxy-groups no blank lines', check_min_proxy_groups_no_blank_lines(lines, variant)),
+            ('min proxy-providers no blank lines', check_min_proxy_providers_no_blank_lines(lines, variant)),
+            ('rules no quoted strategy', check_rules_no_quoted_strategy(lines, variant)),
         ]
 
         variant_pass = all(r for _, r in checks)
