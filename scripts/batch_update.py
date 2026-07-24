@@ -501,6 +501,17 @@ def main():
             # 注：不回滚，ruleset 变更保留，问题修复后可手动提交
             return
 
+        # 8b. 校验 ruleset 一致性（verify_rulesets 失败则不提交）
+        rulesets_result = subprocess.run(
+            [sys.executable, 'scripts/verify_rulesets.py'],
+            cwd=ROOT, capture_output=True, text=True, timeout=120
+        )
+        if rulesets_result.returncode != 0:
+            log('❌ verify_rulesets 未通过，终止提交')
+            log(rulesets_result.stdout[-500:] if rulesets_result.stdout else '')
+            send_failure('verify_rulesets', 'verify_rulesets.py 校验未通过，已阻止提交')
+            return
+
         # 9. 提交 + 推送（仅非 CI 模式）
         if no_commit:
             log('🧪 CI 模式，跳过提交，由 workflow 处理')

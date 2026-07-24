@@ -308,6 +308,13 @@ def write_ruleset(
     }
 
     if dry_run:
+        # 在 dry-run 中也应用 Updated 过滤
+        if diff.strip():
+            meaningful_lines = [l for l in diff.split('\n')
+                              if l and (l.startswith('-') or l.startswith('+'))
+                              and not l.startswith('---') and not l.startswith('+++')
+                              and 'Updated:' not in l]
+            stats['has_changes'] = bool(meaningful_lines)
         return WriteResult(
             success=True,
             diff=diff,
