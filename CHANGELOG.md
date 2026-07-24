@@ -36,6 +36,7 @@
 - Apple/Amazon/Disney 等品牌 README 统计与 payload 不一致（逐品牌仅一次纠偏）
 - 日更噪音：仅 `# Updated:` 变化不再产生写入/提交；CI 提交前过滤仅 Updated 噪音
 - 提交步：暂存区为空时跳过 commit/push，防止 `git commit || echo` 后仍 rebase+push
+- daily-sync 过滤改为始终运行 + `while IFS=` 安全逐行读路径；filter/check/commit 使用 `set -euo pipefail`；`if:` 条件从 filter 移到 check，滤噪后 check 决定 changed
 
 ### Removed
 - **MusicJp.yaml** — 删除 `ruleset/MusicJapan/MusicJp.yaml` 残留空壳文件（0 规则，无全库引用）

@@ -51,9 +51,29 @@ jobs:
       - name: 🔍 verify_rulesets
         run: python3 scripts/verify_rulesets.py
 
+      - name: 🧹 过滤仅 Updated 噪音
+        id: filter
+        run: |
+          set -euo pipefail
+          # 安全遍历每个变更的 ruleset yaml（while IFS= 防空格路径）
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            # 规范化 HEAD 版本和工作区版本（去 CR、去行尾空白、去 Updated 行）
+            head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
+            work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
+            if [ "$head_norm" = "$work_norm" ]; then
+              echo "🧹 噪音: $f（仅 Updated）"
+              git restore --worktree -- "$f"
+            else
+              echo "📝 实质变更: $f"
+            fi
+          done < <(git diff --name-only -- ruleset/ | grep '\.yaml$' || true)
+          # 过滤后重新检查用白名单 porcelain（后续 check 步会执行）
+
       - name: 🔍 检查变更
         id: check
         run: |
+          set -euo pipefail
           # 白名单 porcelain：只检查 ruleset/ configs/ scripts/
           if [ -n "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -63,36 +83,10 @@ jobs:
             echo "⏸️ 无变更，跳过提交"
           fi
 
-      - name: 🧹 过滤仅 Updated 噪音
-        id: filter
+      - name: 📤 提交并推送
         if: steps.check.outputs.changed == 'true'
         run: |
-          # 对每个 ruleset yaml 变更，规范化后与 HEAD 比较
-          for f in $(git diff --name-only -- ruleset/ | grep '\.yaml$' || true); do
-            if [ -n "$f" ]; then
-              # 规范化 HEAD 版本和工作区版本（去 CR、去行尾空白、去 Updated 行）
-              head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
-              work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
-              if [ "$head_norm" = "$work_norm" ]; then
-                echo "🧹 噪音: $f（仅 Updated）"
-                git restore --worktree -- "$f"
-              else
-                echo "📝 实质变更: $f"
-              fi
-            fi
-          done
-          # 重新检查（白名单 porcelain）
-          if [ -z "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "⏸️ 过滤后无变更，跳过提交"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "✅ 过滤后仍有实质变更"
-          fi
-
-      - name: 📤 提交并推送
-        if: steps.filter.outputs.changed == 'true'
-        run: |
+          set -euo pipefail
           git config user.name "mihomo-bot"
           git config user.email "bot@mihomo-rules"
           git add ruleset/ configs/ scripts/
