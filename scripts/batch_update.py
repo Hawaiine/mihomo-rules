@@ -499,7 +499,7 @@ def main():
             log(verify_result.stdout[-500:] if verify_result.stdout else '')
             send_failure('verify_configs', 'verify_configs.py 校验未通过，已阻止提交')
             # 注：不回滚，ruleset 变更保留，问题修复后可手动提交
-            return
+            sys.exit(1)
 
         # 8b. 校验 ruleset 一致性（verify_rulesets 失败则不提交）
         rulesets_result = subprocess.run(
@@ -510,7 +510,7 @@ def main():
             log('❌ verify_rulesets 未通过，终止提交')
             log(rulesets_result.stdout[-500:] if rulesets_result.stdout else '')
             send_failure('verify_rulesets', 'verify_rulesets.py 校验未通过，已阻止提交')
-            return
+            sys.exit(1)
 
         # 9. 提交 + 推送（仅非 CI 模式）
         if no_commit:
@@ -518,7 +518,7 @@ def main():
             send_success(stats, elapsed, updated_brands)
         else:
             commit_msg = f"🔄 每日自动同步 {datetime.now().strftime('%Y-%m-%d')}"
-            subprocess.run(['git', 'add', '-A'], cwd=ROOT)
+            subprocess.run(['git', 'add', 'ruleset/', 'configs/', 'scripts/'], cwd=ROOT)
             subprocess.run(['git', 'commit', '-m', commit_msg], cwd=ROOT,
                            capture_output=True)
             push = subprocess.run(['git', 'push', 'origin', 'main'], cwd=ROOT,

@@ -31,7 +31,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🐍 配置 Python 环境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -44,6 +44,12 @@ jobs:
           MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
+
+      - name: 🔍 verify_configs
+        run: python3 scripts/verify_configs.py
+
+      - name: 🔍 verify_rulesets
+        run: python3 scripts/verify_rulesets.py
 
       - name: 🔍 检查变更
         id: check
@@ -88,6 +94,9 @@ jobs:
             }]
           }
           data = json.dumps(payload).encode('utf-8')
-          req = urllib.request.Request(wh, data=data, headers={'Content-Type': 'application/json'})
+          req = urllib.request.Request(wh, data=data, headers={
+            'Content-Type': 'application/json',
+            'User-Agent': 'mihomo-bot/1.0',
+          })
           urllib.request.urlopen(req, timeout=10)
           " 2>/dev/null || true

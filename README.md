@@ -245,8 +245,13 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 # 全量校验（10 项检查，失败 exit≠0）
 python3 scripts/verify_configs.py
 
+# ruleset 一致性校验（header/payload/README/behavior，失败 exit≠0）
+python3 scripts/verify_rulesets.py
+
 # 生成配置（幂等，无实质变化会 [=] 跳过）
 python3 scripts/generate_config.py
+
+# 日更提交前两者均须 PASS；CI 与 batch_update 双门禁
 ```
 
 ## 📋 近期更新
