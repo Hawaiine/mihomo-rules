@@ -5,12 +5,12 @@
 |------|------|
 | DOMAIN-KEYWORD | 2 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 11 |
-| DOMAIN-SUFFIX | 1451 |
+| DOMAIN | 17 |
+| DOMAIN-SUFFIX | 1500 |
 | IP-CIDR | 10 |
 | IP-CIDR6 | 3 |
 | IP-ASN | 0 |
-| PROCESS-NAME | 12 |
+| PROCESS-NAME | 13 |
 
 - **behavior**: classical
 - **策略组**: Apple

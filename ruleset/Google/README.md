@@ -5,10 +5,10 @@
 |------|------|
 | DOMAIN-KEYWORD | 5 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 107 |
-| DOMAIN-SUFFIX | 709 |
-| IP-CIDR | 2 |
-| IP-CIDR6 | 0 |
+| DOMAIN | 119 |
+| DOMAIN-SUFFIX | 914 |
+| IP-CIDR | 4 |
+| IP-CIDR6 | 1 |
 | IP-ASN | 0 |
 | PROCESS-NAME | 6 |
 
