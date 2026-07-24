@@ -437,11 +437,16 @@ def gen_rules(brand_info, variant):
 
 
 def assemble_config(system_config, system_groups, proxy_groups, rule_providers, rules, variant='full'):
-    """拼接完整 config"""
+    """拼接完整 config。
+
+    full：proxy-groups 与 rule-providers 之间空一行；rule-providers 与 rules 之间空一行。
+    min：各段紧凑，仅单换行，无段间空行。
+    """
     if 'min' in variant:
         # min 版：sections 之间单换行（system_groups 本身已带尾部换行）
         return system_config + system_groups + proxy_groups + '\n' + rule_providers + '\n' + rules
-    return system_config + system_groups + '\n' + proxy_groups + '\n' + rule_providers + '\n\n' + rules
+    # full：品牌组结束后空一行再 rule-providers；rules 前再空一行
+    return system_config + system_groups + '\n' + proxy_groups + '\n\n' + rule_providers + '\n\n' + rules
 
 
 def write_if_changed(path, content):

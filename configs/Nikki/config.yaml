@@ -1659,6 +1659,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
+
 rule-providers:
   Reject:
     type: http
