@@ -229,7 +229,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 | 区块 | 顺序规则 | 说明 |
 |------|---------|------|
-| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 系统组 28 个固定在前 |
+| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 7 控制组 + 21 地区组（共 28）固定在前 |
 | **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
 | **rule-providers** | 7 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
 

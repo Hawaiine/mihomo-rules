@@ -33,6 +33,17 @@ def get_brands():
     return brands
 
 
+def check_extra_files(brand):
+    """检查品牌目录内是否有多余文件（仅允许 <Brand>.yaml 和 README.md）"""
+    extra = []
+    dir_path = ROOT / 'ruleset' / brand
+    allowed = {f'{brand}.yaml', 'README.md'}
+    for f in sorted(os.listdir(dir_path)):
+        if f not in allowed:
+            extra.append(f)
+    return extra
+
+
 def parse_header_counts(yaml_path):
     """从 YAML header 提取 8 类计数"""
     counts = {}
@@ -143,7 +154,12 @@ def check_brand(brand):
     if readme_sg and readme_sg != display:
         errors.append(f'  {brand}: README 策略组 "{readme_sg}" ≠ 策略组名 "{display}"')
 
-    # behavior
+    # 多余文件检查
+    extra = check_extra_files(brand)
+    if extra:
+        errors.append(f'  {brand}: 多余文件 {extra}（仅允许 {brand}.yaml + README.md）')
+
+    # 行为
     readme_bhv = get_readme_behavior(readme_path)
     # 从 payload 检测 behavior
     classical_types = {'IP-CIDR', 'IP-CIDR6', 'IP-ASN', 'PROCESS-NAME',

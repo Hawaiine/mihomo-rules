@@ -17,7 +17,7 @@
 ### Changed
 - **config 格式约定** — full 版 `rules:` 前有空行；min 版 `rules:` 前无空行、段内无空行、proxy-groups/proxy-providers 块间紧凑
 - **proxy-groups 去重** — 修复模板中连续两行 `proxy-groups:` 的重复键缺陷
-- **rules 出站引号** — RULE-SET/GEOIP 行策略组名不再包裹多余双引号（如 `,🎯 全球直连` 而非 `,\"🎯 全球直连\"`）
+- **rules 出站引号** — RULE-SET/GEOIP 行策略组名不再包裹多余双引号（如 `,🎯 全球直连` 而非 `,"🎯 全球直连"`）
 - **batch_update.py** — 校验失败改为 `sys.exit(1)`（含 `--no-commit`）；commit 前 `git status --porcelain` 门闩，无实质 diff 不 commit；`git add -A` 改为白名单 `ruleset/ configs/ scripts/`
 - **commit_writer.py** — YAML/README 独立判断写入，payload 不变不碰 Updated，统计不变不写 README；`has_meaningful_diff` 统一换行符、去除行尾空白、过滤 Updated 行
 - **daily-sync.yml** — 提交前显式 `verify_configs` + `verify_rulesets`；`setup-python@v5→v7` 消除 Node.js 20 弃用警告；失败通知补 User-Agent；新增 🧹 过滤仅 Updated 噪音步骤
@@ -35,6 +35,7 @@
 - Google header 残留脏数据（`# IP-CIDR6: 5→0`）
 - Apple/Amazon/Disney 等品牌 README 统计与 payload 不一致（逐品牌仅一次纠偏）
 - 日更噪音：仅 `# Updated:` 变化不再产生写入/提交；CI 提交前过滤仅 Updated 噪音
+- 提交步：暂存区为空时跳过 commit/push，防止 `git commit || echo` 后仍 rebase+push
 
 ### Removed
 - **MusicJp.yaml** — 删除 `ruleset/MusicJapan/MusicJp.yaml` 残留空壳文件（0 规则，无全库引用）

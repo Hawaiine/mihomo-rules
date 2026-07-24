@@ -67,39 +67,20 @@ jobs:
         id: filter
         if: steps.check.outputs.changed == 'true'
         run: |
-          # 收集所有变更的 ruleset/ 文件
-          changed_files=$(git diff --name-only -- ruleset/)
-          noise_only=true
-          noise_files=""
-          if [ -z "$changed_files" ]; then
-            # 非 ruleset 变更（configs/ scripts/），视为实质变更
-            noise_only=false
-            echo "📝 非 ruleset 变更，保留"
-          fi
-          for f in $changed_files; do
-            case "$f" in
-              ruleset/*)
-                # 检查该文件的 diff 是否仅包含 Updated 行变化
-                diff_text=$(git diff -- "$f")
-                # 标准化：移除 CRLF、行尾空白、Updated 行，看是否还有实质内容
-                filtered=$(echo "$diff_text" | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | grep -v '^---\|^+++\|^@@\|^diff --git\|^index' || true)
-                if [ -z "$filtered" ]; then
-                  noise_files="$noise_files $f"
-                else
-                  noise_only=false
-                  echo "📝 实质变更: $f"
-                fi
-                ;;
-              *)
-                noise_only=false
-                echo "📝 非 ruleset 变更: $f"
-                ;;
-            esac
+          # 对每个 ruleset yaml 变更，规范化后与 HEAD 比较
+          for f in $(git diff --name-only -- ruleset/ | grep '\.yaml$' || true); do
+            if [ -n "$f" ]; then
+              # 规范化 HEAD 版本和工作区版本（去 CR、去行尾空白、去 Updated 行）
+              head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
+              work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
+              if [ "$head_norm" = "$work_norm" ]; then
+                echo "🧹 噪音: $f（仅 Updated）"
+                git restore --worktree -- "$f"
+              else
+                echo "📝 实质变更: $f"
+              fi
+            fi
           done
-          if [ -n "$noise_files" ]; then
-            echo "🧹 丢弃仅 Updated 噪音: $noise_files"
-            git checkout -- $noise_files
-          fi
           # 重新检查（白名单 porcelain）
           if [ -z "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -115,7 +96,12 @@ jobs:
           git config user.name "mihomo-bot"
           git config user.email "bot@mihomo-rules"
           git add ruleset/ configs/ scripts/
-          git commit -m "🔄 每日自动同步 $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          # 暂存区为空则跳过 commit/push（防御性：防止 commit 失败后仍 rebase+push）
+          if [ -z "$(git diff --cached --name-only)" ]; then
+            echo "⏸️ 暂存区为空，跳过 commit/push"
+            exit 0
+          fi
+          git commit -m "🔄 每日自动同步 $(date +'%Y-%m-%d %H:%M:%S')"
           git pull --rebase origin ${{ github.ref_name }}
           git push origin HEAD:${{ github.ref_name }}
 
