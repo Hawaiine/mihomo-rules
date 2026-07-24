@@ -1,80 +1,70 @@
 # 📋 CHANGELOG
 
-- 🗓️ 2026-07-15 · **代码审计追溯 22 commits** → 逐 commit 验证数据污染/归类/重复，全部通过 ✅
-- 🗓️ 2026-07-15 · **CI 覆盖问题根治** → sanitize 新增 sort -u 去重 + rebase 失败自动兜底 + 运行前同步远程状态
-- 🏁 2026-07-15 · **项目初始化结束** → 进入稳定维护期
-- 🗓️ 2026-07-19 · **Netflix** → +44 条 (DOMAIN +5 KEYWORD +2 SUFFIX +35 PROC +2)
-- 🗓️ 2026-07-19 · **Amazon** → +201 条 (KEYWORD +1 SUFFIX +183 IP-CIDR +15 PROC +2)
-- 🗓️ 2026-07-19 · **Apple** → +2063 条 (DOMAIN +106 KEYWORD +2 SUFFIX +1926 IP-CIDR +10 IP-CIDR6 +3 PROC +16)
-- 🗓️ 2026-07-19 · **Cloudflare** → +83 条 (SUFFIX +83)
-- 🗓️ 2026-07-19 · **DAZN** → +21 条 (KEYWORD +1 SUFFIX +20)
-- 🗓️ 2026-07-19 · **Direct** → +121007 条 (DOMAIN +663 KEYWORD +9 SUFFIX +120293 PROC +42)
-- 🗓️ 2026-07-19 · **Disney** → +194 条 (DOMAIN +2 SUFFIX +190 PROC +2)
-- 🗓️ 2026-07-19 · **Facebook** → +609 条 (DOMAIN +1 KEYWORD +2 SUFFIX +583 IP-CIDR +23)
-- 🗓️ 2026-07-19 · **GitHub** → +89 条 (DOMAIN +21 KEYWORD +1 SUFFIX +67)
-- 🗓️ 2026-07-19 · **Google** → +1031 条 (DOMAIN +11 KEYWORD +5 SUFFIX +1004 IP-CIDR +4 IP-CIDR6 +1 PROC +6)
-- 🗓️ 2026-07-19 · **Instagram** → +81 条 (KEYWORD +1 SUFFIX +80)
-- 🗓️ 2026-07-19 · **Microsoft** → +974 条 (DOMAIN +29 KEYWORD +4 SUFFIX +939 PROC +2)
-- 🗓️ 2026-07-19 · **Netflix** → +44 条 (DOMAIN +5 KEYWORD +2 SUFFIX +35 PROC +2)
-- 🗓️ 2026-07-19 · **OneDrive** → +25 条 (KEYWORD +3 SUFFIX +20 PROC +2)
-- 🗓️ 2026-07-19 · **OpenAI** → +50 条 (DOMAIN +9 KEYWORD +1 SUFFIX +38 IP-CIDR +2)
-- 🗓️ 2026-07-19 · **PayPal** → +279 条 (KEYWORD +1 SUFFIX +278)
-- 🗓️ 2026-07-19 · **Pixiv** → +17 条 (SUFFIX +17)
-- 🗓️ 2026-07-19 · **PrimeVideo** → +37 条 (DOMAIN +9 KEYWORD +1 SUFFIX +27)
-- 🗓️ 2026-07-19 · **Proxy** → +29413 条 (DOMAIN +1033 KEYWORD +26 SUFFIX +28257 IP-CIDR +93 IP-CIDR6 +4)
-- 🗓️ 2026-07-19 · **Qobuz** → +33 条 (SUFFIX +31 IP-CIDR +2)
-- 🗓️ 2026-07-19 · **Spotify** → +44 条 (DOMAIN +7 KEYWORD +1 SUFFIX +33 IP-CIDR +2 PROC +1)
-- 🗓️ 2026-07-19 · **Steam** → +93 条 (DOMAIN +16 KEYWORD +3 SUFFIX +74)
-- 🗓️ 2026-07-14 · **Telegram** → +52 条 (DOMAIN +2 KEYWORD +1 SUFFIX +25 IP-CIDR +13 IP-CIDR6 +5 PROC +6)
-- 🗓️ 2026-07-19 · **TikTok** → +64 条 (DOMAIN +4 KEYWORD +1 SUFFIX +58 PROC +1)
-- 🗓️ 2026-07-19 · **Twitch** → +80 条 (DOMAIN +26 KEYWORD +1 SUFFIX +40 IP-CIDR +11 IP-CIDR6 +1 PROC +1)
-- 🗓️ 2026-07-19 · **WhatsApp** → +19 条 (DOMAIN +3 SUFFIX +16)
-- 🗓️ 2026-07-19 · **YouTube** → +195 条 (KEYWORD +1 SUFFIX +191 IP-CIDR +2 IP-CIDR6 +1)
-- 🗓️ 2026-07-19 · **iCloud** → +78 条 (DOMAIN +1 SUFFIX +77)
-- 🗓️ 2026-07-18 · **CNCIDR** → +5920 条 (IP-CIDR +4236 IP-CIDR6 +1684)
-- 🗓️ 2026-07-10 · **LanCIDR** → +32 条 (DOMAIN +14 IP-CIDR +14 IP-CIDR6 +4)
-- 🗓️ 2026-07-14 · **Telegram** → +52 条 (DOMAIN +2 KEYWORD +1 SUFFIX +25 IP-CIDR +13 IP-CIDR6 +5 PROC +6)
-- 🗓️ 2026-07-19 · **Netflix** → +44 条 (DOMAIN +5 KEYWORD +2 SUFFIX +35 PROC +2)
-- 🗓️ 2026-07-19 · **Amazon** → +201 条 (KEYWORD +1 SUFFIX +183 IP-CIDR +15 PROC +2)
-- 🗓️ 2026-07-19 · **Apple** → +2063 条 (DOMAIN +106 KEYWORD +2 SUFFIX +1926 IP-CIDR +10 IP-CIDR6 +3 PROC +16)
-- 🗓️ 2026-07-15 · **Applications** → +104 条 (PROC +104)
-- 🗓️ 2026-07-19 · **Bilibili** → +75 条 (DOMAIN +2 SUFFIX +73)
-- 🗓️ 2026-07-18 · **CNCIDR** → +5920 条 (IP-CIDR +4236 IP-CIDR6 +1684)
-- 🗓️ 2026-07-19 · **Cloudflare** → +83 条 (SUFFIX +83)
-- 🗓️ 2026-07-19 · **Direct** → +121007 条 (DOMAIN +663 KEYWORD +9 SUFFIX +120293 PROC +42)
-- 🗓️ 2026-07-19 · **Disney** → +194 条 (DOMAIN +2 SUFFIX +190 PROC +2)
-- 🗓️ 2026-07-19 · **Facebook** → +609 条 (DOMAIN +1 KEYWORD +2 SUFFIX +583 IP-CIDR +23)
-- 🗓️ 2026-07-19 · **Google** → +1031 条 (DOMAIN +11 KEYWORD +5 SUFFIX +1004 IP-CIDR +4 IP-CIDR6 +1 PROC +6)
-- 🗓️ 2026-07-19 · **HamiVideo** → +41 条 (DOMAIN +21 SUFFIX +20)
-- 🗓️ 2026-07-19 · **Hotstar** → +7 条 (SUFFIX +7)
-- 🗓️ 2026-07-10 · **LanCIDR** → +18 条 (IP-CIDR +14 IP-CIDR6 +4)
-- 🗓️ 2026-07-19 · **X** → +30 条 (SUFFIX +30)
-- 🗓️ 2026-07-19 · **Porn** → +7033 条 (DOMAIN +8 SUFFIX +7025)
-- 🗓️ 2026-07-19 · **Synology** → +29 条 (DOMAIN +1 KEYWORD +1 SUFFIX +27)
-- 🗓️ 2026-07-19 · **Nintendo** → +142 条 (SUFFIX +141 IP-CIDR +1)
-- 🗓️ 2026-07-19 · **Private** → +135 条 (DOMAIN +12 SUFFIX +123)
-- 🗓️ 2026-07-19 · **Reject** → +177433 条 (SUFFIX +177433)
-- 🗓️ 2026-07-19 · **Viu** → +9 条 (DOMAIN +3 SUFFIX +6)
-- 🗓️ 2026-07-19 · **Abema** → +26 条 (DOMAIN +5 SUFFIX +21)
-- 🗓️ 2026-07-19 · **Anthropic** → +9 条 (DOMAIN +1 SUFFIX +8)
-- 🗓️ 2026-07-19 · **Bahamut** → +12 条 (DOMAIN +2 SUFFIX +10)
-- 🗓️ 2026-07-19 · **CatchPlay** → +3 条 (SUFFIX +3)
-- 🗓️ 2026-07-19 · **Deezer** → +3 条 (SUFFIX +3)
-- 🗓️ 2026-07-19 · **Discord** → +31 条 (SUFFIX +31)
-- 🗓️ 2026-07-19 · **Docker** → +10 条 (DOMAIN +3 SUFFIX +7)
-- 🗓️ 2026-07-19 · **HBO** → +95 条 (SUFFIX +94 PROC +1)
-- 🗓️ 2026-07-19 · **Hulu** → +59 条 (DOMAIN +1 SUFFIX +57 PROC +1)
-- 🗓️ 2026-07-19 · **KKTV** → +5 条 (DOMAIN +1 SUFFIX +4)
-- 🗓️ 2026-07-19 · **LiTV** → +21 条 (DOMAIN +9 SUFFIX +12)
-- 🗓️ 2026-07-19 · **LineTV** → +9 条 (DOMAIN +3 SUFFIX +5 PROC +1)
-- 🗓️ 2026-07-19 · **Messenger** → +5 条 (SUFFIX +5)
-- 🗓️ 2026-07-19 · **Musixmatch** → +3 条 (SUFFIX +3)
-- 🗓️ 2026-07-19 · **MyTVSuper** → +4 条 (DOMAIN +2 SUFFIX +2)
-- 🗓️ 2026-07-19 · **Pinterest** → +61 条 (SUFFIX +61)
-- 🗓️ 2026-07-19 · **Poe** → +3 条 (SUFFIX +3)
-- 🗓️ 2026-07-19 · **Reddit** → +18 条 (SUFFIX +18)
-- 🗓️ 2026-07-19 · **TMDB** → +7 条 (DOMAIN +3 SUFFIX +4)
-- 🗓️ 2026-07-19 · **Threads** → +3 条 (SUFFIX +3)
-- 🗓️ 2026-07-19 · **WSJ** → +14 条 (SUFFIX +14)
-- 🗓️ 2026-07-19 · **iCloudPrivateRelay** → +6 条 (DOMAIN +3 SUFFIX +3)
-- 🗓️ 2026-07-19 · **AWS** → +74 条 (SUFFIX +74)
+> 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
+
+---
+
+## 2026-07-24
+
+### Added
+- **verify_rulesets.py** — 新增 ruleset 一致性校验脚本，检查 header/payload/README/behavior 对齐，失败 exit≠0
+- **send_idle()** — 无变化时发送「⏸️ 上游无变化」Discord 通知
+- **has_meaningful_diff()** — 独立比较 YAML/README 忽略 Updated 噪音
+
+### Changed
+- **batch_update.py** — 校验失败改为 `sys.exit(1)`（含 `--no-commit`）；commit 前 `git status --porcelain` 门闩，无实质 diff 不 commit；`git add -A` 改为白名单 `ruleset/ configs/ scripts/`
+- **commit_writer.py** — YAML/README 独立判断写入，payload 不变不碰 Updated，统计不变不写 README
+- **daily-sync.yml** — 提交前显式 `verify_configs` + `verify_rulesets`；`setup-python@v5→v7` 消除 Node.js 20 弃用警告；失败通知补 User-Agent
+- **canonical.py** — `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，保留上游原始大小写
+- **configs** — min rules 段内无空行；full 版文案去掉「97 品牌」旧数
+- **README.md** — 全面对齐 Python 管线，清理过时 shell 描述，品牌口径修正为 99+7=106
+
+### Fixed
+- Google header 残留脏数据（`# IP-CIDR6: 5→0`）
+- Apple/Amazon/Disney 等品牌 README 统计与 payload 不一致（逐品牌仅一次纠偏）
+- 日更噪音：仅 `# Updated:` 变化不再产生写入/提交
+
+---
+
+## 2026-07-22
+
+### Added
+- **ownership_map.py** — SUB_PARENT 父子品牌映射单源化，`generate_config` 与 `resolve_ownership` 从此统一读取
+- 策略组排序规则：子品牌优先于父品牌，其余按显示名字母序
+
+### Changed
+- **resolve_ownership.py** — 仅 `to_remove` 非空时写盘；`kept→CanonicalRule` 统一走 `commit_writer.write_ruleset`
+- **generate_config.py** — 幂等加固（hash 相同不写 configs、不改 mtime）；两次生成 `git diff` 为空
+- 命名两线（技术 ID + 显示名）文档化，RULE-SET 拼法规范，三套顺序规则确立
+
+---
+
+## 2026-07-17
+
+### Added
+- 品牌级 6 路并发拉取
+- 域名/CIDR 格式校验
+- 异常量级 Discord 双通道报警
+
+### Changed
+- CI rebase 冲突显式处理
+- 增量清洗模式：只处理本次同步变更过的品牌
+
+---
+
+## 2026-07-15
+
+- 项目初始化结束，进入稳定维护期
+- 代码审计追溯 22 commits，全部通过
+- CI 覆盖问题根治：sort -u 去重 + rebase 失败自动兜底
+
+---
+
+## 历史说明
+
+2026-07-10～07-19 期间曾有大量按品牌记录的增量条目（反复出现 Netflix/Apple/Amazon 等 +N 条记录），因重复较多且无工程价值，已从此文件删除。历史明细可查阅 git log 或 Discord 通知。核心变更摘要：
+
+- 2026-07-10：地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + weekly geo 更新 + config.min.yaml 无注释版
+- 2026-07-19：全量三源首次批量同步，约 30 万+ 条规则写入
+
+> **日更策略**：各品牌规则条数增减由 `scripts/batch_update.py` 在 Discord 通知中报告，不自动写入 CHANGELOG。工程变更才记入此文件。

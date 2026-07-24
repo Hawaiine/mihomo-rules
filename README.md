@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 106 品牌 32 万+ 规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 99 品牌 · 106 规则集 · 32 万+ 规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 ## 📖 概述
 
-**mihomo-rules** 是一个为 Mihomo / clash-meta 内核设计的通用 RULE-SET 级规则集仓库。自动从 **v2fly/domain-list-community**、**Loyalsoldier/clash-rules**、**blackmatrix7/ios_rule_script** 三大上游同步数据，提供完整的**基础规则集** + **品牌规则集**（流媒体 / AI / 社交 / 云服务 / 游戏等 106 品牌）。
+**mihomo-rules** 是一个为 Mihomo / clash-meta 内核设计的通用 RULE-SET 级规则集仓库。自动从 **v2fly/domain-list-community**、**Loyalsoldier/clash-rules**、**blackmatrix7/ios_rule_script** 三大上游同步数据，提供完整的**基础规则集** + **品牌规则集**（流媒体 / AI / 社交 / 云服务 / 游戏等 99 品牌 · 106 规则集）。
 
 项目包含开箱即用的平台配置文件（**OpenWrt Nikki** + **Clash for Android**），自动品牌图标注入，每日 CI 自动同步，并支持 Discord 通知。
 
@@ -202,8 +202,8 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 2️⃣ 品牌    Netflix/Bilibili 等 99 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
 3️⃣ 直连    Applications(DIRECT) + LanCIDR/Private(DIRECT, 硬直连不可改)
 4️⃣ 国内IP  CNCIDR + GEOIP,CN → DIRECT
-| 5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
-| 6️⃣ 兜底    MATCH
+5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
+6️⃣ 兜底    MATCH
 ```
 
 ---
@@ -338,7 +338,7 @@ python3 scripts/generate_config.py       # 重新生成配置
 
 - **[Mihomo 官方文档](https://wiki.metacubex.one/config/)** — 配置参考
 - **[Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki)** — OpenWrt 透明代理插件
-- **[Oasisic-Icons](https://github.com/Hawaiine/Oasisic-Icons)** —106 品牌图标库
+- **[Oasisic-Icons](https://github.com/Hawaiine/Oasisic-Icons)** — 99 品牌图标库
 - **[mihomo-rules-skill](https://github.com/Hawaiine/mihomo-rules-skill)** — Hermes Agent Skill
 - **[问题反馈](https://github.com/Hawaiine/mihomo-rules/issues)**
 
