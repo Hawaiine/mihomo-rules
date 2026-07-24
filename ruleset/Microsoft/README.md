@@ -3,14 +3,14 @@
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
-| DOMAIN-KEYWORD | 4 |
+| DOMAIN-KEYWORD | 1 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 62 |
-| DOMAIN-SUFFIX | 713 |
+| DOMAIN | 32 |
+| DOMAIN-SUFFIX | 674 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |
-| PROCESS-NAME | 2 |
+| PROCESS-NAME | 0 |
 
-- **behavior**: classical
+- **behavior**: domain
 - **策略组**: Microsoft
