@@ -1881,7 +1881,7 @@ rules:
                                                     # ----- 2. 品牌分流 (按需取消注释, 放在国内规则前, 避免被GEOIP截胡) -----
                                                     # 顺序说明: 子品牌/重叠品牌排父品牌前, 避免被宽泛规则截胡
                                                     # 例: AppleTV/SiriAI/iCloud 在 Apple 前
-                                                    # 全量 97 品牌, 按需取消注释即可
+                                                    # 全量品牌, 按需取消注释即可
                                                     # - RULE-SET,AWS,AWS
                                                     # - RULE-SET,PrimeVideo,Prime Video
                                                     # - RULE-SET,Amazon,Amazon

@@ -489,7 +489,19 @@ def main():
         seen = set()
         updated_brands = [b for b in updated_brands if not (b in seen or seen.add(b))]
 
-        # 8. 提交 + 推送（仅非 CI 模式）
+        # 8. 校验 configs（verify 失败则不提交）
+        verify_result = subprocess.run(
+            [sys.executable, 'scripts/verify_configs.py'],
+            cwd=ROOT, capture_output=True, text=True, timeout=60
+        )
+        if verify_result.returncode != 0:
+            log('❌ verify_configs 未通过，终止提交')
+            log(verify_result.stdout[-500:] if verify_result.stdout else '')
+            send_failure('verify_configs', 'verify_configs.py 校验未通过，已阻止提交')
+            # 注：不回滚，ruleset 变更保留，问题修复后可手动提交
+            return
+
+        # 9. 提交 + 推送（仅非 CI 模式）
         if no_commit:
             log('🧪 CI 模式，跳过提交，由 workflow 处理')
             send_success(stats, elapsed, updated_brands)

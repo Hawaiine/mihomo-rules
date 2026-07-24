@@ -303,12 +303,13 @@ def gen_rules(brand_info, variant):
         lines.append('                                                    # ----- 2. 品牌分流 (按需取消注释, 放在国内规则前, 避免被GEOIP截胡) -----')
         lines.append('                                                    # 顺序说明: 子品牌/重叠品牌排父品牌前, 避免被宽泛规则截胡')
         lines.append('                                                    # 例: AppleTV/SiriAI/iCloud 在 Apple 前')
-        lines.append('                                                    # 全量 97 品牌, 按需取消注释即可')
+        lines.append('                                                    # 全量品牌, 按需取消注释即可')
         for bi in brand_info:
             lines.append(f'                                                    # - RULE-SET,{bi["key"]},{bi["sg"]}')
     # min 版：无品牌 RULE-SET（provider 已配置，按需自行添加）
     # 段 3: 应用程序直连
-    lines.append('')
+    if is_full:
+        lines.append('')
     if is_full:
         if is_nikki:
             lines.append('                                                    # ----- 3. 应用程序直连 (Nikki 跳过: find-process-mode: off, 进程规则无效) -----')
@@ -323,7 +324,8 @@ def gen_rules(brand_info, variant):
         # Nikki min 跳过 Applications
     
     # 段 4: 局域网 & 直连
-    lines.append('')
+    if is_full:
+        lines.append('')
     if is_full:
         lines.append('                                                    # ----- 4. 局域网 & 直连 -----')
     lines.append('  - RULE-SET,LanCIDR,DIRECT')
@@ -331,24 +333,28 @@ def gen_rules(brand_info, variant):
     lines.append('  - RULE-SET,Direct,DIRECT')
     
     # 段 5: 国内 IP
-    lines.append('')
+    if is_full:
+        lines.append('')
     if is_full:
         lines.append('                                                    # ----- 5. 国内 IP (GeoIP 放最后, 兜底国内流量) -----')
     lines.append('  - RULE-SET,CNCIDR,DIRECT')
     lines.append('  - GEOIP,CN,DIRECT')
     
     # 段 6: 代理
-    lines.append('')
+    if is_full:
+        lines.append('')
     if is_full:
         lines.append('                                                    # ----- 6. 代理 (国际流量) -----')
     lines.append('  - RULE-SET,Proxy,🔧 手动切换')
     
     # 段 7: 兜底
-    lines.append('')
+    if is_full:
+        lines.append('')
     if is_full:
         lines.append('                                                    # ----- 7. 兜底 (必须最后) -----')
     lines.append('  - MATCH,🐟 漏网之鱼')
-    lines.append('')
+    if is_full:
+        lines.append('')
     
     return '\n'.join(lines)
 

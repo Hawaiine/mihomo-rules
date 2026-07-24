@@ -48,17 +48,23 @@ class CanonicalRule(NamedTuple):
 
 # ── 归一化 ────────────────────────────────────────────────────
 
-def normalize_value(value: str) -> str:
+def normalize_value(value: str, rule_type: str = "") -> str:
     """
-    归一化值：小写、去首尾空格、去尾部点号。
+    归一化值：去首尾空格、去尾部点号。
+    DOMAIN* 类继续小写；PROCESS* 类保留大小写（进程名大小写敏感）。
 
     Args:
         value: 原始值
+        rule_type: 规则类型（可选，PROCESS 开头时不 lower）
 
     Returns:
         归一化后的值
     """
-    value = value.strip().lower()
+    value = value.strip()
+    # PROCESS-NAME / PROCESS-PATH* 保留大小写（macOS/Linux 进程名大小写敏感）
+    is_process = rule_type.upper().startswith('PROCESS')
+    if not is_process:
+        value = value.lower()
     # 去除尾部 . 号（如 .google.com → google.com）
     while value.endswith("."):
         value = value[:-1]
@@ -85,7 +91,7 @@ def normalize_rule(
     """
     return CanonicalRule(
         rule_type=rule_type.upper(),
-        value=normalize_value(value),
+        value=normalize_value(value, rule_type),
         param=param.strip(),
         source=source,
     )
@@ -177,7 +183,7 @@ def parse_rule_line(line: str, source: str = "") -> CanonicalRule | None:
         
         return CanonicalRule(
             rule_type=rule_type,
-            value=normalize_value(value),
+            value=normalize_value(value, rule_type),
             param=param,
             source=source,
         )

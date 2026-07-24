@@ -1773,16 +1773,11 @@ rule-providers:
     path: ./ruleset/myTVSuper.yaml
 rules:
   - RULE-SET,Reject,🛑 全球拦截
-
   - RULE-SET,Applications,DIRECT
-
   - RULE-SET,LanCIDR,DIRECT
   - RULE-SET,Private,DIRECT
   - RULE-SET,Direct,DIRECT
-
   - RULE-SET,CNCIDR,DIRECT
   - GEOIP,CN,DIRECT
-
   - RULE-SET,Proxy,🔧 手动切换
-
   - MATCH,🐟 漏网之鱼

@@ -308,6 +308,27 @@ def check_full_comment_order(lines, variant):
     return True
 
 
+def check_min_rules_no_blank_lines(lines, variant):
+    """min 版 rules: 段内不得出现空行"""
+    if 'full' in variant:
+        return True
+    in_rules = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('rules:'):
+            in_rules = True
+            continue
+        if in_rules:
+            if stripped == '':
+                print(f'  FAIL: {variant} — blank line found in rules section')
+                return False
+            if stripped.startswith('- RULE-SET,') or stripped.startswith('- MATCH,') or stripped.startswith('- GEOIP,'):
+                continue
+            # 非规则行 = 退出 rules 段
+            break
+    return True
+
+
 def check_cross_variant_rules(configs, all_lines):
     """同平台 full vs min 激活规则列表必须全等"""
     platforms = {
@@ -394,6 +415,7 @@ def main():
             ('active rules count', check_full_min_rules_equivalence(variant, lines)),
             ('rule-providers base order', check_rule_providers_base_order(lines, variant)),
             ('full comment RULE-SET order', check_full_comment_order(lines, variant)),
+            ('min rules no blank lines', check_min_rules_no_blank_lines(lines, variant)),
         ]
 
         variant_pass = all(r for _, r in checks)
