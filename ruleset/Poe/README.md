@@ -12,5 +12,5 @@
 | IP-ASN | 0 |
 | PROCESS-NAME | 0 |
 
-- **behavior**: domain
+- **behavior**: classical
 - **策略组**: Poe

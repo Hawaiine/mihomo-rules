@@ -706,6 +706,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/AWS.png"
+
   - name: "Prime Video"
     type: select
     proxies:
@@ -715,6 +716,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo-1.png"
+
   - name: "Amazon"
     type: select
     proxies:
@@ -724,6 +726,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Amazon.png"
+
   - name: "iCloud Private Relay"
     type: select
     proxies:
@@ -732,6 +735,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Apple TV"
     type: select
     proxies:
@@ -741,6 +745,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV.png"
+
   - name: "Siri AI"
     type: select
     proxies:
@@ -750,6 +755,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI.png"
+
   - name: "iCloud"
     type: select
     proxies:
@@ -759,6 +765,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud.png"
+
   - name: "Apple"
     type: select
     proxies:
@@ -768,6 +775,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
+
   - name: "Hotstar"
     type: select
     proxies:
@@ -777,6 +785,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
+
   - name: "Disney"
     type: select
     proxies:
@@ -786,6 +795,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
+
   - name: "Instagram"
     type: select
     proxies:
@@ -795,6 +805,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Instagram-2.png"
+
   - name: "Messenger"
     type: select
     proxies:
@@ -804,6 +815,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Messenger.png"
+
   - name: "Threads"
     type: select
     proxies:
@@ -813,6 +825,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Threads-1.png"
+
   - name: "WhatsApp"
     type: select
     proxies:
@@ -822,6 +835,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp-2.png"
+
   - name: "Facebook"
     type: select
     proxies:
@@ -831,6 +845,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
+
   - name: "YouTube Music"
     type: select
     proxies:
@@ -840,6 +855,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTubeMusic.png"
+
   - name: "Google AI"
     type: select
     proxies:
@@ -849,6 +865,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Gemini.png"
+
   - name: "YouTube"
     type: select
     proxies:
@@ -858,6 +875,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/YouTube-5.png"
+
   - name: "Google"
     type: select
     proxies:
@@ -867,6 +885,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Google-2.png"
+
   - name: "GitHub"
     type: select
     proxies:
@@ -876,6 +895,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub-1.png"
+
   - name: "OneDrive"
     type: select
     proxies:
@@ -885,6 +905,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Drive/OneDrive.png"
+
   - name: "Microsoft"
     type: select
     proxies:
@@ -894,6 +915,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Microsoft-4.png"
+
   - name: "AbemaTV"
     type: select
     proxies:
@@ -903,6 +925,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AbemaTV.png"
+
   - name: "Anthropic"
     type: select
     proxies:
@@ -912,6 +935,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic-1.png"
+
   - name: "Bahamut"
     type: select
     proxies:
@@ -921,6 +945,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bahamut-1.png"
+
   - name: "Bangumi"
     type: select
     proxies:
@@ -929,6 +954,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Bank"
     type: select
     proxies:
@@ -937,6 +963,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Bilibili"
     type: select
     proxies:
@@ -946,6 +973,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bilibili-1.png"
+
   - name: "Bluesky"
     type: select
     proxies:
@@ -955,6 +983,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Bluesky-1.png"
+
   - name: "CATCHPLAY+"
     type: select
     proxies:
@@ -964,6 +993,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
+
   - name: "Cloudflare"
     type: select
     proxies:
@@ -973,6 +1003,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
+
   - name: "Cursor"
     type: select
     proxies:
@@ -981,6 +1012,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "D Anime Store"
     type: select
     proxies:
@@ -989,6 +1021,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "DAZN"
     type: select
     proxies:
@@ -998,6 +1031,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN-1.png"
+
   - name: "DMM TV"
     type: select
     proxies:
@@ -1007,6 +1041,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DMMTV-1.png"
+
   - name: "Deezer"
     type: select
     proxies:
@@ -1016,6 +1051,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Deezer.png"
+
   - name: "Discord"
     type: select
     proxies:
@@ -1025,6 +1061,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord-2.png"
+
   - name: "Docker"
     type: select
     proxies:
@@ -1034,6 +1071,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Docker.png"
+
   - name: "F1 TV"
     type: select
     proxies:
@@ -1043,6 +1081,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/F1TV.png"
+
   - name: "Fuji TV"
     type: select
     proxies:
@@ -1051,6 +1090,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Game Japan"
     type: select
     proxies:
@@ -1059,6 +1099,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "General AI"
     type: select
     proxies:
@@ -1068,6 +1109,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/AI.png"
+
   - name: "HBO"
     type: select
     proxies:
@@ -1077,6 +1119,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HBO-1.png"
+
   - name: "HOY TV"
     type: select
     proxies:
@@ -1086,6 +1129,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HOY.png"
+
   - name: "Hami Video"
     type: select
     proxies:
@@ -1095,6 +1139,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo-1.png"
+
   - name: "Hulu"
     type: select
     proxies:
@@ -1104,6 +1149,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hulu.png"
+
   - name: "KKTV"
     type: select
     proxies:
@@ -1113,6 +1159,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV.png"
+
   - name: "Karaoke@DAM"
     type: select
     proxies:
@@ -1121,6 +1168,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "LINE TV"
     type: select
     proxies:
@@ -1130,6 +1178,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LineTV.png"
+
   - name: "Lemino"
     type: select
     proxies:
@@ -1138,6 +1187,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "LiTV"
     type: select
     proxies:
@@ -1147,6 +1197,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV.png"
+
   - name: "Manus"
     type: select
     proxies:
@@ -1155,6 +1206,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "MetaBrainz"
     type: select
     proxies:
@@ -1163,6 +1215,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Mora"
     type: select
     proxies:
@@ -1171,6 +1224,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Music Japan"
     type: select
     proxies:
@@ -1179,6 +1233,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Musixmatch"
     type: select
     proxies:
@@ -1187,6 +1242,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "MyVideo"
     type: select
     proxies:
@@ -1196,6 +1252,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MyVideo.png"
+
   - name: "NHK"
     type: select
     proxies:
@@ -1204,6 +1261,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Netflix"
     type: select
     proxies:
@@ -1213,6 +1271,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Netflix-2.png"
+
   - name: "Niconico"
     type: select
     proxies:
@@ -1222,6 +1281,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Niconico.png"
+
   - name: "Nintendo"
     type: select
     proxies:
@@ -1231,6 +1291,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Nintendo.png"
+
   - name: "Now E"
     type: select
     proxies:
@@ -1240,6 +1301,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NowE.png"
+
   - name: "OpenAI"
     type: select
     proxies:
@@ -1249,6 +1311,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI-4.png"
+
   - name: "PT"
     type: select
     proxies:
@@ -1257,6 +1320,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "PT China"
     type: select
     proxies:
@@ -1265,6 +1329,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "PayPal"
     type: select
     proxies:
@@ -1274,6 +1339,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/PayPal-1.png"
+
   - name: "Perplexity"
     type: select
     proxies:
@@ -1283,6 +1349,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Perplexity.png"
+
   - name: "Pinterest"
     type: select
     proxies:
@@ -1292,6 +1359,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pinterest.png"
+
   - name: "Pixiv"
     type: select
     proxies:
@@ -1301,6 +1369,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pixiv.png"
+
   - name: "Podcast"
     type: select
     proxies:
@@ -1310,6 +1379,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Podcasts.png"
+
   - name: "Poe"
     type: select
     proxies:
@@ -1319,6 +1389,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe-1.png"
+
   - name: "Porn"
     type: select
     proxies:
@@ -1327,6 +1398,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Porn China"
     type: select
     proxies:
@@ -1335,6 +1407,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Qobuz"
     type: select
     proxies:
@@ -1344,6 +1417,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Qobuz.png"
+
   - name: "Radiko"
     type: select
     proxies:
@@ -1352,6 +1426,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Rakuten TV"
     type: select
     proxies:
@@ -1360,6 +1435,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Reads Japan"
     type: select
     proxies:
@@ -1368,6 +1444,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Reddit"
     type: select
     proxies:
@@ -1377,6 +1454,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Reddit-2.png"
+
   - name: "Spotify"
     type: select
     proxies:
@@ -1386,6 +1464,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Spotify-3.png"
+
   - name: "Steam"
     type: select
     proxies:
@@ -1395,6 +1474,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Steam-1.png"
+
   - name: "Synology"
     type: select
     proxies:
@@ -1404,6 +1484,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Synology.png"
+
   - name: "TMDB"
     type: select
     proxies:
@@ -1413,6 +1494,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/TMDB.png"
+
   - name: "TVer"
     type: select
     proxies:
@@ -1422,6 +1504,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TVer.png"
+
   - name: "Telasa"
     type: select
     proxies:
@@ -1430,6 +1513,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Telegram"
     type: select
     proxies:
@@ -1439,6 +1523,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Telegram-3.png"
+
   - name: "Tidal"
     type: select
     proxies:
@@ -1448,6 +1533,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL-1.png"
+
   - name: "TikTok"
     type: select
     proxies:
@@ -1457,6 +1543,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/TikTok-3.png"
+
   - name: "Tubi"
     type: select
     proxies:
@@ -1465,6 +1552,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Twitch"
     type: select
     proxies:
@@ -1474,6 +1562,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Twitch-2.png"
+
   - name: "U-NEXT"
     type: select
     proxies:
@@ -1482,6 +1571,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Video Market"
     type: select
     proxies:
@@ -1491,6 +1581,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/VideoMarket.png"
+
   - name: "Viu"
     type: select
     proxies:
@@ -1500,6 +1591,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Viu.png"
+
   - name: "WOWOW"
     type: select
     proxies:
@@ -1508,6 +1600,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "WSJ"
     type: select
     proxies:
@@ -1516,6 +1609,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
+
   - name: "Wallpaper"
     type: select
     proxies:
@@ -1525,6 +1619,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Wallpaper.png"
+
   - name: "X"
     type: select
     proxies:
@@ -1534,6 +1629,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/X-1.png"
+
   - name: "Z-Library"
     type: select
     proxies:
@@ -1543,6 +1639,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/Z-Library.png"
+
   - name: "friDay video"
     type: select
     proxies:
@@ -1552,6 +1649,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDay.png"
+
   - name: "myTV Super"
     type: select
     proxies:
@@ -1564,19 +1662,19 @@ proxy-groups:
 rule-providers:
   Reject:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reject/Reject.yaml"
     interval: 86400
     path: ./ruleset/Reject.yaml
   Direct:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Direct/Direct.yaml"
     interval: 86400
     path: ./ruleset/Direct.yaml
   Proxy:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Proxy/Proxy.yaml"
     interval: 86400
     path: ./ruleset/Proxy.yaml
@@ -1606,13 +1704,13 @@ rule-providers:
     path: ./ruleset/CNCIDR.yaml
   AWS:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AWS/AWS.yaml"
     interval: 86400
     path: ./ruleset/AWS.yaml
   AbemaTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AbemaTV/AbemaTV.yaml"
     interval: 86400
     path: ./ruleset/AbemaTV.yaml
@@ -1624,7 +1722,7 @@ rule-providers:
     path: ./ruleset/Amazon.yaml
   Anthropic:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Anthropic/Anthropic.yaml"
     interval: 86400
     path: ./ruleset/Anthropic.yaml
@@ -1642,37 +1740,37 @@ rule-providers:
     path: ./ruleset/AppleTV.yaml
   Bahamut:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bahamut/Bahamut.yaml"
     interval: 86400
     path: ./ruleset/Bahamut.yaml
   Bangumi:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bangumi/Bangumi.yaml"
     interval: 86400
     path: ./ruleset/Bangumi.yaml
   Bank:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bank/Bank.yaml"
     interval: 86400
     path: ./ruleset/Bank.yaml
   Bilibili:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bilibili/Bilibili.yaml"
     interval: 86400
     path: ./ruleset/Bilibili.yaml
   Bluesky:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bluesky/Bluesky.yaml"
     interval: 86400
     path: ./ruleset/Bluesky.yaml
   CATCHPLAY:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CATCHPLAY/CATCHPLAY.yaml"
     interval: 86400
     path: ./ruleset/CATCHPLAY.yaml
@@ -1684,37 +1782,37 @@ rule-providers:
     path: ./ruleset/Cloudflare.yaml
   Cursor:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cursor/Cursor.yaml"
     interval: 86400
     path: ./ruleset/Cursor.yaml
   DAZN:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DAZN/DAZN.yaml"
     interval: 86400
     path: ./ruleset/DAZN.yaml
   DAnimeStore:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DAnimeStore/DAnimeStore.yaml"
     interval: 86400
     path: ./ruleset/DAnimeStore.yaml
   DMMTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DMMTV/DMMTV.yaml"
     interval: 86400
     path: ./ruleset/DMMTV.yaml
   Deezer:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Deezer/Deezer.yaml"
     interval: 86400
     path: ./ruleset/Deezer.yaml
   Discord:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Discord/Discord.yaml"
     interval: 86400
     path: ./ruleset/Discord.yaml
@@ -1726,13 +1824,13 @@ rule-providers:
     path: ./ruleset/Disney.yaml
   Docker:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Docker/Docker.yaml"
     interval: 86400
     path: ./ruleset/Docker.yaml
   F1TV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/F1TV/F1TV.yaml"
     interval: 86400
     path: ./ruleset/F1TV.yaml
@@ -1744,25 +1842,25 @@ rule-providers:
     path: ./ruleset/Facebook.yaml
   FujiTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/FujiTV/FujiTV.yaml"
     interval: 86400
     path: ./ruleset/FujiTV.yaml
   GameJapan:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GameJapan/GameJapan.yaml"
     interval: 86400
     path: ./ruleset/GameJapan.yaml
   GeneralAI:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GeneralAI/GeneralAI.yaml"
     interval: 86400
     path: ./ruleset/GeneralAI.yaml
   GitHub:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GitHub/GitHub.yaml"
     interval: 86400
     path: ./ruleset/GitHub.yaml
@@ -1774,7 +1872,7 @@ rule-providers:
     path: ./ruleset/Google.yaml
   GoogleAI:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
     interval: 86400
     path: ./ruleset/GoogleAI.yaml
@@ -1786,19 +1884,19 @@ rule-providers:
     path: ./ruleset/HBO.yaml
   HOYTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HOYTV/HOYTV.yaml"
     interval: 86400
     path: ./ruleset/HOYTV.yaml
   HamiVideo:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HamiVideo/HamiVideo.yaml"
     interval: 86400
     path: ./ruleset/HamiVideo.yaml
   Hotstar:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hotstar/Hotstar.yaml"
     interval: 86400
     path: ./ruleset/Hotstar.yaml
@@ -1810,13 +1908,13 @@ rule-providers:
     path: ./ruleset/Hulu.yaml
   Instagram:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Instagram/Instagram.yaml"
     interval: 86400
     path: ./ruleset/Instagram.yaml
   KKTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KKTV/KKTV.yaml"
     interval: 86400
     path: ./ruleset/KKTV.yaml
@@ -1828,67 +1926,67 @@ rule-providers:
     path: ./ruleset/LINETV.yaml
   Lemino:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Lemino/Lemino.yaml"
     interval: 86400
     path: ./ruleset/Lemino.yaml
   LiTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LiTV/LiTV.yaml"
     interval: 86400
     path: ./ruleset/LiTV.yaml
   Manus:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Manus/Manus.yaml"
     interval: 86400
     path: ./ruleset/Manus.yaml
   Messenger:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Messenger/Messenger.yaml"
     interval: 86400
     path: ./ruleset/Messenger.yaml
   MetaBrainz:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MetaBrainz/MetaBrainz.yaml"
     interval: 86400
     path: ./ruleset/MetaBrainz.yaml
   Microsoft:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Microsoft/Microsoft.yaml"
     interval: 86400
     path: ./ruleset/Microsoft.yaml
   Mora:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Mora/Mora.yaml"
     interval: 86400
     path: ./ruleset/Mora.yaml
   MusicJapan:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MusicJapan/MusicJapan.yaml"
     interval: 86400
     path: ./ruleset/MusicJapan.yaml
   Musixmatch:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Musixmatch/Musixmatch.yaml"
     interval: 86400
     path: ./ruleset/Musixmatch.yaml
   MyVideo:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MyVideo/MyVideo.yaml"
     interval: 86400
     path: ./ruleset/MyVideo.yaml
   NHK:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NHK/NHK.yaml"
     interval: 86400
     path: ./ruleset/NHK.yaml
@@ -1900,7 +1998,7 @@ rule-providers:
     path: ./ruleset/Netflix.yaml
   Niconico:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Niconico/Niconico.yaml"
     interval: 86400
     path: ./ruleset/Niconico.yaml
@@ -1912,7 +2010,7 @@ rule-providers:
     path: ./ruleset/Nintendo.yaml
   NowE:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NowE/NowE.yaml"
     interval: 86400
     path: ./ruleset/NowE.yaml
@@ -1930,67 +2028,67 @@ rule-providers:
     path: ./ruleset/OpenAI.yaml
   PT:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PT/PT.yaml"
     interval: 86400
     path: ./ruleset/PT.yaml
   PTChina:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PTChina/PTChina.yaml"
     interval: 86400
     path: ./ruleset/PTChina.yaml
   PayPal:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PayPal/PayPal.yaml"
     interval: 86400
     path: ./ruleset/PayPal.yaml
   Perplexity:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Perplexity/Perplexity.yaml"
     interval: 86400
     path: ./ruleset/Perplexity.yaml
   Pinterest:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pinterest/Pinterest.yaml"
     interval: 86400
     path: ./ruleset/Pinterest.yaml
   Pixiv:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pixiv/Pixiv.yaml"
     interval: 86400
     path: ./ruleset/Pixiv.yaml
   Podcast:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Podcast/Podcast.yaml"
     interval: 86400
     path: ./ruleset/Podcast.yaml
   Poe:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Poe/Poe.yaml"
     interval: 86400
     path: ./ruleset/Poe.yaml
   Porn:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Porn/Porn.yaml"
     interval: 86400
     path: ./ruleset/Porn.yaml
   PornChina:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PornChina/PornChina.yaml"
     interval: 86400
     path: ./ruleset/PornChina.yaml
   PrimeVideo:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PrimeVideo/PrimeVideo.yaml"
     interval: 86400
     path: ./ruleset/PrimeVideo.yaml
@@ -2002,31 +2100,31 @@ rule-providers:
     path: ./ruleset/Qobuz.yaml
   Radiko:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Radiko/Radiko.yaml"
     interval: 86400
     path: ./ruleset/Radiko.yaml
   RakutenTV:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RakutenTV/RakutenTV.yaml"
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
   ReadsJapan:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
     interval: 86400
     path: ./ruleset/ReadsJapan.yaml
   Reddit:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reddit/Reddit.yaml"
     interval: 86400
     path: ./ruleset/Reddit.yaml
   SiriAI:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/SiriAI/SiriAI.yaml"
     interval: 86400
     path: ./ruleset/SiriAI.yaml
@@ -2038,31 +2136,31 @@ rule-providers:
     path: ./ruleset/Spotify.yaml
   Steam:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Steam/Steam.yaml"
     interval: 86400
     path: ./ruleset/Steam.yaml
   Synology:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Synology/Synology.yaml"
     interval: 86400
     path: ./ruleset/Synology.yaml
   TMDB:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TMDB/TMDB.yaml"
     interval: 86400
     path: ./ruleset/TMDB.yaml
   TVer:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TVer/TVer.yaml"
     interval: 86400
     path: ./ruleset/TVer.yaml
   Telasa:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Telasa/Telasa.yaml"
     interval: 86400
     path: ./ruleset/Telasa.yaml
@@ -2074,13 +2172,13 @@ rule-providers:
     path: ./ruleset/Telegram.yaml
   Threads:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Threads/Threads.yaml"
     interval: 86400
     path: ./ruleset/Threads.yaml
   Tidal:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
     interval: 86400
     path: ./ruleset/Tidal.yaml
@@ -2092,7 +2190,7 @@ rule-providers:
     path: ./ruleset/TikTok.yaml
   Tubi:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tubi/Tubi.yaml"
     interval: 86400
     path: ./ruleset/Tubi.yaml
@@ -2104,43 +2202,43 @@ rule-providers:
     path: ./ruleset/Twitch.yaml
   UNext:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/UNext/UNext.yaml"
     interval: 86400
     path: ./ruleset/UNext.yaml
   VideoMarket:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/VideoMarket/VideoMarket.yaml"
     interval: 86400
     path: ./ruleset/VideoMarket.yaml
   Viu:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Viu/Viu.yaml"
     interval: 86400
     path: ./ruleset/Viu.yaml
   WOWOW:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WOWOW/WOWOW.yaml"
     interval: 86400
     path: ./ruleset/WOWOW.yaml
   WSJ:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WSJ/WSJ.yaml"
     interval: 86400
     path: ./ruleset/WSJ.yaml
   Wallpaper:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Wallpaper/Wallpaper.yaml"
     interval: 86400
     path: ./ruleset/Wallpaper.yaml
   WhatsApp:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WhatsApp/WhatsApp.yaml"
     interval: 86400
     path: ./ruleset/WhatsApp.yaml
@@ -2158,43 +2256,43 @@ rule-providers:
     path: ./ruleset/YouTube.yaml
   YouTubeMusic:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTubeMusic/YouTubeMusic.yaml"
     interval: 86400
     path: ./ruleset/YouTubeMusic.yaml
   ZLibrary:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ZLibrary/ZLibrary.yaml"
     interval: 86400
     path: ./ruleset/ZLibrary.yaml
   friDayvideo:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
     interval: 86400
     path: ./ruleset/friDayvideo.yaml
   iCloud:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloud/iCloud.yaml"
     interval: 86400
     path: ./ruleset/iCloud.yaml
   iCloudPrivateRelay:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloudPrivateRelay/iCloudPrivateRelay.yaml"
     interval: 86400
     path: ./ruleset/iCloudPrivateRelay.yaml
   karaokeDAM:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/karaokeDAM/karaokeDAM.yaml"
     interval: 86400
     path: ./ruleset/karaokeDAM.yaml
   myTVSuper:
     type: http
-    behavior: domain
+    behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
     interval: 86400
     path: ./ruleset/myTVSuper.yaml

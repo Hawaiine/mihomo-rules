@@ -69,20 +69,16 @@ def get_strategy_group(brand_name: str) -> str:
 
 def determine_behavior(rules: list[CanonicalRule]) -> str:
     """
-    自动判断 behavior 类型。
+    返回 behavior 类型。
 
-    - domain: 仅含 DOMAIN / DOMAIN-SUFFIX / DOMAIN-KEYWORD / DOMAIN-REGEX 类规则
-    - classical: 含 IP-CIDR / IP-CIDR6 / IP-ASN / PROCESS-NAME 中任一类型
+    mihomo 官方格式定义（https://wiki.metacubex.one/config/rule-providers/）：
+    - domain: payload 为无类型前缀的 clash 通配域名列表，如 '.blogger.com'
+    - ipcidr: payload 为无类型前缀的纯 CIDR 列表，如 '192.168.1.0/24'
+    - classical: payload 为带类型前缀的规则行，如 DOMAIN-SUFFIX,google.com
+
+    本仓库所有规则集使用 TYPE,value 格式（classical），因此统一返回 "classical"。
     """
-    classical_types = {"IP-CIDR", "IP-CIDR6", "IP-ASN",
-                       "PROCESS-NAME", "PROCESS-NAME-WILDCARD", "PROCESS-NAME-REGEX",
-                       "PROCESS-PATH", "PROCESS-PATH-WILDCARD", "PROCESS-PATH-REGEX",
-                       "SRC-IP-CIDR", "SRC-IP-CIDR6", "DST-PORT", "SRC-PORT"}
-
-    for rule in rules:
-        if rule.rule_type in classical_types:
-            return "classical"
-    return "domain"
+    return "classical"
 
 
 # ── YAML 生成 ──────────────────────────────────────────────────

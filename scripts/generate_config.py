@@ -22,11 +22,11 @@ from lib.ownership_map import SUB_PARENT
 # 🎯 全球直连别名（无引号，供 rules 直接拼接；groups 中自行加引号）
 GLOBAL_DIRECT_PROXY = '🎯 全球直连'
 
-# 基础 provider 配置
+# 基础 provider 配置（本仓库 ruleset 全部使用 TYPE,value classical 格式）
 BASE_PROVIDERS = {
-    'Reject':       'domain',
-    'Direct':       'domain',
-    'Proxy':        'domain',
+    'Reject':       'classical',
+    'Direct':       'classical',
+    'Proxy':        'classical',
     'Applications': 'classical',
     'Private':      'classical',
     'LanCIDR':      'classical',
@@ -89,31 +89,28 @@ def scan_brands():
 
 
 def detect_behavior(yaml_path):
-    """检测规则集的 behavior"""
-    classical_types = {
-        'IP-CIDR', 'IP-CIDR6', 'IP-ASN', 'PROCESS-NAME',
-        'PROCESS-NAME-WILDCARD', 'PROCESS-NAME-REGEX',
-        'PROCESS-PATH', 'PROCESS-PATH-WILDCARD', 'PROCESS-PATH-REGEX',
-        'SRC-IP-CIDR', 'SRC-IP-CIDR6', 'DST-PORT', 'SRC-PORT',
-        'IN-TYPE', 'IN-USER', 'IN-NAME', 'IN-PORT',
-        'UID', 'NETWORK', 'PROTOCOL', 'RULE-SET',
-    }
+    """检测规则集的 behavior（mihomo 官方格式）"""
     try:
         with open(yaml_path) as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith('#') or line.startswith('payload'):
                     continue
-                rule_type = line.split(',')[0].strip()
-                if rule_type in classical_types:
-                    return 'classical'
-                if rule_type.startswith('- '):
-                    rule_type = rule_type[2:].strip()
-                    if rule_type in classical_types:
+                # 任何 TYPE,value 行 → classical
+                # 官方格式：classical 行以 - TYPE, 开头
+                if line.startswith('- '):
+                    first_part = line[2:].strip()
+                    if ',' in first_part:
                         return 'classical'
-        return 'domain'
+                    # 无逗号 → 可能是纯域名（domain）或纯 CIDR（ipcidr）
+                    val = first_part
+                    if '/' in val:
+                        continue  # 可能为 ipcidr，但本仓库无此格式
+                    # 无前缀域名 → domain
+                    return 'domain'
+        return 'classical'
     except Exception:
-        return 'domain'
+        return 'classical'
 
 
 def sort_brands(brands, sg_map):
@@ -319,14 +316,17 @@ def extract_system_config(config_path, compact=False):
 
 # ============ 生成函数 ============
 
-def gen_proxy_groups(brand_info, icons):
-    """生成品牌组 YAML（不含 proxy-groups: 标题，已在系统组中）"""
+def gen_proxy_groups(brand_info, icons, blank_between=False):
+    """生成品牌组 YAML（不含 proxy-groups: 标题，已在系统组中）
+    blank_between=True 时相邻品牌组之间空一行（full 版使用）"""
     lines = []
-    for bi in brand_info:
+    for i, bi in enumerate(brand_info):
+        if blank_between and i > 0:
+            lines.append('')
         lines.append(f'  - name: "{bi["sg"]}"')
         lines.append('    type: select')
         lines.append('    proxies:')
-        lines.append(f'      - \"{GLOBAL_DIRECT_PROXY}\"')
+        lines.append(f'      - "{GLOBAL_DIRECT_PROXY}"')
         lines.append('      - "♻️ 自动选择"')
         lines.append('      - "🔧 手动切换"')
         lines.append('    use:')
@@ -485,8 +485,9 @@ def main():
     icons = extract_icons(ROOT / 'configs' / 'Android' / 'config.yaml', sg_map)
     print(f'[+] 图标映射: {len(icons)} 个')
     
-    # 生成区块
-    proxy_groups = gen_proxy_groups(brand_info, icons)
+    # 生成区块（full 版品牌组间空行，min 版紧凑）
+    proxy_groups_full = gen_proxy_groups(brand_info, icons, blank_between=True)
+    proxy_groups_min = gen_proxy_groups(brand_info, icons, blank_between=False)
     rule_providers = gen_rule_providers(brand_info)
     
     # 定义 4 个变体
@@ -499,6 +500,7 @@ def main():
     
     for variant, (config_path, platform) in variants.items():
         is_min = 'min' in variant
+        proxy_groups = proxy_groups_min if is_min else proxy_groups_full
         system_config = extract_system_config(str(config_path), compact=is_min)
         system_groups = extract_system_groups(str(config_path), compact=is_min)
         rules = gen_rules(brand_info, variant)

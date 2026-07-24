@@ -159,20 +159,12 @@ def check_brand(brand):
     if extra:
         errors.append(f'  {brand}: 多余文件 {extra}（仅允许 {brand}.yaml + README.md）')
 
-    # 行为
+    # 行为校验（按 mihomo 官方格式：payload 为 TYPE,value 行→classical）
     readme_bhv = get_readme_behavior(readme_path)
-    # 从 payload 检测 behavior
-    classical_types = {'IP-CIDR', 'IP-CIDR6', 'IP-ASN', 'PROCESS-NAME',
-                       'PROCESS-NAME-WILDCARD', 'PROCESS-NAME-REGEX',
-                       'PROCESS-PATH', 'PROCESS-PATH-WILDCARD', 'PROCESS-PATH-REGEX',
-                       'SRC-IP-CIDR', 'SRC-IP-CIDR6', 'DST-PORT', 'SRC-PORT'}
-    actual_bhv = 'domain'
-    for t, c in payload_counts.items():
-        if c > 0 and t in classical_types:
-            actual_bhv = 'classical'
-            break
-    if readme_bhv and readme_bhv != actual_bhv:
-        errors.append(f'  {brand}: README behavior="{readme_bhv}" ≠ payload 实际="{actual_bhv}"')
+    # 从 payload 检测 behavior：本仓库所有 ruleset 使用 TYPE,value 格式→classical
+    expected_bhv = 'classical'
+    if readme_bhv and readme_bhv != expected_bhv:
+        errors.append(f'  {brand}: README behavior="{readme_bhv}" ≠ 官方格式预期="{expected_bhv}"')
 
     return len(errors) == 0, errors
 

@@ -38,6 +38,12 @@
 - 提交步：暂存区为空时跳过 commit/push，防止 `git commit || echo` 后仍 rebase+push
 - daily-sync 过滤改为始终运行 + `while IFS=` 安全逐行读路径；filter/check/commit 使用 `set -euo pipefail`；`if:` 条件从 filter 移到 check，滤噪后 check 决定 changed
 - daily-sync 过滤改用 `sed '/Updated:/d'` 替代 `grep -v` 避免 `set -e` 下无匹配误失败；文件列表改用 `git diff -- 'ruleset/**/*.yaml'`
+- 修复 f230458 品牌组全球直连错误转义（`gen_proxy_groups` 多余反斜杠），重生 4 份 config
+
+### Changed
+- **behavior 全链路统一 classical** — 按 mihomo 官方文件格式定义：所有 ruleset 使用 TYPE,value 行（classical 格式），config/README/检测逻辑统一为 classical；BASE_PROVIDERS 7 兜底全部 classical
+- **full 品牌组空行** — full 版 config proxy-groups 品牌段相邻组间空行；min 版保持紧凑/无空行
+- **verify_rulesets** — behavior 校验按官方格式，不再按「有无 IP」判 domain
 
 ### Removed
 - **MusicJp.yaml** — 删除 `ruleset/MusicJapan/MusicJp.yaml` 残留空壳文件（0 规则，无全库引用）
