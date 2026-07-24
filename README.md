@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/github/actions/workflow/status/Hawaiine/mihomo-rules/daily-sync.yml?label=CI" alt="CI状态">
   <img src="https://img.shields.io/badge/platform-Nikki%20%7C%20Android-lightgrey" alt="支持平台">
   <img src="https://img.shields.io/badge/rulesets-106-blue" alt="规则集数量">
-  <img src="https://img.shields.io/badge/brands-106-orange" alt="品牌数量">
+  <img src="https://img.shields.io/badge/brands-99-orange" alt="品牌数量">
   <img src="https://img.shields.io/github/license/Hawaiine/mihomo-rules" alt="许可证">
 </p>
 
@@ -33,29 +33,26 @@
 |------|------|
 | 🔄 **每日自动同步** | 北京时间 06:00 自动从 3 个上游合并最新规则，Discord 通知 |
 | 📦 **即用配置** | 内置 Android + Nikki 完整配置，带注释版 + 无注释精简版，替换订阅链接即可使用 |
-| 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（106 品牌），`icon-map.sh` 唯一数据源 |
-| 🧹 **格式自动修复** | awk 驱动，全量 106 文件校验 < 1 秒；自动修复裸域名、`+.xxx` 前缀、@标签、Header 计数 |
-| ⚡ **并发同步** | 品牌级别 6 路并发拉取，大幅缩短同步时间 |
-| 📊 **增量清洗** | 只处理本次同步变更过的品牌，非全量 106 文件扫描 |
-| 🛡️ **格式校验** | 对 DOMAIN/DOMAIN-SUFFIX 域名格式 + IP-CIDR/IP-CIDR6 掩码范围做校验，异常报警不丢弃 |
-| 🔍 **异常量级检测** | 品牌规则量突增超过历史 5 倍时，CI 日志 + Discord 双通道报警 |
-| ⚡ **幂等更新** | 无变更不覆盖，`Updated` 时间仅内容变更时更新 |
-| 📋 **CHANGELOG 自动管理** | 已有条目原地覆盖，无则追加 |
-| 🌐 **国内加速** | 内置 jsDelivr CDN 地址用于 geoip/geosite 数据库下载 |
-| 🔒 **安全优先** | 写入 temp → diff 对比 → 无变化不覆盖，零数据丢失风险 |
-| 🛡️ **全局清洗兜底** | 每次同步末尾强制修复 regexp 格式 + Cloudflare IP 剥离 + sort -u 去重，上游脏数据无法累积 |
-| 🔄 **CI 防冲突** | rebase 先普通→冲突打印→`-X theirs` 兜底，Discord 通知冲突文件 |
-| 📝 **失败归档** | 失败 Action 7 天后自动归档到 `ci-failure-log.md`，保留排障线索 |
+| 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（99 品牌），`scripts/match_icons.py` 生成映射 |
+| ⚡ **Python 管线** | 8 步串联（fetch → parse → merge → write → resolve → icons → config → verify），全自动幂等运行 |
+| 🛡️ **双 verify 门禁** | `verify_configs` + `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
+| 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
+| 🔧 **写入幂等** | `has_meaningful_diff` 忽略 `Updated:` 噪音；payload 不变不写 YAML，统计不变不写 README |
+| 📊 **增量清洗** | 只处理本次同步变更过的品牌，非全量文件扫描 |
+| 🛡️ **格式校验** | 对 DOMAIN/DOMAIN-SUFFIX 域名格式做校验，异常报警不丢弃 |
+| 🔍 **异常量级检测** | 品牌规则量突增超过历史倍数时，CI 日志 + Discord 双通道报警 |
+| 🌐 **国内加速** | 内置 DNSPod/阿里 DNS 优先，国内 CDN 加速 geoip/geosite 数据库下载 |
+| 📝 **失败归档** | 失败 Action 保留排障线索 |
 
 ## 🏗️ 项目架构
 
 ```
 mihomo-rules/
 ├── ruleset/                      # 规则集（每个品牌独立子目录）
-│   ├── Direct/                   # 基础规则集 (8个)
+│   ├── Direct/                   # 基础规则集 (7个)
 │   │   ├── Direct.yaml           # 规则集文件（Header + payload）
-│   │   └── README.md             #106 品牌说明（统计/behavior/使用方式）
-│   ├── Netflix/                  #106 品牌规则集 (105个)
+│   │   └── README.md             # 品牌说明（统计/behavior/使用方式）
+│   ├── Netflix/                  # 品牌规则集 (99个)
 │   ├── OpenAI/
 │   └── .../
 ├── configs/                      # 平台配置文件
@@ -69,27 +66,30 @@ mihomo-rules/
 │       └── README.md
 ├── providers/                    # 节点配置模板
 │   ├── airport/                  # 机场订阅配置
-│   │   ├── http/                 # 远程订阅 (config.yaml + README)
-│   │   ├── file/                 # 本地订阅 (config.yaml + README)
-│   │   └── filter/               # 地区过滤正则 (examples + README)
-│   └── nodes/                    # 单节点配置 (按协议分组)
-│       ├── shadowsocks/          # 4 种配置变体
-│       ├── vmess/                # 5 种配置变体
-│       ├── vless/                # 5 种配置变体
-│       ├── trojan/               # 4 种配置变体
-│       ├── hysteria/             # 5 种配置变体
-│       ├── tuic/                 # 3 种配置变体
-│       ├── wireguard/            # 3 种配置变体
-│       └── ssh-snell-anytls/     # 4 种配置变体
-├── scripts/                      # 核心工具脚本
-│   ├── sync-upstream.sh          # 上游同步（v2fly + Loyalsoldier + blackmatrix7）
-│   ├── validate-ruleset.sh       # 格式校验 + 自动修复 + README 同步
-│   ├── generate-config.sh        # 配置生成（behavior 检测 + 图标注入 + DNS 分流）
-│   ├── sync-icons.sh             # Oasisic-Icons 图标同步
-│   ├── parse-loyalsoldier.awk    # Loyalsoldier 解析器
-│   └── parse-v2fly.awk           # v2fly 解析器
+│   │   ├── http/                 # 远程订阅
+│   │   ├── file/                 # 本地订阅
+│   │   └── filter/               # 地区过滤正则
+│   └── nodes/                    # 单节点配置（按协议分组）
+├── scripts/                      # Python 核心管线
+│   ├── batch_update.py           # 日更入口：8 步串联 + 校验 + Discord 通知
+│   ├── fetch_upstream.py         # 从 3 个上游拉取原始数据
+│   ├── parse_v2fly.py            # v2fly 数据解析
+│   ├── parse_loyalsoldier.py     # Loyalsoldier 数据解析
+│   ├── parse_blackmatrix7.py     # blackmatrix7 数据解析
+│   ├── merge_and_dedup.py        # 三源合并 + 去重
+│   ├── commit_writer.py          # 写入 ruleset YAML + README（含幂等）
+│   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌）
+│   ├── match_icons.py            # Oasisic-Icons 品牌图标映射
+│   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
+│   ├── verify_configs.py         # 配置校验（10 项检查）
+│   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README）
+│   └── lib/                      # 共享库
+│       ├── canonical.py          # 规则解析、标准化、排序
+│       ├── ownership.py          # 品牌归属逻辑
+│       ├── ownership_map.py      # SUB_PARENT 父子品牌映射
+│       └── validators.py         # 格式校验
 ├── .github/workflows/
-│   └── daily-sync.yml            # 每日 CI 自动同步 + 图标 + 验证 + Discord 通知
+│   └── daily-sync.yml            # 每日 CI 自动同步 + 双 verify + Discord 通知
 ├── CHANGELOG.md
 └── README.md
 ```
@@ -99,10 +99,10 @@ mihomo-rules/
 | # | 上游 | 内容 | 合并策略 |
 |---|------|------|---------|
 | ① | [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community) | 域名 | `data/<brand>` 文件，递归解析 `include:` 引用（≤5 层） |
-| ② | [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | 域名 + IP-CIDR | `release/` 目录，外部 awk 解析 YAML payload |
+| ② | [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | 域名 + IP-CIDR | `release/` 目录，Python 解析 YAML payload |
 | ③ | [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script) | 域名 + IP-CIDR + IP-CIDR6 + PROCESS-NAME | 域名仅补漏，IP-CIDR/PROCESS-NAME 无条件全加 |
 
-**合并逻辑：** 已有规则集 → ① v2fly 补充域名 → ② Loyalsoldier 补充域名+IP-CIDR → ③ blackmatrix7 域名仅补漏、IP-CIDR/PROC-NAME 无条件全加 → 全局去重（`sort -u`）→ 按类型分组 → 字母序排列 → 重写 Header
+**合并逻辑：** 已有规则集 → ① v2fly 补充域名 → ② Loyalsoldier 补充域名+IP-CIDR → ③ blackmatrix7 域名仅补漏、IP-CIDR/PROC-NAME 无条件全加 → 合并去重（`CanonicalRule` 精确匹配）→ 按类型分组 → 字母序排序 → 重写 Header
 
 ## 🚀 快速使用
 
@@ -199,7 +199,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 ```
 1️⃣ 拦截    RULE-SET,Reject + GEOSITE 广告
-2️⃣106 品牌    Netflix/Bilibili 等（按需取消注释，放在国内前避免被GEOIP截胡）
+2️⃣ 品牌    Netflix/Bilibili 等 99 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
 3️⃣ 直连    Applications(DIRECT) + LanCIDR/Private(DIRECT, 硬直连不可改)
 4️⃣ 国内IP  CNCIDR + GEOIP,CN → DIRECT
 | 5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
@@ -258,18 +258,26 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
-| 2026-07-17 | 品牌级 6 路并发拉取、`clean_file()` awk 重写、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理+失败 7 天归档、HEADER_ORDER 共享、分组注释移除、图标映射去重 |
+| 2026-07-24 | CI 门禁加固（verify_configs + verify_rulesets 双门禁，失败 sys.exit(1)）；git add 白名单；setup-python 升级消除 Node 20 警告；写入幂等加固（YAML/README 独立判断，无实质变化不写盘）；日更无实质 diff 不 commit；PROCESS 大小写保护；min rules 去空行；verify_rulesets 新增（header/payload/README/behavior 一致性） |
+| 2026-07-22 | SUB_PARENT 单源化（ownership_map.py）；resolve_ownership 噪音修复；generate_config 幂等加固；命名两线文档 |
+| 2026-07-17 | 品牌级 6 路并发拉取、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理 |
 | 2026-07-10 | 地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + geo 每周更新 + config.min.yaml 无注释版 |
 
 ## 🛠️ 脚本说明
 
 | 脚本 | 说明 | 用法 |
 |------|------|------|
-| `sync-upstream.sh` | 从 3 个上游同步规则（6 路并发拉取，单品牌/全量支持） | `bash scripts/sync-upstream.sh` 或 `bash scripts/sync-upstream.sh Netflix` |
-| `validate-ruleset.sh` | 校验 + 自动修复 + README 同步 (7 种规则类型全量顺序校验) | `bash scripts/validate-ruleset.sh` 或 `bash scripts/validate-ruleset.sh ruleset/X/X.yaml` |
-| `generate-config.sh` | 生成 Android + Nikki 双平台配置（图标从 `icon-map.sh` 读取） | `bash scripts/generate-config.sh` |
-| `sync-icons.sh` | 从 Oasisic-Icons 同步品牌图标映射（唯一数据源，含 23 条手动补丁） | `bash scripts/sync-icons.sh` |
-| `header-order.sh` | 共享的 HEADER 顺序定义（被 `sync-upstream.sh` 和 `validate-ruleset.sh` source） | 不独立执行 |
+| `batch_update.py` | 日更入口：8 步串联（fetch → parse → merge → write → resolve → icons → config → verify） | `python3 scripts/batch_update.py` 或 `--no-commit` |
+| `verify_configs.py` | 配置校验（10 项检查，集合等价/命名两线/顺序约束/格式约定） | `python3 scripts/verify_configs.py` |
+| `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
+| `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
+| `resolve_ownership.py` | 品牌归属去重（子品牌规则移到父品牌目录） | `python3 scripts/resolve_ownership.py --apply` |
+| `commit_writer.py` | 写入单个品牌 YAML + README（含幂等，跳过 Updated 噪音） | 由 batch_update 调用 |
+| `match_icons.py` | 从 Oasisic-Icons 生成品牌图标映射 | `python3 scripts/match_icons.py` |
+
+> 日更入口：`python3 scripts/batch_update.py`（自动 pull → 同步 → 校验 → commit → push）  
+> CI 入口：`.github/workflows/daily-sync.yml`（`batch_update --no-commit` + 显式 verify + 提交）  
+> 单品牌操作：暂由 batch_update 全量管线处理，不支持单独指定品牌 CLI
 
 ## 📊 规则集统计
 
@@ -295,14 +303,16 @@ python3 scripts/generate_config.py
 
 ## 🤝 贡献指南
 
-1. **新增品牌**：在 `ruleset/` 下创建 `<Brand>/<Brand>.yaml`，运行 `bash scripts/sync-upstream.sh <Brand>`
-2. **修复规则**：修改 YAML 文件后运行 `bash scripts/validate-ruleset.sh` 校验格式
+1. **新增品牌**：在 `ruleset/` 下创建 `<Brand>/<Brand>.yaml`，按 8 种规则类型规范编写，运行 `python3 scripts/verify_rulesets.py` 校验
+2. **修复规则**：修改 YAML 文件后运行 `python3 scripts/verify_rulesets.py` 校验格式一致性
 3. **提交前检查**：
    ```bash
-   bash -n scripts/*.sh                    # 脚本语法检查
-   bash scripts/validate-ruleset.sh        # 规则集格式校验
-   bash scripts/generate-config.sh         # 配置生成测试
+   python3 scripts/verify_configs.py        # 配置校验
+   python3 scripts/verify_rulesets.py       # ruleset 一致性校验
+   python3 scripts/generate_config.py       # 配置生成测试
    ```
+
+> 日更由 `scripts/batch_update.py` 或 CI `daily-sync.yml` 全量管线处理，不单独同步单一品牌。如需新增品牌，编辑 `scripts/lib/ownership_map.py` 添加品牌映射后运行全量管线。
 
 ## ❓ 常见问题
 
@@ -310,22 +320,19 @@ python3 scripts/generate_config.py
 每日北京时间 06:00（UTC 22:00）自动触发 CI 同步。也可在 GitHub Actions 手动触发 `workflow_dispatch`。
 
 ### Q: 如何只同步某个品牌？
-```bash
-bash scripts/sync-upstream.sh Netflix     # 只同步 Netflix
-bash scripts/sync-upstream.sh OpenAI      # 只同步 OpenAI
-```
+日更由 `scripts/batch_update.py` 全量管线处理，不支持单品牌 CLI。如需单独修复品牌规则，直接编辑 `ruleset/<Brand>/<Brand>.yaml` 后运行 `python3 scripts/verify_rulesets.py` 校验即可。
 
 ### Q: 配置中的订阅链接如何填写？
 编辑 `configs/Android/config.yaml` 或 `configs/Nikki/config.yaml`（或同目录下的 `config.min.yaml` 无注释版），找到 `proxy-providers` 下的 `url: "此处填入你的订阅链接"`，替换为真实机场订阅地址。
 
 ### Q: 图标不显示怎么办？
 ```bash
-bash scripts/sync-icons.sh                # 从 Oasisic-Icons 同步图标映射
-bash scripts/generate-config.sh           # 重新生成配置
+python3 scripts/match_icons.py           # 从 Oasisic-Icons 同步图标映射
+python3 scripts/generate_config.py       # 重新生成配置
 ```
 
 ### Q: 如何自定义策略组？
-编辑 `scripts/generate-config.sh` 中的 `write_global_groups()` 和 `write_brand_groups()` 函数，重新生成配置即可。
+编辑 `scripts/generate_config.py` 中的策略组生成函数，重新生成配置即可。
 
 ## 🔗 相关资源
 
