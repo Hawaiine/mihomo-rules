@@ -62,8 +62,50 @@ jobs:
             echo "⏸️ 无变更，跳过提交"
           fi
 
-      - name: 📤 提交并推送
+      - name: 🧹 过滤仅 Updated 噪音
+        id: filter
         if: steps.check.outputs.changed == 'true'
+        run: |
+          # 收集所有变更的 ruleset/ 文件
+          changed_files=$(git diff --name-only)
+          noise_only=true
+          noise_files=""
+          for f in $changed_files; do
+            case "$f" in
+              ruleset/*)
+                # 检查该文件的 diff 是否仅包含 Updated 行变化
+                diff_text=$(git diff -- "$f")
+                # 移除 Updated 行后，若 patch 为空则为噪音
+                filtered=$(echo "$diff_text" | grep -v 'Updated:' | grep -v '^---\|^+++\|^@@\|^diff --git\|^index' || true)
+                if [ -z "$filtered" ]; then
+                  noise_files="$noise_files $f"
+                else
+                  noise_only=false
+                  echo "📝 实质变更: $f"
+                fi
+                ;;
+              *)
+                # 非 ruleset/ 文件变更视为实质变更
+                noise_only=false
+                echo "📝 非 ruleset 变更: $f"
+                ;;
+            esac
+          done
+          if [ -n "$noise_files" ]; then
+            echo "🧹 丢弃仅 Updated 噪音: $noise_files"
+            git checkout -- $noise_files
+          fi
+          # 重新检查
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "⏸️ 过滤后无变更，跳过提交"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 过滤后仍有实质变更"
+          fi
+
+      - name: 📤 提交并推送
+        if: steps.filter.outputs.changed == 'true'
         run: |
           git config user.name "mihomo-bot"
           git config user.email "bot@mihomo-rules"

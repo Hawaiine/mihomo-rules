@@ -254,21 +254,27 @@ def diff_report(old_path: str, new_content: str) -> str:
 # ── 写入规则集 ────────────────────────────────────────────────
 
 def has_meaningful_diff(old_path: str, new_content: str) -> bool:
-    """检查文件是否有实质变化（忽略 Updated: 行）"""
+    """检查文件是否有实质变化（忽略 Updated: 行和 trailing whitespace 差异）"""
+    def normalize(text: str) -> list[str]:
+        """统一换行符、去除行尾空白、过滤 Updated 行"""
+        result = []
+        for line in text.splitlines(keepends=True):
+            line = line.replace('\r\n', '\n').replace('\r', '\n')
+            stripped = line.rstrip('\n').rstrip()
+            if 'Updated:' in stripped:
+                continue
+            result.append(stripped)
+        return result
+
     try:
         with open(old_path, "r", encoding="utf-8") as f:
-            old_lines = f.readlines()
+            old_content = f.read()
     except FileNotFoundError:
         return True  # 新文件=有变化
 
-    new_lines = new_content.splitlines(keepends=True)
-    if old_lines == new_lines:
-        return False
-
-    # 逐行比较，跳过 Updated: 行
-    old_filtered = [l for l in old_lines if 'Updated:' not in l]
-    new_filtered = [l for l in new_lines if 'Updated:' not in l]
-    return old_filtered != new_filtered
+    old_normalized = normalize(old_content)
+    new_normalized = normalize(new_content)
+    return old_normalized != new_normalized
 
 
 def write_ruleset(
@@ -346,6 +352,9 @@ def write_ruleset(
                 stats=stats,
                 error=f"写入 YAML 失败: {yaml_err}",
             )
+    else:
+        # 幂等保护：仅 Updated 行差异时不写盘，不刷新 mtime
+        pass
 
     # 写入 README（仅统计/behavior 实质变化时）
     if readme_changed:
@@ -357,6 +366,9 @@ def write_ruleset(
                 stats=stats,
                 error=f"写入 README 失败: {readme_err}",
             )
+
+    # 重新计算 has_changes（防御性：yaml_changed 和 readme_changed 已分别决定写盘）
+    stats['has_changes'] = yaml_changed or readme_changed
 
     return WriteResult(
         success=True,

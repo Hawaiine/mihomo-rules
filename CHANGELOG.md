@@ -7,14 +7,20 @@
 ## 2026-07-24
 
 ### Added
+- **🎯 全球直连** — 新增别名；rules/组内直连统一走别名；providers 拉取仍 DIRECT
+- **21 地区节点** — 保留港日美新台，新增 16 区；每区 provider_xx + 节点组成对，♻️ 自动选择仅 21 地区组
+- **verify_configs.py 校验** — 新增 proxy-groups 单键断言、min 版 groups/providers 块间无空行、rules 出站无错误引号
 - **verify_rulesets.py** — 新增 ruleset 一致性校验脚本，检查 header/payload/README/behavior 对齐，失败 exit≠0
 - **send_idle()** — 无变化时发送「⏸️ 上游无变化」Discord 通知
 - **has_meaningful_diff()** — 独立比较 YAML/README 忽略 Updated 噪音
 
 ### Changed
+- **config 格式约定** — full 版 `rules:` 前有空行；min 版 `rules:` 前无空行、段内无空行、proxy-groups/proxy-providers 块间紧凑
+- **proxy-groups 去重** — 修复模板中连续两行 `proxy-groups:` 的重复键缺陷
+- **rules 出站引号** — RULE-SET/GEOIP 行策略组名不再包裹多余双引号（如 `,🎯 全球直连` 而非 `,"🎯 全球直连"`）
 - **batch_update.py** — 校验失败改为 `sys.exit(1)`（含 `--no-commit`）；commit 前 `git status --porcelain` 门闩，无实质 diff 不 commit；`git add -A` 改为白名单 `ruleset/ configs/ scripts/`
-- **commit_writer.py** — YAML/README 独立判断写入，payload 不变不碰 Updated，统计不变不写 README
-- **daily-sync.yml** — 提交前显式 `verify_configs` + `verify_rulesets`；`setup-python@v5→v7` 消除 Node.js 20 弃用警告；失败通知补 User-Agent
+- **commit_writer.py** — YAML/README 独立判断写入，payload 不变不碰 Updated，统计不变不写 README；`has_meaningful_diff` 统一换行符、去除行尾空白、过滤 Updated 行
+- **daily-sync.yml** — 提交前显式 `verify_configs` + `verify_rulesets`；`setup-python@v5→v7` 消除 Node.js 20 弃用警告；失败通知补 User-Agent；新增 🧹 过滤仅 Updated 噪音步骤
 - **canonical.py** — `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，保留上游原始大小写
 - **configs** — min rules 段内无空行；full 版文案去掉「97 品牌」旧数
 - **README.md** — 全面对齐 Python 管线，清理过时 shell 描述，品牌口径修正为 99+7=106
@@ -22,7 +28,7 @@
 ### Fixed
 - Google header 残留脏数据（`# IP-CIDR6: 5→0`）
 - Apple/Amazon/Disney 等品牌 README 统计与 payload 不一致（逐品牌仅一次纠偏）
-- 日更噪音：仅 `# Updated:` 变化不再产生写入/提交
+- 日更噪音：仅 `# Updated:` 变化不再产生写入/提交；CI 提交前过滤仅 Updated 噪音
 
 ---
 
