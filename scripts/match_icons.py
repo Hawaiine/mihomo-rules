@@ -8,7 +8,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ICON_REPO = Path('/opt/data/Oasisic-Icons')
+# 图标仓库路径优先级：环境变量 > 仓库本地克隆 > 旧硬编码路径
+ICON_REPO = Path(os.environ.get('MIHOMO_ICON_REPO', str(ROOT / 'Oasisic-Icons')))
+if not ICON_REPO.exists():
+    ICON_REPO = Path('/opt/data/Oasisic-Icons')
 GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons'
 
 # 导入品牌映射

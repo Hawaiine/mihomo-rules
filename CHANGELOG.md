@@ -17,18 +17,27 @@
 ### Changed
 - **config 格式约定** — full 版 `rules:` 前有空行；min 版 `rules:` 前无空行、段内无空行、proxy-groups/proxy-providers 块间紧凑
 - **proxy-groups 去重** — 修复模板中连续两行 `proxy-groups:` 的重复键缺陷
-- **rules 出站引号** — RULE-SET/GEOIP 行策略组名不再包裹多余双引号（如 `,🎯 全球直连` 而非 `,"🎯 全球直连"`）
+- **rules 出站引号** — RULE-SET/GEOIP 行策略组名不再包裹多余双引号（如 `,🎯 全球直连` 而非 `,\"🎯 全球直连\"`）
 - **batch_update.py** — 校验失败改为 `sys.exit(1)`（含 `--no-commit`）；commit 前 `git status --porcelain` 门闩，无实质 diff 不 commit；`git add -A` 改为白名单 `ruleset/ configs/ scripts/`
 - **commit_writer.py** — YAML/README 独立判断写入，payload 不变不碰 Updated，统计不变不写 README；`has_meaningful_diff` 统一换行符、去除行尾空白、过滤 Updated 行
 - **daily-sync.yml** — 提交前显式 `verify_configs` + `verify_rulesets`；`setup-python@v5→v7` 消除 Node.js 20 弃用警告；失败通知补 User-Agent；新增 🧹 过滤仅 Updated 噪音步骤
 - **canonical.py** — `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，保留上游原始大小写
 - **configs** — min rules 段内无空行；full 版文案去掉「97 品牌」旧数
 - **README.md** — 全面对齐 Python 管线，清理过时 shell 描述，品牌口径修正为 99+7=106
+- **commit_writer.py** — 抽出 `_normalize_for_compare` 独立函数（含去末尾空行）；`write_ruleset` 路径锚定仓库根，不依赖 cwd
+- **daily-sync.yml** — `git status --porcelain` 限定白名单 `ruleset/ configs/ scripts/`；噪音过滤增强（CRLF + 行尾空白标准化）
+- **match_icons.py** — ICON_REPO 支持 `MIHOMO_ICON_REPO` 环境变量，优先仓库本地 `Oasisic-Icons/`，再回退旧硬编码路径
+- **generate_config.py** — `extract_icons` 图标路径可移植，与 `match_icons.py` 统一策略
+- **.gitignore** — 增加 `Oasisic-Icons/` 防止 CI checkout 污染 git status
+- **README.md** — 修正「系统组 11 个」→「28 个系统组」与代码一致
 
 ### Fixed
 - Google header 残留脏数据（`# IP-CIDR6: 5→0`）
 - Apple/Amazon/Disney 等品牌 README 统计与 payload 不一致（逐品牌仅一次纠偏）
 - 日更噪音：仅 `# Updated:` 变化不再产生写入/提交；CI 提交前过滤仅 Updated 噪音
+
+### Removed
+- **MusicJp.yaml** — 删除 `ruleset/MusicJapan/MusicJp.yaml` 残留空壳文件（0 规则，无全库引用）
 
 ---
 

@@ -54,7 +54,8 @@ jobs:
       - name: 🔍 检查变更
         id: check
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
+          # 白名单 porcelain：只检查 ruleset/ configs/ scripts/
+          if [ -n "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "🔄 检测到变更"
           else
@@ -67,16 +68,21 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: |
           # 收集所有变更的 ruleset/ 文件
-          changed_files=$(git diff --name-only)
+          changed_files=$(git diff --name-only -- ruleset/)
           noise_only=true
           noise_files=""
+          if [ -z "$changed_files" ]; then
+            # 非 ruleset 变更（configs/ scripts/），视为实质变更
+            noise_only=false
+            echo "📝 非 ruleset 变更，保留"
+          fi
           for f in $changed_files; do
             case "$f" in
               ruleset/*)
                 # 检查该文件的 diff 是否仅包含 Updated 行变化
                 diff_text=$(git diff -- "$f")
-                # 移除 Updated 行后，若 patch 为空则为噪音
-                filtered=$(echo "$diff_text" | grep -v 'Updated:' | grep -v '^---\|^+++\|^@@\|^diff --git\|^index' || true)
+                # 标准化：移除 CRLF、行尾空白、Updated 行，看是否还有实质内容
+                filtered=$(echo "$diff_text" | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | grep -v '^---\|^+++\|^@@\|^diff --git\|^index' || true)
                 if [ -z "$filtered" ]; then
                   noise_files="$noise_files $f"
                 else
@@ -85,7 +91,6 @@ jobs:
                 fi
                 ;;
               *)
-                # 非 ruleset/ 文件变更视为实质变更
                 noise_only=false
                 echo "📝 非 ruleset 变更: $f"
                 ;;
@@ -95,8 +100,8 @@ jobs:
             echo "🧹 丢弃仅 Updated 噪音: $noise_files"
             git checkout -- $noise_files
           fi
-          # 重新检查
-          if [ -z "$(git status --porcelain)" ]; then
+          # 重新检查（白名单 porcelain）
+          if [ -z "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "⏸️ 过滤后无变更，跳过提交"
           else

@@ -253,27 +253,31 @@ def diff_report(old_path: str, new_content: str) -> str:
 
 # ── 写入规则集 ────────────────────────────────────────────────
 
-def has_meaningful_diff(old_path: str, new_content: str) -> bool:
-    """检查文件是否有实质变化（忽略 Updated: 行和 trailing whitespace 差异）"""
-    def normalize(text: str) -> list[str]:
-        """统一换行符、去除行尾空白、过滤 Updated 行"""
-        result = []
-        for line in text.splitlines(keepends=True):
-            line = line.replace('\r\n', '\n').replace('\r', '\n')
-            stripped = line.rstrip('\n').rstrip()
-            if 'Updated:' in stripped:
-                continue
-            result.append(stripped)
-        return result
+def _normalize_for_compare(text: str) -> list[str]:
+    """统一换行符、去除行尾空白、过滤 Updated 行、去掉末尾空行"""
+    result = []
+    for line in text.splitlines(keepends=True):
+        line = line.replace('\r\n', '\n').replace('\r', '\n')
+        stripped = line.rstrip('\n').rstrip()
+        if 'Updated:' in stripped:
+            continue
+        result.append(stripped)
+    # 去掉末尾空行
+    while result and result[-1] == '':
+        result.pop()
+    return result
 
+
+def has_meaningful_diff(old_path: str, new_content: str) -> bool:
+    """检查文件是否有实质变化（忽略 Updated: 行、trailing whitespace、末尾空行差异）"""
     try:
         with open(old_path, "r", encoding="utf-8") as f:
             old_content = f.read()
     except FileNotFoundError:
         return True  # 新文件=有变化
 
-    old_normalized = normalize(old_content)
-    new_normalized = normalize(new_content)
+    old_normalized = _normalize_for_compare(old_content)
+    new_normalized = _normalize_for_compare(new_content)
     return old_normalized != new_normalized
 
 
@@ -312,10 +316,11 @@ def write_ruleset(
     yaml_content = generate_yaml(brand_name, rules, strategy_group)
     readme_content = generate_readme(brand_name, rules, behavior, strategy_group)
 
-    # 文件路径
-    ruleset_dir = os.path.join("ruleset", brand_name)
-    yaml_path = os.path.join(ruleset_dir, f"{brand_name}.yaml")
-    readme_path = os.path.join(ruleset_dir, "README.md")
+    # 文件路径（锚定仓库根目录，不依赖 cwd）
+    repo_root = Path(__file__).resolve().parent.parent
+    ruleset_dir = repo_root / "ruleset" / brand_name
+    yaml_path = str(ruleset_dir / f"{brand_name}.yaml")
+    readme_path = str(ruleset_dir / "README.md")
 
     # 差异报告（YAML 用于 diff 输出，独立判断各有无实质变化）
     diff = diff_report(yaml_path, yaml_content)

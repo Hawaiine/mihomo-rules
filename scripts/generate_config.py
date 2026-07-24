@@ -191,9 +191,10 @@ def extract_icons(config_path, sg_map):
         except:
             pass
     
-    # 从 Oasisic-Icons 匹配缺失的图标
+    # 从 Oasisic-Icons 匹配缺失的图标（可移植路径）
     GITHUB_ICON = 'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons'
-    icon_repo = Path('/opt/data/Oasisic-Icons')
+    icon_repo_env = Path(os.environ.get('MIHOMO_ICON_REPO', str(ROOT / 'Oasisic-Icons')))
+    icon_repo = icon_repo_env if icon_repo_env.exists() else Path('/opt/data/Oasisic-Icons')
     if icon_repo.exists():
         for root, dirs, files in os.walk(icon_repo / 'icons'):
             for f in files:
