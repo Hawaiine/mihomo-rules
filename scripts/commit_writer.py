@@ -253,6 +253,24 @@ def diff_report(old_path: str, new_content: str) -> str:
 
 # ── 写入规则集 ────────────────────────────────────────────────
 
+def has_meaningful_diff(old_path: str, new_content: str) -> bool:
+    """检查文件是否有实质变化（忽略 Updated: 行）"""
+    try:
+        with open(old_path, "r", encoding="utf-8") as f:
+            old_lines = f.readlines()
+    except FileNotFoundError:
+        return True  # 新文件=有变化
+
+    new_lines = new_content.splitlines(keepends=True)
+    if old_lines == new_lines:
+        return False
+
+    # 逐行比较，跳过 Updated: 行
+    old_filtered = [l for l in old_lines if 'Updated:' not in l]
+    new_filtered = [l for l in new_lines if 'Updated:' not in l]
+    return old_filtered != new_filtered
+
+
 def write_ruleset(
     brand_name: str,
     rules: list[CanonicalRule],
@@ -293,8 +311,10 @@ def write_ruleset(
     yaml_path = os.path.join(ruleset_dir, f"{brand_name}.yaml")
     readme_path = os.path.join(ruleset_dir, "README.md")
 
-    # 差异报告
+    # 差异报告（YAML 用于 diff 输出，独立判断各有无实质变化）
     diff = diff_report(yaml_path, yaml_content)
+    yaml_changed = has_meaningful_diff(yaml_path, yaml_content)
+    readme_changed = has_meaningful_diff(readme_path, readme_content)
 
     stats = {
         "brand": brand_name,
@@ -304,17 +324,11 @@ def write_ruleset(
         "type_counts": type_counts,
         "yaml_path": yaml_path,
         "readme_path": readme_path,
-        "has_changes": bool(diff.strip()),
+        "has_changes": yaml_changed or readme_changed,
     }
 
     if dry_run:
-        # 在 dry-run 中也应用 Updated 过滤
-        if diff.strip():
-            meaningful_lines = [l for l in diff.split('\n')
-                              if l and (l.startswith('-') or l.startswith('+'))
-                              and not l.startswith('---') and not l.startswith('+++')
-                              and 'Updated:' not in l]
-            stats['has_changes'] = bool(meaningful_lines)
+        stats['has_changes'] = yaml_changed or readme_changed
         return WriteResult(
             success=True,
             diff=diff,
@@ -322,40 +336,27 @@ def write_ruleset(
             error="",
         )
 
-    # 检查是否有实质性变化（跳过仅时间戳的噪音变更）
-    if diff.strip():
-        meaningful_lines = [l for l in diff.split('\n')
-                          if l and (l.startswith('-') or l.startswith('+'))
-                          and not l.startswith('---') and not l.startswith('+++')
-                          and 'Updated:' not in l]
-        if not meaningful_lines:
-            stats['has_changes'] = False
+    # 写入 YAML（仅 payload/header 实质变化时）
+    if yaml_changed:
+        yaml_ok, yaml_err = atomic_write(yaml_content, yaml_path)
+        if not yaml_ok:
             return WriteResult(
-                success=True,
-                diff="",
+                success=False,
+                diff=diff,
                 stats=stats,
-                error="",
+                error=f"写入 YAML 失败: {yaml_err}",
             )
 
-    # 写入 YAML
-    yaml_ok, yaml_err = atomic_write(yaml_content, yaml_path)
-    if not yaml_ok:
-        return WriteResult(
-            success=False,
-            diff=diff,
-            stats=stats,
-            error=f"写入 YAML 失败: {yaml_err}",
-        )
-
-    # 写入 README
-    readme_ok, readme_err = atomic_write(readme_content, readme_path)
-    if not readme_ok:
-        return WriteResult(
-            success=False,
-            diff=diff,
-            stats=stats,
-            error=f"写入 README 失败: {readme_err}",
-        )
+    # 写入 README（仅统计/behavior 实质变化时）
+    if readme_changed:
+        readme_ok, readme_err = atomic_write(readme_content, readme_path)
+        if not readme_ok:
+            return WriteResult(
+                success=False,
+                diff=diff,
+                stats=stats,
+                error=f"写入 README 失败: {readme_err}",
+            )
 
     return WriteResult(
         success=True,

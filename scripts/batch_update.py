@@ -116,6 +116,19 @@ def send_success(stats, elapsed, updated_brands=None):
     )
 
 
+def send_idle(elapsed):
+    """⏸️ 无变化通知"""
+    fields = [
+        {"name": "📊 品牌", "value": "99 个品牌均无变化", "inline": True},
+        {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
+    ]
+    send_discord(
+        "⏸️ 上游无变化，跳过提交",
+        15844367,
+        fields,
+    )
+
+
 def send_failure(step, error_msg):
     """❌ 失败通知"""
     send_discord(
@@ -517,10 +530,27 @@ def main():
             log('🧪 CI 模式，跳过提交，由 workflow 处理')
             send_success(stats, elapsed, updated_brands)
         else:
+            # 9a. 检查 working tree 是否有实质变更
+            diff_status = subprocess.run(
+                ['git', 'status', '--porcelain',
+                 '--', 'ruleset/', 'configs/', 'scripts/'],
+                cwd=ROOT, capture_output=True, text=True, timeout=10
+            )
+            porcelain = diff_status.stdout.strip()
+            if not porcelain:
+                log('⏸️ ruleset/configs/scripts 无实质变化，跳过提交')
+                send_idle(elapsed)
+                return
+
+            # 9b. 有变更才提交
             commit_msg = f"🔄 每日自动同步 {datetime.now().strftime('%Y-%m-%d')}"
-            subprocess.run(['git', 'add', 'ruleset/', 'configs/', 'scripts/'], cwd=ROOT)
-            subprocess.run(['git', 'commit', '-m', commit_msg], cwd=ROOT,
-                           capture_output=True)
+            subprocess.run(['git', 'add', 'ruleset/', 'configs/', 'scripts/'],
+                           cwd=ROOT, capture_output=True)
+            result = subprocess.run(['git', 'commit', '-m', commit_msg],
+                                    cwd=ROOT, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                log(f'❌ git commit 失败: {result.stderr[:200]}')
+                return
             push = subprocess.run(['git', 'push', 'origin', 'main'], cwd=ROOT,
                                   capture_output=True, text=True, timeout=120)
             if push.returncode != 0:
