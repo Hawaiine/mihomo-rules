@@ -163,7 +163,7 @@ dns:
       - 240.0.0.0/4                                 # 组播地址 (通常是被污染的返回值)
 
 # TLS/HTTP 嗅探 (fake-ip 模式下识别真实域名, 否则 HTTPS 网站会因 fake-ip 访问异常)
-# 参考: https://wiki.metacubex.one/config/sniffer/
+# 参考: https://wiki.metacubex.one/config/sniff/
 sniffer:
   enable: true                                      # 开启 TLS/HTTP 嗅探
   force-dns-mapping: true                           # 强制 DNS 映射: 嗅探结果覆盖 fake-ip 的 DNS 映射
