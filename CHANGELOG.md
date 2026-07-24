@@ -37,6 +37,7 @@
 - 日更噪音：仅 `# Updated:` 变化不再产生写入/提交；CI 提交前过滤仅 Updated 噪音
 - 提交步：暂存区为空时跳过 commit/push，防止 `git commit || echo` 后仍 rebase+push
 - daily-sync 过滤改为始终运行 + `while IFS=` 安全逐行读路径；filter/check/commit 使用 `set -euo pipefail`；`if:` 条件从 filter 移到 check，滤噪后 check 决定 changed
+- daily-sync 过滤改用 `sed '/Updated:/d'` 替代 `grep -v` 避免 `set -e` 下无匹配误失败；文件列表改用 `git diff -- 'ruleset/**/*.yaml'`
 
 ### Removed
 - **MusicJp.yaml** — 删除 `ruleset/MusicJapan/MusicJp.yaml` 残留空壳文件（0 规则，无全库引用）

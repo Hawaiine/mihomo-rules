@@ -59,15 +59,15 @@ jobs:
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             # 规范化 HEAD 版本和工作区版本（去 CR、去行尾空白、去 Updated 行）
-            head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
-            work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | grep -v 'Updated:' | md5sum | cut -d' ' -f1)
+            head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | sed '/Updated:/d' | md5sum | cut -d' ' -f1)
+            work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | sed '/Updated:/d' | md5sum | cut -d' ' -f1)
             if [ "$head_norm" = "$work_norm" ]; then
               echo "🧹 噪音: $f（仅 Updated）"
               git restore --worktree -- "$f"
             else
               echo "📝 实质变更: $f"
             fi
-          done < <(git diff --name-only -- ruleset/ | grep '\.yaml$' || true)
+          done < <(git diff --name-only -- 'ruleset/**/*.yaml' || true)
           # 过滤后重新检查用白名单 porcelain（后续 check 步会执行）
 
       - name: 🔍 检查变更
