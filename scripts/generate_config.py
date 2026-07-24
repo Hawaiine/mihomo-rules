@@ -336,26 +336,37 @@ def gen_proxy_groups(brand_info, icons, blank_between=False):
     return '\n'.join(lines)
 
 
-def gen_rule_providers(brand_info):
-    """生成 rule-providers 区块"""
-    lines = ['rule-providers:']
+def gen_rule_providers(brand_info, blank_between=False):
+    """生成 rule-providers 区块。
+
+    blank_between=True（full）：相邻 provider 块之间空一行。
+    blank_between=False（min）：紧凑无空行。
+    """
+    blocks = []
     # 基础 provider
     for name, bhv in BASE_PROVIDERS.items():
-        lines.append(f'  {name}:')
-        lines.append('    type: http')
-        lines.append(f'    behavior: {bhv}')
-        lines.append(f'    url: "{GITHUB_BASE}/ruleset/{name}/{name}.yaml"')
-        lines.append('    interval: 86400')
-        lines.append(f'    path: ./ruleset/{name}.yaml')
+        lines = [
+            f'  {name}:',
+            '    type: http',
+            f'    behavior: {bhv}',
+            f'    url: "{GITHUB_BASE}/ruleset/{name}/{name}.yaml"',
+            '    interval: 86400',
+            f'    path: ./ruleset/{name}.yaml',
+        ]
+        blocks.append('\n'.join(lines))
     # 品牌 provider（按 provider key 字母序）
     for bi in sorted(brand_info, key=lambda x: x['key']):
-        lines.append(f'  {bi["key"]}:')
-        lines.append('    type: http')
-        lines.append(f'    behavior: {bi["behavior"]}')
-        lines.append(f'    url: "{GITHUB_BASE}/ruleset/{bi["key"]}/{bi["key"]}.yaml"')
-        lines.append('    interval: 86400')
-        lines.append(f'    path: ./ruleset/{bi["key"]}.yaml')
-    return '\n'.join(lines)
+        lines = [
+            f'  {bi["key"]}:',
+            '    type: http',
+            f'    behavior: {bi["behavior"]}',
+            f'    url: "{GITHUB_BASE}/ruleset/{bi["key"]}/{bi["key"]}.yaml"',
+            '    interval: 86400',
+            f'    path: ./ruleset/{bi["key"]}.yaml',
+        ]
+        blocks.append('\n'.join(lines))
+    sep = '\n\n' if blank_between else '\n'
+    return 'rule-providers:\n' + sep.join(blocks)
 
 
 def gen_rules(brand_info, variant):
@@ -493,7 +504,8 @@ def main():
     # 生成区块（full 版品牌组间空行，min 版紧凑）
     proxy_groups_full = gen_proxy_groups(brand_info, icons, blank_between=True)
     proxy_groups_min = gen_proxy_groups(brand_info, icons, blank_between=False)
-    rule_providers = gen_rule_providers(brand_info)
+    rule_providers_full = gen_rule_providers(brand_info, blank_between=True)
+    rule_providers_min = gen_rule_providers(brand_info, blank_between=False)
     
     # 定义 4 个变体
     variants = {
@@ -506,6 +518,7 @@ def main():
     for variant, (config_path, platform) in variants.items():
         is_min = 'min' in variant
         proxy_groups = proxy_groups_min if is_min else proxy_groups_full
+        rule_providers = rule_providers_min if is_min else rule_providers_full
         system_config = extract_system_config(str(config_path), compact=is_min)
         system_groups = extract_system_groups(str(config_path), compact=is_min)
         rules = gen_rules(brand_info, variant)

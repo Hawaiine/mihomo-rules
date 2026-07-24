@@ -1667,630 +1667,735 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reject/Reject.yaml"
     interval: 86400
     path: ./ruleset/Reject.yaml
+
   Direct:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Direct/Direct.yaml"
     interval: 86400
     path: ./ruleset/Direct.yaml
+
   Proxy:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Proxy/Proxy.yaml"
     interval: 86400
     path: ./ruleset/Proxy.yaml
+
   Applications:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Applications/Applications.yaml"
     interval: 86400
     path: ./ruleset/Applications.yaml
+
   Private:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Private/Private.yaml"
     interval: 86400
     path: ./ruleset/Private.yaml
+
   LanCIDR:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LanCIDR/LanCIDR.yaml"
     interval: 86400
     path: ./ruleset/LanCIDR.yaml
+
   CNCIDR:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CNCIDR/CNCIDR.yaml"
     interval: 86400
     path: ./ruleset/CNCIDR.yaml
+
   AWS:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AWS/AWS.yaml"
     interval: 86400
     path: ./ruleset/AWS.yaml
+
   AbemaTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AbemaTV/AbemaTV.yaml"
     interval: 86400
     path: ./ruleset/AbemaTV.yaml
+
   Amazon:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Amazon/Amazon.yaml"
     interval: 86400
     path: ./ruleset/Amazon.yaml
+
   Anthropic:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Anthropic/Anthropic.yaml"
     interval: 86400
     path: ./ruleset/Anthropic.yaml
+
   Apple:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Apple/Apple.yaml"
     interval: 86400
     path: ./ruleset/Apple.yaml
+
   AppleTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleTV/AppleTV.yaml"
     interval: 86400
     path: ./ruleset/AppleTV.yaml
+
   Bahamut:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bahamut/Bahamut.yaml"
     interval: 86400
     path: ./ruleset/Bahamut.yaml
+
   Bangumi:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bangumi/Bangumi.yaml"
     interval: 86400
     path: ./ruleset/Bangumi.yaml
+
   Bank:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bank/Bank.yaml"
     interval: 86400
     path: ./ruleset/Bank.yaml
+
   Bilibili:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bilibili/Bilibili.yaml"
     interval: 86400
     path: ./ruleset/Bilibili.yaml
+
   Bluesky:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bluesky/Bluesky.yaml"
     interval: 86400
     path: ./ruleset/Bluesky.yaml
+
   CATCHPLAY:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CATCHPLAY/CATCHPLAY.yaml"
     interval: 86400
     path: ./ruleset/CATCHPLAY.yaml
+
   Cloudflare:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cloudflare/Cloudflare.yaml"
     interval: 86400
     path: ./ruleset/Cloudflare.yaml
+
   Cursor:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cursor/Cursor.yaml"
     interval: 86400
     path: ./ruleset/Cursor.yaml
+
   DAZN:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DAZN/DAZN.yaml"
     interval: 86400
     path: ./ruleset/DAZN.yaml
+
   DAnimeStore:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DAnimeStore/DAnimeStore.yaml"
     interval: 86400
     path: ./ruleset/DAnimeStore.yaml
+
   DMMTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DMMTV/DMMTV.yaml"
     interval: 86400
     path: ./ruleset/DMMTV.yaml
+
   Deezer:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Deezer/Deezer.yaml"
     interval: 86400
     path: ./ruleset/Deezer.yaml
+
   Discord:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Discord/Discord.yaml"
     interval: 86400
     path: ./ruleset/Discord.yaml
+
   Disney:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Disney/Disney.yaml"
     interval: 86400
     path: ./ruleset/Disney.yaml
+
   Docker:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Docker/Docker.yaml"
     interval: 86400
     path: ./ruleset/Docker.yaml
+
   F1TV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/F1TV/F1TV.yaml"
     interval: 86400
     path: ./ruleset/F1TV.yaml
+
   Facebook:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Facebook/Facebook.yaml"
     interval: 86400
     path: ./ruleset/Facebook.yaml
+
   FujiTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/FujiTV/FujiTV.yaml"
     interval: 86400
     path: ./ruleset/FujiTV.yaml
+
   GameJapan:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GameJapan/GameJapan.yaml"
     interval: 86400
     path: ./ruleset/GameJapan.yaml
+
   GeneralAI:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GeneralAI/GeneralAI.yaml"
     interval: 86400
     path: ./ruleset/GeneralAI.yaml
+
   GitHub:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GitHub/GitHub.yaml"
     interval: 86400
     path: ./ruleset/GitHub.yaml
+
   Google:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Google/Google.yaml"
     interval: 86400
     path: ./ruleset/Google.yaml
+
   GoogleAI:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
     interval: 86400
     path: ./ruleset/GoogleAI.yaml
+
   HBO:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HBO/HBO.yaml"
     interval: 86400
     path: ./ruleset/HBO.yaml
+
   HOYTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HOYTV/HOYTV.yaml"
     interval: 86400
     path: ./ruleset/HOYTV.yaml
+
   HamiVideo:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HamiVideo/HamiVideo.yaml"
     interval: 86400
     path: ./ruleset/HamiVideo.yaml
+
   Hotstar:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hotstar/Hotstar.yaml"
     interval: 86400
     path: ./ruleset/Hotstar.yaml
+
   Hulu:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hulu/Hulu.yaml"
     interval: 86400
     path: ./ruleset/Hulu.yaml
+
   Instagram:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Instagram/Instagram.yaml"
     interval: 86400
     path: ./ruleset/Instagram.yaml
+
   KKTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KKTV/KKTV.yaml"
     interval: 86400
     path: ./ruleset/KKTV.yaml
+
   LINETV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LINETV/LINETV.yaml"
     interval: 86400
     path: ./ruleset/LINETV.yaml
+
   Lemino:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Lemino/Lemino.yaml"
     interval: 86400
     path: ./ruleset/Lemino.yaml
+
   LiTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LiTV/LiTV.yaml"
     interval: 86400
     path: ./ruleset/LiTV.yaml
+
   Manus:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Manus/Manus.yaml"
     interval: 86400
     path: ./ruleset/Manus.yaml
+
   Messenger:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Messenger/Messenger.yaml"
     interval: 86400
     path: ./ruleset/Messenger.yaml
+
   MetaBrainz:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MetaBrainz/MetaBrainz.yaml"
     interval: 86400
     path: ./ruleset/MetaBrainz.yaml
+
   Microsoft:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Microsoft/Microsoft.yaml"
     interval: 86400
     path: ./ruleset/Microsoft.yaml
+
   Mora:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Mora/Mora.yaml"
     interval: 86400
     path: ./ruleset/Mora.yaml
+
   MusicJapan:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MusicJapan/MusicJapan.yaml"
     interval: 86400
     path: ./ruleset/MusicJapan.yaml
+
   Musixmatch:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Musixmatch/Musixmatch.yaml"
     interval: 86400
     path: ./ruleset/Musixmatch.yaml
+
   MyVideo:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MyVideo/MyVideo.yaml"
     interval: 86400
     path: ./ruleset/MyVideo.yaml
+
   NHK:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NHK/NHK.yaml"
     interval: 86400
     path: ./ruleset/NHK.yaml
+
   Netflix:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Netflix/Netflix.yaml"
     interval: 86400
     path: ./ruleset/Netflix.yaml
+
   Niconico:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Niconico/Niconico.yaml"
     interval: 86400
     path: ./ruleset/Niconico.yaml
+
   Nintendo:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Nintendo/Nintendo.yaml"
     interval: 86400
     path: ./ruleset/Nintendo.yaml
+
   NowE:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NowE/NowE.yaml"
     interval: 86400
     path: ./ruleset/NowE.yaml
+
   OneDrive:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OneDrive/OneDrive.yaml"
     interval: 86400
     path: ./ruleset/OneDrive.yaml
+
   OpenAI:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OpenAI/OpenAI.yaml"
     interval: 86400
     path: ./ruleset/OpenAI.yaml
+
   PT:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PT/PT.yaml"
     interval: 86400
     path: ./ruleset/PT.yaml
+
   PTChina:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PTChina/PTChina.yaml"
     interval: 86400
     path: ./ruleset/PTChina.yaml
+
   PayPal:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PayPal/PayPal.yaml"
     interval: 86400
     path: ./ruleset/PayPal.yaml
+
   Perplexity:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Perplexity/Perplexity.yaml"
     interval: 86400
     path: ./ruleset/Perplexity.yaml
+
   Pinterest:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pinterest/Pinterest.yaml"
     interval: 86400
     path: ./ruleset/Pinterest.yaml
+
   Pixiv:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pixiv/Pixiv.yaml"
     interval: 86400
     path: ./ruleset/Pixiv.yaml
+
   Podcast:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Podcast/Podcast.yaml"
     interval: 86400
     path: ./ruleset/Podcast.yaml
+
   Poe:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Poe/Poe.yaml"
     interval: 86400
     path: ./ruleset/Poe.yaml
+
   Porn:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Porn/Porn.yaml"
     interval: 86400
     path: ./ruleset/Porn.yaml
+
   PornChina:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PornChina/PornChina.yaml"
     interval: 86400
     path: ./ruleset/PornChina.yaml
+
   PrimeVideo:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PrimeVideo/PrimeVideo.yaml"
     interval: 86400
     path: ./ruleset/PrimeVideo.yaml
+
   Qobuz:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Qobuz/Qobuz.yaml"
     interval: 86400
     path: ./ruleset/Qobuz.yaml
+
   Radiko:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Radiko/Radiko.yaml"
     interval: 86400
     path: ./ruleset/Radiko.yaml
+
   RakutenTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RakutenTV/RakutenTV.yaml"
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
+
   ReadsJapan:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
     interval: 86400
     path: ./ruleset/ReadsJapan.yaml
+
   Reddit:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reddit/Reddit.yaml"
     interval: 86400
     path: ./ruleset/Reddit.yaml
+
   SiriAI:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/SiriAI/SiriAI.yaml"
     interval: 86400
     path: ./ruleset/SiriAI.yaml
+
   Spotify:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Spotify/Spotify.yaml"
     interval: 86400
     path: ./ruleset/Spotify.yaml
+
   Steam:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Steam/Steam.yaml"
     interval: 86400
     path: ./ruleset/Steam.yaml
+
   Synology:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Synology/Synology.yaml"
     interval: 86400
     path: ./ruleset/Synology.yaml
+
   TMDB:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TMDB/TMDB.yaml"
     interval: 86400
     path: ./ruleset/TMDB.yaml
+
   TVer:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TVer/TVer.yaml"
     interval: 86400
     path: ./ruleset/TVer.yaml
+
   Telasa:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Telasa/Telasa.yaml"
     interval: 86400
     path: ./ruleset/Telasa.yaml
+
   Telegram:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Telegram/Telegram.yaml"
     interval: 86400
     path: ./ruleset/Telegram.yaml
+
   Threads:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Threads/Threads.yaml"
     interval: 86400
     path: ./ruleset/Threads.yaml
+
   Tidal:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
     interval: 86400
     path: ./ruleset/Tidal.yaml
+
   TikTok:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TikTok/TikTok.yaml"
     interval: 86400
     path: ./ruleset/TikTok.yaml
+
   Tubi:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tubi/Tubi.yaml"
     interval: 86400
     path: ./ruleset/Tubi.yaml
+
   Twitch:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Twitch/Twitch.yaml"
     interval: 86400
     path: ./ruleset/Twitch.yaml
+
   UNext:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/UNext/UNext.yaml"
     interval: 86400
     path: ./ruleset/UNext.yaml
+
   VideoMarket:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/VideoMarket/VideoMarket.yaml"
     interval: 86400
     path: ./ruleset/VideoMarket.yaml
+
   Viu:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Viu/Viu.yaml"
     interval: 86400
     path: ./ruleset/Viu.yaml
+
   WOWOW:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WOWOW/WOWOW.yaml"
     interval: 86400
     path: ./ruleset/WOWOW.yaml
+
   WSJ:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WSJ/WSJ.yaml"
     interval: 86400
     path: ./ruleset/WSJ.yaml
+
   Wallpaper:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Wallpaper/Wallpaper.yaml"
     interval: 86400
     path: ./ruleset/Wallpaper.yaml
+
   WhatsApp:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WhatsApp/WhatsApp.yaml"
     interval: 86400
     path: ./ruleset/WhatsApp.yaml
+
   X:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/X/X.yaml"
     interval: 86400
     path: ./ruleset/X.yaml
+
   YouTube:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTube/YouTube.yaml"
     interval: 86400
     path: ./ruleset/YouTube.yaml
+
   YouTubeMusic:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTubeMusic/YouTubeMusic.yaml"
     interval: 86400
     path: ./ruleset/YouTubeMusic.yaml
+
   ZLibrary:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ZLibrary/ZLibrary.yaml"
     interval: 86400
     path: ./ruleset/ZLibrary.yaml
+
   friDayvideo:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
     interval: 86400
     path: ./ruleset/friDayvideo.yaml
+
   iCloud:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloud/iCloud.yaml"
     interval: 86400
     path: ./ruleset/iCloud.yaml
+
   iCloudPrivateRelay:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloudPrivateRelay/iCloudPrivateRelay.yaml"
     interval: 86400
     path: ./ruleset/iCloudPrivateRelay.yaml
+
   karaokeDAM:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/karaokeDAM/karaokeDAM.yaml"
     interval: 86400
     path: ./ruleset/karaokeDAM.yaml
+
   myTVSuper:
     type: http
     behavior: classical
