@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-07-25
+
+### Added
+- **collect_repo_stats()** — 实时扫描 ruleset 目录统计品牌数/规则集数/规则总条数，替代硬编码 99 品牌
+- **CLI 通知模式** — `batch_update.py --notify pushed|skip|failed` 由 workflow 在 filter/check 后调用，与提交结果对齐
+
+### Changed
+- **Discord 通知与提交结果对齐** — CI 路径（--no-commit）不再提前发「✅ 同步成功」；workflow 在 filter+check 后按实际提交结果发通知
+- **notify_pushed** — 标题「✅ 规则集已同步并推送」；品牌/规则集/规则条数实时统计；变更品牌 top10 基于 git diff；展示新 commit SHA
+- **notify_skip** — 合并 send_idle/send_nochange 为同一函数；展示实时统计；噪音丢弃数
+- **notify_failure** — 文案按是否真回滚区分：「已自动回滚」vs「已阻止提交，工作区可能保留变更」
+- **daily-sync.yml** — 过滤步骤记录 noise_count；新增「通知 — 已推送」「通知 — 跳过提交」步骤；通知失败不阻断工作流（`|| true` 兜底）
+
+### Fixed
+- **rules_total 恒 0** — 实时扫描各品牌 yaml 的 payload 规则数，不再硬编码
+
+### Removed
+- **send_success() / send_idle() / send_nochange()** — 合并为 notify_pushed / notify_skip
+- **CI 路径提前发 success** — `--no-commit` 模式下不再调用通知，由 workflow 统一处理
+
+---
+
 ## 2026-07-24
 
 ### Added

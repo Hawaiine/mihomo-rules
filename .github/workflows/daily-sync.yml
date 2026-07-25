@@ -55,6 +55,7 @@ jobs:
         id: filter
         run: |
           set -euo pipefail
+          noise_count=0
           # 安全遍历每个变更的 ruleset yaml（while IFS= 防空格路径）
           while IFS= read -r f; do
             [ -n "$f" ] || continue
@@ -63,11 +64,13 @@ jobs:
             work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | sed '/Updated:/d' | md5sum | cut -d' ' -f1)
             if [ "$head_norm" = "$work_norm" ]; then
               echo "🧹 噪音: $f（仅 Updated）"
+              noise_count=$((noise_count + 1))
               git restore --worktree -- "$f"
             else
               echo "📝 实质变更: $f"
             fi
           done < <(git diff --name-only -- 'ruleset/**/*.yaml' || true)
+          echo "noise_count=$noise_count" >> "$GITHUB_OUTPUT"
           # 过滤后重新检查用白名单 porcelain（后续 check 步会执行）
 
       - name: 🔍 检查变更
@@ -98,6 +101,26 @@ jobs:
           git commit -m "🔄 每日自动同步 $(date +'%Y-%m-%d %H:%M:%S')"
           git pull --rebase origin ${{ github.ref_name }}
           git push origin HEAD:${{ github.ref_name }}
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: 🔔 通知 — 已推送
+        if: steps.check.outputs.changed == 'true' && env.MIHOMO_DISCORD_WEBHOOK != ''
+        env:
+          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
+        run: |
+          python3 scripts/batch_update.py --notify pushed \
+            --noise-restored ${{ steps.filter.outputs.noise_count }} \
+            --commit-sha $(git rev-parse HEAD) \
+            2>&1 || echo "⚠️ 通知发送失败（非致命）"
+
+      - name: 🔔 通知 — 跳过提交
+        if: steps.check.outputs.changed == 'false' && env.MIHOMO_DISCORD_WEBHOOK != ''
+        env:
+          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
+        run: |
+          python3 scripts/batch_update.py --notify skip \
+            --noise-restored ${{ steps.filter.outputs.noise_count }} \
+            2>&1 || echo "⚠️ 通知发送失败（非致命）"
 
       - name: ⚠️ 工作流异常通知
         if: failure() && env.MIHOMO_DISCORD_WEBHOOK != ''

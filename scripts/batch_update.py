@@ -8,6 +8,11 @@ batch_update.py — 上游拉取 → 自动生成 → 校验 → 提交 → Disc
   3. 执行 8 步（fetch→parse→merge→write→ownership→config）
   4. 校验（品牌数/空壳/YAML/随机50*3轮）
   5. 通过 → 提交 + 推送；失败 → 回滚 + 通知
+
+CLI 通知模式（由 workflow 在 filter/check 后调用）：
+  python3 scripts/batch_update.py --notify pushed [--elapsed N] [--noise-restored N] [--commit-sha SHA]
+  python3 scripts/batch_update.py --notify skip   [--elapsed N] [--noise-restored N]
+  python3 scripts/batch_update.py --notify failed [--elapsed N] [--step S] [--error E] [--rollback true|false]
 """
 import json
 import os
@@ -27,6 +32,9 @@ DISCORD_WEBHOOK = os.environ.get('MIHOMO_DISCORD_WEBHOOK', '')
 GITHUB_RUN_URL = os.environ.get('GITHUB_RUN_URL', '')
 GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY', 'Hawaiine/mihomo-rules')
 GITHUB_SHA = os.environ.get('GITHUB_SHA', '')
+
+# 7 个兜底品牌（排除不计数）
+BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
 
 # 8 步流程
 STEPS = [
@@ -87,73 +95,238 @@ def send_discord(title, color, fields, add_run_link=True):
         log(f'⚠️ Discord 通知失败: {e}')
 
 
-def send_success(stats, elapsed, updated_brands=None):
-    """✅ 成功通知"""
-    commit_short = GITHUB_SHA[:7] if GITHUB_SHA else '?'
+# ── 实时统计 ──────────────────────────────────────────
+
+
+def collect_repo_stats():
+    """扫描 ruleset 目录，返回实时统计：品牌数、规则集总数、规则总条数"""
+    ruleset_dir = ROOT / 'ruleset'
+    all_dirs = sorted([d.name for d in ruleset_dir.iterdir() if d.is_dir()])
+    brand_count = len([d for d in all_dirs if d not in BASE_BRANDS])
+    ruleset_count = len(all_dirs)
+    rules_total = 0
+    for d in all_dirs:
+        if d in BASE_BRANDS:
+            continue
+        yaml_path = ruleset_dir / d / f'{d}.yaml'
+        if yaml_path.exists():
+            raw = yaml_path.read_text().split('\n')
+            rules = [l for l in raw if l.strip() and not l.startswith('#') and not l.startswith('payload')]
+            rules_total += len(rules)
+    return {
+        'brand_count': brand_count,
+        'ruleset_count': ruleset_count,
+        'rules_total': rules_total,
+    }
+
+
+def _get_changed_brands_from_git():
+    """从 git diff 提取变更品牌列表（用于通知）"""
+    changed = []
+    try:
+        # 优先用 HEAD~1..HEAD（已提交场景），回退到工作区 diff
+        result = subprocess.run(
+            ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', 'ruleset/'],
+            cwd=ROOT, capture_output=True, text=True, timeout=10
+        )
+        names = result.stdout.strip()
+        if not names:
+            result = subprocess.run(
+                ['git', 'diff', '--name-only', '--', 'ruleset/'],
+                cwd=ROOT, capture_output=True, text=True, timeout=10
+            )
+            names = result.stdout.strip()
+    except Exception:
+        return []
+    for line in names.split('\n'):
+        parts = line.strip().split('/')
+        if len(parts) >= 2 and parts[0] == 'ruleset':
+            brand = parts[1]
+            if brand not in changed:
+                changed.append(brand)
+    return changed
+
+
+# ── 通知函数（可 CLI 调用） ────────────────────────────
+
+
+def notify_pushed(stats, elapsed=0, noise_restored=0, commit_sha=''):
+    """✅ 规则集已同步并推送（有实质变更且已 commit/push）"""
+    if not DISCORD_WEBHOOK:
+        return
+
+    # 实时收集变更品牌
+    changed_brands = _get_changed_brands_from_git()
+    # 计算 ± 规则行
+    rules_added = 0
+    rules_removed = 0
+    try:
+        num_result = subprocess.run(
+            ['git', 'diff', '--numstat', '--', 'ruleset/'],
+            cwd=ROOT, capture_output=True, text=True, timeout=10
+        )
+        for line in num_result.stdout.strip().split('\n'):
+            parts = line.split('\t')
+            if len(parts) >= 2:
+                try:
+                    rules_added += int(parts[0]) if parts[0] != '-' else 0
+                    rules_removed += int(parts[1]) if parts[1] != '-' else 0
+                except ValueError:
+                    pass
+    except Exception:
+        pass
+
+    # 检查 configs 是否变更
+    configs_changed = False
+    try:
+        cfg_result = subprocess.run(
+            ['git', 'diff', '--name-only', '--', 'configs/'],
+            cwd=ROOT, capture_output=True, text=True, timeout=10
+        )
+        configs_changed = bool(cfg_result.stdout.strip())
+    except Exception:
+        pass
+
+    commit_display = commit_sha[:7] if commit_sha else '由 workflow 提交'
+
     fields = [
-        {"name": "📊 品牌统计", "value": f"99 品牌 | {stats.get('rules_total', '?')} 条规则", "inline": True},
-        {"name": "🔄 变更数", "value": str(stats.get('brands_updated', 0)), "inline": True},
-        {"name": "➕ 新增规则", "value": f"+{stats.get('rules_added', 0)} 条", "inline": True},
-        {"name": "➖ 移除规则", "value": f"-{stats.get('rules_removed', 0)} 条", "inline": True},
-        {"name": "⚙️ Config 更新", "value": f"{stats.get('configs_updated', 0)} 个", "inline": True},
-        {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
-        {"name": "🆔 提交", "value": f"`{commit_short}`", "inline": True},
+        {
+            "name": "📊 品牌统计",
+            "value": f"{stats['brand_count']} 业务品牌 · {stats['ruleset_count']} 规则集 · {stats['rules_total']} 条规则",
+            "inline": True,
+        },
+        {
+            "name": "🔄 变更品牌数",
+            "value": str(len(changed_brands)),
+            "inline": True,
+        },
+        {
+            "name": "➕ 新增规则",
+            "value": f"+{rules_added} 条",
+            "inline": True,
+        },
+        {
+            "name": "➖ 移除规则",
+            "value": f"-{rules_removed} 条",
+            "inline": True,
+        },
+        {
+            "name": "⚙️ Config 更新",
+            "value": "是" if configs_changed else "否",
+            "inline": True,
+        },
+        {
+            "name": "⏱️ 耗时",
+            "value": f"{elapsed:.0f} 秒" if elapsed else "—",
+            "inline": True,
+        },
+        {
+            "name": "🆔 提交",
+            "value": f"`{commit_display}`",
+            "inline": True,
+        },
     ]
     # 变更品牌 top10
-    if updated_brands:
-        top = updated_brands[:10]
-        if len(updated_brands) > 10:
-            top.append(f"等 {len(updated_brands) - 10} 个")
+    if changed_brands:
+        top = changed_brands[:10]
+        if len(changed_brands) > 10:
+            top.append(f"等 {len(changed_brands) - 10} 个")
         fields.insert(1, {
             "name": "📝 变更品牌",
             "value": " · ".join(top),
             "inline": False,
         })
-    send_discord(
-        "✅ 规则集同步成功",
-        5763719,
-        fields,
-    )
+    send_discord("✅ 规则集已同步并推送", 5763719, fields)
 
 
-def send_idle(elapsed):
-    """⏸️ 无变化通知"""
+def notify_skip(stats, elapsed=0, noise_restored=0):
+    """⏸️ 上游无实质变化，已跳过提交"""
+    if not DISCORD_WEBHOOK:
+        return
+    noise_line = ""
+    if noise_restored:
+        noise_line = f"（{noise_restored} 个文件仅 Updated 噪音已丢弃）"
     fields = [
-        {"name": "📊 品牌", "value": "99 个品牌均无变化", "inline": True},
-        {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
+        {
+            "name": "📊 品牌统计",
+            "value": f"{stats['brand_count']} 业务品牌 · {stats['ruleset_count']} 规则集 · {stats['rules_total']} 条规则",
+            "inline": True,
+        },
+        {
+            "name": "⏸️ 状态",
+            "value": f"仅 Updated 噪音已丢弃，无实质变更{noise_line}",
+            "inline": True,
+        },
+        {
+            "name": "⏱️ 耗时",
+            "value": f"{elapsed:.0f} 秒" if elapsed else "—",
+            "inline": True,
+        },
     ]
-    send_discord(
-        "⏸️ 上游无变化，跳过提交",
-        15844367,
-        fields,
-    )
+    send_discord("⏸️ 上游无实质变化，已跳过提交", 15844367, fields)
 
 
-def send_failure(step, error_msg):
-    """❌ 失败通知"""
-    send_discord(
-        "❌ 同步失败，已自动回滚",
-        15548997,
-        [
-            {"name": "💥 失败步骤", "value": f"`{step}`", "inline": True},
-            {"name": "📝 错误信息", "value": f"```{error_msg[:300]}```"},
-            {"name": "🔄 回滚状态", "value": "✅ 已恢复至同步前版本，无需手动操作", "inline": True},
-            {"name": "⏱️ 耗时", "value": f"{time.time() - START_TIME:.0f} 秒", "inline": True},
-        ],
-        add_run_link=True
-    )
+def notify_failure(stats, elapsed=0, step='', error='', rolled_back=False):
+    """❌ 失败通知（按是否真回滚区分文案）"""
+    if not DISCORD_WEBHOOK:
+        return
+    if rolled_back:
+        title = "❌ 同步失败，已自动回滚"
+        rollback_status = "✅ 已回滚至同步前版本，无需手动操作"
+    else:
+        title = "❌ 同步失败，已阻止提交"
+        rollback_status = "⚠️ 工作区可能保留变更，请手动检查"
+
+    fields = [
+        {"name": "💥 失败步骤", "value": f"`{step}`", "inline": True},
+        {"name": "📝 错误信息", "value": f"```{error[:300]}```"},
+        {"name": "🔄 回滚状态", "value": rollback_status, "inline": True},
+        {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒" if elapsed else "—", "inline": True},
+    ]
+    send_discord(title, 15548997, fields)
 
 
-def send_nochange(elapsed):
-    """⏸️ 无变化通知"""
-    send_discord(
-        "⏸️ 上游无变化，跳过提交",
-        15844367,
-        [
-            {"name": "📊 品牌", "value": "99 个品牌均无变化", "inline": True},
-            {"name": "⏱️ 耗时", "value": f"{elapsed:.0f} 秒", "inline": True},
-        ]
-    )
+# ── CLI 通知模式入口 ──────────────────────────────────
+
+
+def _cli_notify():
+    """处理 --notify 子命令，仅供 workflow 在 filter/check 后调用"""
+    if len(sys.argv) < 3 or sys.argv[1] != '--notify':
+        return False
+
+    notify_type = sys.argv[2]
+    kwargs = {}
+    i = 3
+    while i < len(sys.argv):
+        if sys.argv[i].startswith('--') and i + 1 < len(sys.argv):
+            key = sys.argv[i][2:].replace('-', '_')
+            val = sys.argv[i + 1]
+            # 尝试转 int
+            try:
+                kwargs[key] = int(val)
+            except ValueError:
+                if val.lower() == 'true':
+                    kwargs[key] = True
+                elif val.lower() == 'false':
+                    kwargs[key] = False
+                else:
+                    kwargs[key] = val
+            i += 2
+        else:
+            i += 1
+
+    stats = collect_repo_stats()
+
+    if notify_type == 'pushed':
+        notify_pushed(stats, **kwargs)
+    elif notify_type == 'skip':
+        notify_skip(stats, **kwargs)
+    elif notify_type == 'failed':
+        notify_failure(stats, **kwargs)
+    else:
+        log(f'⚠️ 未知通知类型: {notify_type}')
+        return False
+    return True
 
 
 # ── 锁 ──────────────────────────────────────────────────
@@ -209,6 +382,7 @@ def backup():
 
 
 def rollback(step, error_msg):
+    elapsed = time.time() - START_TIME
     log(f'❌ 回滚: {step} - {error_msg}')
     if BACKUP_DIR and BACKUP_DIR.exists():
         # 恢复目录
@@ -225,7 +399,7 @@ def rollback(step, error_msg):
             subprocess.run(['git', 'reset', '--hard', manifest['commit']], cwd=ROOT,
                            capture_output=True)
         log('✅ 已回滚')
-    send_failure(step, error_msg)
+    notify_failure(collect_repo_stats(), elapsed=elapsed, step=step, error=error_msg, rolled_back=True)
     sys.exit(1)
 
 
@@ -236,7 +410,6 @@ def validate():
     """校验品牌规则集一致性"""
     from commit_writer import STRATEGY_GROUP_MAP
 
-    BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
     brands = sorted([d.name for d in (ROOT / 'ruleset').iterdir()
                      if d.is_dir() and d.name not in BASE_BRANDS])
 
@@ -287,7 +460,7 @@ def validate():
             for line in readme.read_text().split('\n'):
                 if line.startswith('# '):
                     expected = f'📦 {sg} 规则集'
-                    actual = line.strip('# \n')
+                    actual = line.strip('# \\n')
                     if actual != expected:
                         berrors.append(f'README 标题: 应为 {expected}，实为 {actual}')
                     break
@@ -312,8 +485,14 @@ def validate():
 
 def main():
     global LOG
+
+    # 检查 --notify 模式（CLI 通知，由 workflow 在 filter/check 后调用）
+    if '--notify' in sys.argv:
+        handled = _cli_notify()
+        sys.exit(0 if handled else 1)
+
     log('=== 🔄 batch_update.py 开始 ===')
-    
+
     # 检查 --no-commit 模式（用于 GitHub Actions，由 workflow 处理提交）
     no_commit = '--no-commit' in sys.argv
 
@@ -344,7 +523,6 @@ def main():
         # 4. 执行 8 步
         sys.path.insert(0, str(ROOT / 'scripts'))
         from commit_writer import STRATEGY_GROUP_MAP
-        BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
 
         for name, desc, timeout in STEPS:
             log(f'=== 🔧 {desc} ===')
@@ -358,11 +536,11 @@ def main():
                     from parse_v2fly import parse_v2fly_brand
                     from parse_loyalsoldier import parse_loyalsoldier_brand
                     from parse_blackmatrix7 import parse_blackmatrix7_brand
-                    
+
                     v2fly_dir = str(ROOT / 'upstream' / 'v2fly' / 'data')
                     ls_dir = str(ROOT / 'upstream' / 'loyalsoldier')
                     bm7_dir = str(ROOT / 'upstream' / 'blackmatrix7' / 'rule' / 'Clash')
-                    
+
                     brands = sorted([d.name for d in (ROOT / 'ruleset').iterdir()
                                      if d.is_dir() and d.name not in BASE_BRANDS])
                     ok_count = 0
@@ -380,7 +558,7 @@ def main():
                                 continue
                             merged = merge_with_stats(v2fly_rules, ls_rules, bm7_rules)
                             merged_rules = merged["rules"]
-                            
+
                             # Union 合并：读取现有规则，保留手动添加的规则
                             existing_yaml = ROOT / 'ruleset' / b / f'{b}.yaml'
                             manual_rules = []
@@ -461,7 +639,7 @@ def main():
 
         if not diff:
             log('无变化，跳过提交')
-            send_nochange(elapsed)
+            notify_skip(collect_repo_stats(), elapsed=elapsed)
             return
 
         # 7. 统计变化
@@ -510,7 +688,9 @@ def main():
         if verify_result.returncode != 0:
             log('❌ verify_configs 未通过，终止提交')
             log(verify_result.stdout[-500:] if verify_result.stdout else '')
-            send_failure('verify_configs', 'verify_configs.py 校验未通过，已阻止提交')
+            notify_failure(collect_repo_stats(), elapsed=elapsed,
+                           step='verify_configs', error='verify_configs.py 校验未通过，已阻止提交',
+                           rolled_back=False)
             # 注：不回滚，ruleset 变更保留，问题修复后可手动提交
             sys.exit(1)
 
@@ -522,13 +702,16 @@ def main():
         if rulesets_result.returncode != 0:
             log('❌ verify_rulesets 未通过，终止提交')
             log(rulesets_result.stdout[-500:] if rulesets_result.stdout else '')
-            send_failure('verify_rulesets', 'verify_rulesets.py 校验未通过，已阻止提交')
+            notify_failure(collect_repo_stats(), elapsed=elapsed,
+                           step='verify_rulesets', error='verify_rulesets.py 校验未通过，已阻止提交',
+                           rolled_back=False)
             sys.exit(1)
 
         # 9. 提交 + 推送（仅非 CI 模式）
         if no_commit:
             log('🧪 CI 模式，跳过提交，由 workflow 处理')
-            send_success(stats, elapsed, updated_brands)
+            # CI 模式下不发通知 —— workflow 在 filter/check 后统一发
+            # 保留 send_failure 路径（rollback / verify 失败已发），成功不发
         else:
             # 9a. 检查 working tree 是否有实质变更
             diff_status = subprocess.run(
@@ -539,7 +722,7 @@ def main():
             porcelain = diff_status.stdout.strip()
             if not porcelain:
                 log('⏸️ ruleset/configs/scripts 无实质变化，跳过提交')
-                send_idle(elapsed)
+                notify_skip(collect_repo_stats(), elapsed=elapsed)
                 return
 
             # 9b. 有变更才提交
@@ -556,7 +739,9 @@ def main():
             if push.returncode != 0:
                 rollback('git push', push.stderr[:200])
             log('✅ 提交并推送成功')
-            send_success(stats, elapsed, updated_brands)
+            commit_sha = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
+                                        capture_output=True, text=True, timeout=10).stdout.strip()
+            notify_pushed(collect_repo_stats(), elapsed=elapsed, commit_sha=commit_sha)
 
     except Exception as e:
         rollback('未知', f'{type(e).__name__}: {str(e)[:200]}')
