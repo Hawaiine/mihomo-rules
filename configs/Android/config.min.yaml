@@ -532,7 +532,7 @@ proxy-groups:
   - name: "🔧 手动切换"
     type: select
     proxies:
-      - DIRECT
+      - "🎯 全球直连"
       - "♻️ 自动选择"
     use:
       - provider1
