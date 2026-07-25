@@ -114,9 +114,12 @@ def detect_behavior(yaml_path):
 
 
 def sort_brands(brands, sg_map):
-    """排序品牌：子品牌→父品牌→字母序"""
+    """排序品牌：子品牌→父品牌→字母序，LAST_BRANDS 置底"""
     sub_brands_set = set(SUB_PARENT.keys())
     parent_brands_set = set(SUB_PARENT.values()) - sub_brands_set
+
+    # 置底品牌（放所有品牌规则最后，避免 IP-CIDR 截胡其他品牌域名规则）
+    LAST_BRANDS = {'Cloudflare'}
 
     # 递归收集所有子品牌（含嵌套），返回 (品牌名, 深度) 列表
     def collect_children(parent, brands_set, depth=1):
@@ -144,10 +147,15 @@ def sort_brands(brands, sg_map):
 
     # 其他：按策略组名字母序
     other = sorted(
-        [b for b in brands if b not in done],
+        [b for b in brands if b not in done and b not in LAST_BRANDS],
         key=lambda b: sg_map.get(b, b)
     )
-    return result + other
+    # 置底品牌移到最后
+    last = sorted(
+        [b for b in brands if b in LAST_BRANDS],
+        key=lambda b: sg_map.get(b, b)
+    )
+    return result + other + last
 
 
 def build_brand_info(brands, sg_map):

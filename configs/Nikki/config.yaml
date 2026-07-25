@@ -980,16 +980,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
 
-  - name: "Cloudflare"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
-
   - name: "Cursor"
     type: select
     proxies:
@@ -1645,6 +1635,16 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
+
+  - name: "Cloudflare"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 
 rule-providers:
   Reject:
@@ -2427,7 +2427,6 @@ rules:
                                                     # - RULE-SET,Bilibili,Bilibili
                                                     # - RULE-SET,Bluesky,Bluesky
                                                     # - RULE-SET,CATCHPLAY,CATCHPLAY+
-                                                    # - RULE-SET,Cloudflare,Cloudflare
                                                     # - RULE-SET,Cursor,Cursor
                                                     # - RULE-SET,DAnimeStore,D Anime Store
                                                     # - RULE-SET,DAZN,DAZN
@@ -2496,6 +2495,7 @@ rules:
                                                     # - RULE-SET,ZLibrary,Z-Library
                                                     # - RULE-SET,friDayvideo,friDay video
                                                     # - RULE-SET,myTVSuper,myTV Super
+                                                    # - RULE-SET,Cloudflare,Cloudflare
 
                                                     # ----- 3. 应用程序直连 (Nikki 跳过: find-process-mode: off, 进程规则无效) -----
                                                     # - RULE-SET,Applications,🎯 全球直连
