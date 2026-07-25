@@ -73,14 +73,14 @@ logread -e nikki
 ## 📡 DNS 分流说明
 
 ```
-default-nameserver: 223.5.5.5, 119.29.29.29             ← 仅解析 nameserver 域名 IP
-nameserver:         阿里 DoH, DNSPod DoH + UDP 兜底    ← 常规 DNS 查询
-proxy-server-ns:    阿里 DoH, DNSPod DoH + UDP 兜底    ← 代理服务器域名专用（全国内）
+default-nameserver: 119.29.29.29, 223.5.5.5              ← 国内公共 UDP
+nameserver:         119.29.29.29, 223.5.5.5              ← 常规查询（仅 UDP）
+proxy-server-ns:    119.29.29.29, 223.5.5.5              ← 代理节点域名解析（仅 UDP）
 nameserver-policy:
-  geosite:private,cn        → 阿里/DNSPod DoH + UDP    ← 国内域名走国内 DNS
-  geosite:geolocation-!cn   → Cloudflare/Google DoT    ← 国际域名走 DoT (tls://)
-fallback:                   Cloudflare/Google DoT + UDP ← 兜底（并发查询，取最快）
-fallback-filter:            geoip:cn + ipcidr           ← CN 域名不经过 fallback
+  geosite:private,cn        → 119.29.29.29 / 223.5.5.5  ← 国内域名
+  geosite:geolocation-!cn   → 1.1.1.1 / 8.8.8.8         ← 国际域名（UDP）
+fallback:                   1.1.1.1 / 8.8.8.8            ← 兜底 UDP
+fallback-filter:            geoip:cn + ipcidr           ← CN 结果可信时不用 fallback
 ```
 
 ## 🔗 规则匹配顺序

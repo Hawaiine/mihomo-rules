@@ -122,40 +122,26 @@ dns:
   nameserver-policy:                                # 按 geosite 分流 DNS 查询 (优先于 nameserver)
                                                     # geosite:cn → 国内 DNS, 防止境外 DNS 返回错误 IP
     "geosite:private,cn":
-      - https://doh.pub/dns-query
-      - https://dns.alidns.com/dns-query
-      - 119.29.29.29                                # UDP 兜底 (国内 DoH 异常时备用)
-      - 223.5.5.5                                   # UDP 兜底
+      - 119.29.29.29                                # DNSPod UDP (腾讯)
+      - 223.5.5.5                                   # 阿里 UDP
                                                     # geosite:geolocation-!cn → 境外 DNS, 防止国内 DNS 污染
-                                                    # 使用 DoT (TLS over 853) + UDP 兜底:
-                                                    #   - DoT 比 DoH 更轻量(无 HTTP 封装), 且 IP 直连无需域名解析, 更可靠
-                                                    #   - UDP 做最后兜底, DoT 异常时自动切换
+                                                    # 使用境外公共 UDP DNS (IP 直连)
     "geosite:geolocation-!cn":
-      - tls://1.1.1.1                               # Cloudflare DoT (TLS, 853 端口, IP 直连)
-      - tls://8.8.8.8                               # Google DoT (TLS, 853 端口, IP 直连)
-      - 1.1.1.1                                     # UDP 兜底 (Cloudflare, 国际 DoT 异常时备用)
-      - 8.8.8.8                                     # UDP 兜底 (Google, 国际 DoT 异常时备用)
+      - 1.1.1.1                                     # Cloudflare UDP
+      - 8.8.8.8                                     # Google UDP
   nameserver:                                       # 常规 DNS 查询 (不匹配 nameserver-policy 的域名)
-    - https://doh.pub/dns-query                     # DNSPod DoH (腾讯, 国内优先)
-    - https://dns.alidns.com/dns-query              # 阿里 DoH (国内备用)
-    - 119.29.29.29                                  # UDP 兜底 (国内 DoH 异常时备用)
-    - 223.5.5.5                                     # UDP 兜底
+    - 119.29.29.29                                  # DNSPod UDP (腾讯)
+    - 223.5.5.5                                     # 阿里 UDP
   fallback:                                         # 兜底 DNS (并发查询, 取最快响应)
                                                     # 当 nameserver 结果不可信时 (如被污染的域名), 使用 fallback 结果
-                                                    # 使用 DoT (TLS over 853) + UDP 兜底:
-                                                    #   - DoT 轻量无 HTTP 封装, IP 直连无需域名解析
-                                                    #   - 三协议(DoT/UDP/DoT)并发查询, 谁快用谁, 任一挂了不影响其他
-    - tls://1.1.1.1                                 # Cloudflare DoT (TLS, 853 端口, IP 直连, 国际低延迟)
-    - tls://8.8.8.8                                 # Google DoT (TLS, 853 端口, IP 直连, 国际备用)
-    - 1.1.1.1                                       # UDP 兜底 (Cloudflare, 国际 DoT 异常时备用)
-    - 8.8.8.8                                       # UDP 兜底 (Google, 国际 DoT 异常时备用)
+                                                    # 使用境外公共 UDP DNS (IP 直连)
+    - 1.1.1.1                                       # Cloudflare UDP
+    - 8.8.8.8                                       # Google UDP
   proxy-server-nameserver:                          # 代理服务器域名解析专用 DNS
                                                     # 避免陷入: 解析代理域名 → 走代理 → 解析不了 → 死循环
                                                     # 例: 订阅链接 proxy.example.com → 用此 DNS 直连解析, 不走代理
-    - https://doh.pub/dns-query                     # DNSPod DoH (国内, 低延迟, 解析代理节点域名)
-    - https://dns.alidns.com/dns-query              # 阿里 DoH (国内备用)
-    - 119.29.29.29                                  # UDP 兜底 (国内 DoH 异常时备用)
-    - 223.5.5.5                                     # UDP 兜底
+    - 119.29.29.29                                  # DNSPod UDP (腾讯)
+    - 223.5.5.5                                     # 阿里 UDP
   fallback-filter:                                  # fallback 过滤: 以下条件的 nameserver 结果可信, 不使用 fallback
     geoip: true                                     # 检查 nameserver 返回的 IP 归属地
     geoip-code: CN                                  # IP 属于中国 → nameserver 结果可信, 丢弃 fallback

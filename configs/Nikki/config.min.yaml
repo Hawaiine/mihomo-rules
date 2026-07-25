@@ -75,28 +75,18 @@ dns:
     - 'geosite:cn'
   nameserver-policy:
     "geosite:private,cn":
-      - https://doh.pub/dns-query
-      - https://dns.alidns.com/dns-query
       - 119.29.29.29
       - 223.5.5.5
     "geosite:geolocation-!cn":
-      - tls://1.1.1.1
-      - tls://8.8.8.8
       - 1.1.1.1
       - 8.8.8.8
   nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
     - 119.29.29.29
     - 223.5.5.5
   fallback:
-    - tls://1.1.1.1
-    - tls://8.8.8.8
     - 1.1.1.1
     - 8.8.8.8
   proxy-server-nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
     - 119.29.29.29
     - 223.5.5.5
   fallback-filter:
