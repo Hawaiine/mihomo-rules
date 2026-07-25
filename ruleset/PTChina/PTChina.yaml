@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: PT China
 # Author: Hawaiine
-# Updated: 2026-07-21 00:00:00
+# Updated: 2026-07-26 00:00:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 50
-# DOMAIN-SUFFIX: 1
+# DOMAIN: 53
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -55,6 +55,8 @@ payload:
   - DOMAIN,tracker.agsvpt.cn
   - DOMAIN,tracker.agsvpt.work
   - DOMAIN,tracker.carpt.net
+  - DOMAIN,tracker.cspt.cc
+  - DOMAIN,tracker.cspt.top
   - DOMAIN,tracker.hhanclub.net
   - DOMAIN,tracker.m-team.cc
   - DOMAIN,tracker.m-team.io
@@ -62,4 +64,7 @@ payload:
   - DOMAIN,tracker.qingwapt.com
   - DOMAIN,tracker.totheglory.im
   - DOMAIN,www.open.cd
+  - DOMAIN,www.oshen.win
+  - DOMAIN-SUFFIX,crabpt.vip
+  - DOMAIN-SUFFIX,hdfans.org
   - DOMAIN-SUFFIX,nicept.net
