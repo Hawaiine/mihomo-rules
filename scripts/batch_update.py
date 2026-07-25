@@ -98,21 +98,44 @@ def send_discord(title, color, fields, add_run_link=True):
 # ── 实时统计 ──────────────────────────────────────────
 
 
+def _count_payload_rules(yaml_path: Path) -> int:
+    """统计单个 ruleset yaml 的 payload 规则行数。"""
+    try:
+        text = yaml_path.read_text(encoding='utf-8', errors='replace')
+    except Exception:
+        return 0
+    in_payload = False
+    n = 0
+    for line in text.splitlines():
+        s = line.strip()
+        if s == 'payload:':
+            in_payload = True
+            continue
+        if not in_payload:
+            continue
+        if not s or s.startswith('#'):
+            continue
+        if s.startswith('-'):
+            n += 1
+    return n
+
+
 def collect_repo_stats():
-    """扫描 ruleset 目录，返回实时统计：品牌数、规则集总数、规则总条数"""
+    """扫描 ruleset 目录，返回实时统计。
+
+    - brand_count: 业务品牌数（排除 7 兜底，期望 99）
+    - ruleset_count: 规则集目录总数（期望 106）
+    - rules_total: **全部**规则集（含 7 兜底）payload 规则行合计
+    """
     ruleset_dir = ROOT / 'ruleset'
     all_dirs = sorted([d.name for d in ruleset_dir.iterdir() if d.is_dir()])
     brand_count = len([d for d in all_dirs if d not in BASE_BRANDS])
     ruleset_count = len(all_dirs)
     rules_total = 0
     for d in all_dirs:
-        if d in BASE_BRANDS:
-            continue
         yaml_path = ruleset_dir / d / f'{d}.yaml'
         if yaml_path.exists():
-            raw = yaml_path.read_text().split('\n')
-            rules = [l for l in raw if l.strip() and not l.startswith('#') and not l.startswith('payload')]
-            rules_total += len(rules)
+            rules_total += _count_payload_rules(yaml_path)
     return {
         'brand_count': brand_count,
         'ruleset_count': ruleset_count,
@@ -155,17 +178,37 @@ def notify_pushed(stats, elapsed=0, noise_restored=0, commit_sha=''):
     if not DISCORD_WEBHOOK:
         return
 
-    # 实时收集变更品牌
+    # 变更统计：优先 HEAD~1..HEAD（CI 已 commit 后工作区干净）；否则回退工作区 diff
+    def _committed_or_worktree_diff(extra_flags, *pathspecs):
+        """extra_flags 如 ['--numstat'] 或 ['--name-only']。"""
+        has_parent = subprocess.run(
+            ['git', 'rev-parse', '--verify', 'HEAD~1'],
+            cwd=ROOT, capture_output=True, timeout=5,
+        ).returncode == 0
+        if has_parent:
+            check = subprocess.run(
+                ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', *pathspecs],
+                cwd=ROOT, capture_output=True, text=True, timeout=10,
+            )
+            if (check.stdout or '').strip():
+                return subprocess.run(
+                    ['git', 'diff', *extra_flags, 'HEAD~1', 'HEAD', '--', *pathspecs],
+                    cwd=ROOT, capture_output=True, text=True, timeout=15,
+                )
+        return subprocess.run(
+            ['git', 'diff', *extra_flags, '--', *pathspecs],
+            cwd=ROOT, capture_output=True, text=True, timeout=15,
+        )
+
     changed_brands = _get_changed_brands_from_git()
-    # 计算 ± 规则行
+
     rules_added = 0
     rules_removed = 0
     try:
-        num_result = subprocess.run(
-            ['git', 'diff', '--numstat', '--', 'ruleset/'],
-            cwd=ROOT, capture_output=True, text=True, timeout=10
-        )
-        for line in num_result.stdout.strip().split('\n'):
+        num_result = _committed_or_worktree_diff(['--numstat'], 'ruleset/')
+        for line in (num_result.stdout or '').strip().split('\n'):
+            if not line.strip():
+                continue
             parts = line.split('\t')
             if len(parts) >= 2:
                 try:
@@ -176,14 +219,10 @@ def notify_pushed(stats, elapsed=0, noise_restored=0, commit_sha=''):
     except Exception:
         pass
 
-    # 检查 configs 是否变更
     configs_changed = False
     try:
-        cfg_result = subprocess.run(
-            ['git', 'diff', '--name-only', '--', 'configs/'],
-            cwd=ROOT, capture_output=True, text=True, timeout=10
-        )
-        configs_changed = bool(cfg_result.stdout.strip())
+        cfg_result = _committed_or_worktree_diff(['--name-only'], 'configs/')
+        configs_changed = bool((cfg_result.stdout or '').strip())
     except Exception:
         pass
 

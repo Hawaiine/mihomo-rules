@@ -1,6 +1,7 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
+- Discord `rules_total` 计入全部 106 规则集（含 7 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
 
 ---
 
