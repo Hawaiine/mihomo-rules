@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: GitHub
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-07-28 06:52:33
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 30
-# DOMAIN-SUFFIX: 35
+# DOMAIN-SUFFIX: 36
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -66,6 +66,7 @@ payload:
   - DOMAIN-SUFFIX,githubnext.com
   - DOMAIN-SUFFIX,githubpreview.dev
   - DOMAIN-SUFFIX,githubstatus.com
+  - DOMAIN-SUFFIX,githubsupport.com
   - DOMAIN-SUFFIX,githubuniverse.com
   - DOMAIN-SUFFIX,githubusercontent.com
   - DOMAIN-SUFFIX,myoctocat.com
