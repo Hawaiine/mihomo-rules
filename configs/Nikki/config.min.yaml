@@ -522,8 +522,8 @@ proxy-groups:
   - name: "🛑 全球拦截"
     type: select
     proxies:
-      - DIRECT
       - REJECT
+      - DIRECT
   - name: "🎯 全球直连"
     type: select
     proxies:
