@@ -128,15 +128,15 @@ def sort_brands(brands, sg_map):
             if b in SUB_PARENT and SUB_PARENT[b] == parent:
                 kids.append((b, depth))
                 kids.extend(collect_children(b, brands_set, depth+1))
-        # 排序：深度大的先（嵌套深的先），同深度按字母序
+        # 排序：深度大的先（嵌套深的先），同深度按 provider key 字母序
         def sort_key(item):
-            return (-item[1], sg_map.get(item[0], item[0]))
+            return (-item[1], item[0])
         return sorted(kids, key=sort_key)
 
-    # 按父品牌分组：父品牌内子品牌(含嵌套)按字母序排在父品牌前
+    # 按父品牌分组：父品牌内子品牌(含嵌套)按 provider key 字母序排在父品牌前
     result = []
     done = set()
-    for parent in sorted(parent_brands_set, key=lambda p: sg_map.get(p, p)):
+    for parent in sorted(parent_brands_set, key=lambda p: p):
         children = collect_children(parent, set(brands))
         for c, _ in children:
             if c not in done:
