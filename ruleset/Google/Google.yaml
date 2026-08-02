@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-07-24 11:05:18
+# Updated: 2026-08-02 10:59:46
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
 # DOMAIN: 107
-# DOMAIN-SUFFIX: 709
+# DOMAIN-SUFFIX: 711
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -132,6 +132,7 @@ payload:
   - DOMAIN-SUFFIX,2mdn.net
   - DOMAIN-SUFFIX,466453.com
   - DOMAIN-SUFFIX,abc.xyz
+  - DOMAIN-SUFFIX,actifio.com
   - DOMAIN-SUFFIX,adgoogle.net
   - DOMAIN-SUFFIX,admeld.com
   - DOMAIN-SUFFIX,admob-cn.com
@@ -701,6 +702,7 @@ payload:
   - DOMAIN-SUFFIX,opensourceinsights.dev
   - DOMAIN-SUFFIX,openthread.io
   - DOMAIN-SUFFIX,openweave.io
+  - DOMAIN-SUFFIX,openxla.org
   - DOMAIN-SUFFIX,orbitera.com
   - DOMAIN-SUFFIX,page.link
   - DOMAIN-SUFFIX,pagespeedmobilizer.com

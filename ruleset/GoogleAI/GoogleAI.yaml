@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google AI
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-08-02 10:59:43
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 11
-# DOMAIN-SUFFIX: 29
+# DOMAIN-SUFFIX: 30
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -45,6 +45,7 @@ payload:
   - DOMAIN-SUFFIX,labs.google
   - DOMAIN-SUFFIX,labs.google.com
   - DOMAIN-SUFFIX,makersuite.google.com
+  - DOMAIN-SUFFIX,notebook.google.com
   - DOMAIN-SUFFIX,notebooklm.google
   - DOMAIN-SUFFIX,notebooklm.google.com
   - DOMAIN-SUFFIX,opal.google
