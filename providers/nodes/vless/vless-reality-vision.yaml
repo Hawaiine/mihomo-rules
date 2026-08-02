@@ -13,6 +13,7 @@
   # routing-mark: 0                             # 路由标记
   udp: true
   tls: true
+  network: tcp                                # 传输方式: tcp / ws / grpc
   servername: yahoo.com                        # 必须与服务端 REALITY dest 一致
   client-fingerprint: chrome                    # 推荐 chrome; firefox/safari/random 也可用
                                                 # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
