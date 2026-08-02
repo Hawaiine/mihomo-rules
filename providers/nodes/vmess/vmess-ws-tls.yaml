@@ -8,15 +8,32 @@
   server: server.example.com
   port: 443
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  alter-id: 0
-  cipher: auto
+  alter-id: 0                                   # 建议 0 (部分机场不支持)
+  cipher: auto                                  # 加密方式: auto / aes-128-gcm / chacha20-ietf / none
   udp: true
-  tls: true
-  servername: cloudflare.com           # 伪装域名 (推荐大站)
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
+  tls: true                                     # 启用 TLS (必须)
+  servername: cloudflare.com                    # TLS SNI (推荐大站)
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
+  # fingerprint: random                         # TLS 指纹 (random/chrome/safari/firefox/edge)
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
   network: ws
   ws-opts:
-    path: "/ws?ed=2048"                # 路径 + ED (Extended Data)
+    path: "/ws?ed=2048"                         # 路径 + ED (Extended Data)
     headers:
-      Host: cloudflare.com             # Host 头 (与 servername 一致)
-    # max-early-data: 2048             # 早期数据 (同 path ed 参数)
+      Host: cloudflare.com                      # Host 头 (与 servername 一致)
+    # max-early-data: 2048                      # 早期数据 (同 path ed 参数)
     # early-data-header-name: Sec-WebSocket-Protocol  # 早期数据头名
+  # 可选参数:
+  # proxy-alive: false                          # 虚假存活连接 (对抗 QoS)
+  # smux:                                       # 多路复用
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true

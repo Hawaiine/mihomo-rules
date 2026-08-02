@@ -9,6 +9,9 @@
   port: 443
   cipher: chacha20-ietf-poly1305
   password: "your-password"
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   plugin: obfs
   plugin-opts:

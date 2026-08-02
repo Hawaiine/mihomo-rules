@@ -7,6 +7,9 @@
   server: server.example.com
   port: 440
   psk: "your-pre-shared-key"
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   version: 4
   # obfs-opts:

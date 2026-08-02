@@ -10,6 +10,9 @@
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   alter-id: 0
   cipher: auto
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   tls: true
   servername: example.com

@@ -10,6 +10,9 @@
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   alter-id: 0                          # 建议 0 (部分机场不支持)
   cipher: auto                         # 加密: auto / aes-128-gcm / chacha20-ietf / none
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   # tfo: false                         # TCP Fast Open
   # mptcp: false                       # Multipath TCP

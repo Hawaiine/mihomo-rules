@@ -10,6 +10,9 @@ provider_main:
   url: "https://example.com/api/v1/client/subscribe?token=your_token_here"
   interval: 86400
   path: ./providers/provider_main.yaml
+  # proxy: DIRECT                          # 下载订阅时使用的代理 (可选，默认 DIRECT)
+  # size-limit: 0                        # 下载文件最大大小 (字节，0 不限制)
+  # age-secret-key: AGE-SECRET-KEY-xxx    # age 私钥 (解密加密订阅，可选)
   header:
     User-Agent:
       - "clash.meta"
@@ -49,6 +52,7 @@ provider_backup:
   url: "https://backup.example.com/subscribe?token=your_backup_token"
   interval: 86400
   path: ./providers/provider_backup.yaml
+  proxy: DIRECT  # 备用订阅直连下载
   health-check:
     enable: true
     url: https://cp.cloudflare.com/generate_204
@@ -58,6 +62,14 @@ provider_backup:
   override:
     udp: true
     skip-cert-verify: true
+
+# 加密订阅 (age 加密)
+provider_encrypted:
+  type: http
+  url: "https://example.com/encrypted-subscribe"
+  interval: 86400
+  path: ./providers/provider_encrypted.yaml
+  age-secret-key: "AGE-SECRET-KEY-1ZTQLLN0A4U3ZTT3DCZKYN0CGZEZQLWX2DFTXUWMT4ZHR0N2UG6LSW9NT0N"  # age 私钥
 
 # 本地文件订阅 (可直接导出订阅文件)
 provider_local:

@@ -9,6 +9,9 @@
   port: 443
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   password: "your-password"         # TUIC v4 使用密码认证
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   sni: server.example.com
   alpn:

@@ -7,5 +7,8 @@
   server: server.example.com
   port: "443-8443"                 # 端口范围
   password: "your-password"
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   # hop-interval: 30               # 跳跃间隔 (秒)

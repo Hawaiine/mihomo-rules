@@ -2,16 +2,38 @@
 # VMess + WebSocket
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
+
 - name: "vmess-ws"
   type: vmess
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
-  alter-id: 0
-  cipher: auto
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  alter-id: 0                                   # 建议 0
+  cipher: auto                                  # 加密方式: auto/aes-128-gcm/chacha20-ietf
   udp: true
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
+  # tls: true                                   # 启用 TLS (推荐)
+  # servername: example.com                     # TLS SNI (推荐)
+  # skip-cert-verify: false                     # 跳过证书验证
+  # fingerprint: random                         # TLS 指纹 (random/chrome/safari/firefox)
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
   network: ws
   ws-opts:
-    path: "/ws"
+    path: "/ws"                                 # WebSocket 路径
     headers:
-      Host: cloudflare.com
+      Host: example.com                         # Host 头
+    # max-early-data: 2048                      # 早期数据
+    # early-data-header-name: Sec-WebSocket-Protocol  # 早期数据头名
+  # 可选参数:
+  # proxy-alive: false                          # 虚假存活连接 (对抗 QoS)
+  # smux:                                       # 多路复用
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true

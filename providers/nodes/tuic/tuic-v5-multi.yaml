@@ -10,6 +10,9 @@
   token:
     - "token-1"
     - "token-2"                     # 多 token 支持 (负载均衡)
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   sni: server.example.com
   alpn:

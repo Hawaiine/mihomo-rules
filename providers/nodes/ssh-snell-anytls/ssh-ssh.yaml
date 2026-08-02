@@ -11,6 +11,9 @@
   password: "your-password"        # 或使用 private-key
   # private-key: "your-private-key-path"  # SSH 私钥路径
   # private-key-passphrase: "..."   # 私钥密码
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   # skip-cert-verify: true
   # tfo: false

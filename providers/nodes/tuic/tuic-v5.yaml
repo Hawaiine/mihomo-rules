@@ -8,6 +8,9 @@
   server: server.example.com
   port: 443
   token: "your-token"               # TUIC v5 认证 token
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   sni: server.example.com
   # skip-cert-verify: false         # 跳过证书验证 (不推荐)

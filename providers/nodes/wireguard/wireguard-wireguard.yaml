@@ -12,6 +12,9 @@
   private-key: "your-private-key"  # Base64 编码的私钥
   # public-key: "your-public-key"  # 对等方公钥
   # preshared-key: "your-preshared-key"  # 预共享密钥
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: true
   # peer-dns: true                 # 使用服务端 DNS
   # allowed-ips:                   # 允许的 IP 段

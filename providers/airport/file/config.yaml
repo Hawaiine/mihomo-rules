@@ -11,4 +11,6 @@ my_provider:
     url: https://cp.cloudflare.com/generate_204
     interval: 300
     lazy: true
-    expected-status: 204
+  override:
+    udp: true
+    skip-cert-verify: true

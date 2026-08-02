@@ -16,6 +16,9 @@
 | `url` | 是(type=http) | 订阅链接 |
 | `interval` | 否 | 更新间隔(秒), 默认 86400 |
 | `path` | 是 | 本地缓存路径 |
+| `proxy` | 否 | 下载代理 (如 `DIRECT`, `Proxy`) |
+| `size-limit` | 否 | 文件大小限制 (字节) |
+| `age-secret-key` | 否 | age 私钥 (解密加密订阅) |
 | `header` | 否 | 自定义 HTTP 请求头 |
 | `filter` | 否 | 正则匹配保留节点名 |
 | `exclude-filter` | 否 | 正则排除节点名 |

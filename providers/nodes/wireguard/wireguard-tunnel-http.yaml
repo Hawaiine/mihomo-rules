@@ -8,5 +8,8 @@
   port: 80
   ip: 10.0.0.2/32
   private-key: "your-private-key"
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   udp: false
   # 注意: HTTP 隧道需要服务端支持
