@@ -1,5 +1,5 @@
 # ===========================================
-# Trojan + WS (WebSocket)
+# Trojan + WebSocket
 # 参考: https://wiki.metacubex.one/en/config/proxies/trojan
 # ===========================================
 
@@ -7,17 +7,22 @@
   type: trojan
   server: server.example.com
   port: 443
-  password: "your-password"
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
   udp: true
-  sni: example.com
+  password:
+    - "your-password"                          # 密码 (支持多密码)
+  network: ws
+  ws-opts:
+    path: "/ws"                                # WebSocket 路径
+    headers:
+      Host: example.com                        # Host 头
+  sni: example.com                              # TLS SNI
   alpn:
     - h2
     - http/1.1
-  network: ws
-  ws-opts:
-    path: "/trojan"
-    headers:
-      Host: example.com
+  # client-fingerprint: chrome                 # TLS 指纹
+  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

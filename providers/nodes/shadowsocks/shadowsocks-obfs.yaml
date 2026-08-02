@@ -1,5 +1,5 @@
 # ===========================================
-# Shadowsocks + obfs 插件 (HTTP/TLS 混淆)
+# Shadowsocks + obfs 插件
 # 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
 # ===========================================
 
@@ -7,13 +7,13 @@
   type: ss
   server: server.example.com
   port: 443
-  cipher: chacha20-ietf-poly1305
-  password: "your-password"
+  udp: true
+  cipher: chacha20-ietf-poly1305               # 加密方式
+  password: "your-password"                    # 密码
+  plugin: obfs
+  plugin-opts:
+    mode: tls                                  # obfs 模式: tls / http
+    host: example.com                          # 混淆域名
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  plugin: obfs
-  plugin-opts:
-    mode: tls                          # 混淆模式: tls / http
-    host: example.com                  # 伪装域名 (推荐大站如 google.com)

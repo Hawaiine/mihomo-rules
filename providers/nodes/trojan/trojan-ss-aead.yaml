@@ -1,5 +1,5 @@
 # ===========================================
-# Trojan + Shadowsocks AEAD (双层加密)
+# Trojan + Shadowsockd AEAD
 # 参考: https://wiki.metacubex.one/en/config/proxies/trojan
 # ===========================================
 
@@ -7,13 +7,19 @@
   type: trojan
   server: server.example.com
   port: 443
-  password: "your-trojan-password"
+  udp: true
+  password:
+    - "your-password"                          # Trojan 密码
+  ss-password: "your-ss-password"              # Shadowsocks 密码
+  network: tcp
+  sni: example.com                              # TLS SNI
+  alpn:
+    - h2
+    - http/1.1
+  # client-fingerprint: chrome                 # TLS 指纹
+  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  ss-opts:
-    enabled: true
-    method: aes-128-gcm
-    password: "your-ss-password"
-  # 注意: 此配置需要服务端也启用 ss-opts
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

@@ -1,17 +1,20 @@
 # ===========================================
-# Snell 基础配置 (v4)
+# Snell v4 基础配置
+# 参考: https://wiki.metacubex.one/en/config/proxies/snell
 # ===========================================
 
 - name: "snell-v4"
   type: snell
   server: server.example.com
-  port: 440
-  psk: "your-pre-shared-key"
+  port: 44000
+  udp: true
+  psk: "your-psk"                              # Pre-Shared Key
+  version: 4                                   # Snell 版本: 3 / 4
+  # obfs-opts:
+  #   mode: plain                               # 混淆模式: plain / tls / http
+  #   host: example.com                         # 混淆域名
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  version: 4
-  # obfs-opts:
-  #   mode: tls
-  #   host: example.com
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

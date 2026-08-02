@@ -7,32 +7,22 @@
   type: vless
   server: server.example.com
   port: 443
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   udp: true
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  network: ws
+  ws-opts:
+    path: "/ws?ed=2048"                        # 路径 + ED (Extended Data)
+    headers:
+      Host: example.com                        # Host 头
+  # tls: false                                 # 未启用 TLS
+  # servername: example.com                    # TLS SNI (启用 tls 时必填)
+  # client-fingerprint: random                 # TLS 指纹
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  # tls: true                                   # 启用 TLS (推荐)
-  # servername: example.com                     # TLS SNI (推荐)
-  # skip-cert-verify: false                     # 跳过证书验证
-  # fingerprint: random                         # TLS 指纹 (random/chrome/safari/firefox)
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  network: ws
-  ws-opts:
-    path: "/ws"                                 # WebSocket 路径
-    headers:
-      Host: example.com                         # Host 头
-    # max-early-data: 2048                      # 早期数据
-    # early-data-header-name: Sec-WebSocket-Protocol  # 早期数据头名
-  # 加密方式 (部分服务端需要)
-  # encryption: none                            # 默认值
-  # encryption: "mlkem768x25519plus.native.0rtt"  # XTLS Vision 加密
-  # 可选参数:
   # xudp: true                                  # 启用 XUDP (QUIC)
-  # packet-encoding: xudp                       # 数据包编码
-  # flow: xtls-rprx-vision                     # XTLS 流控 (需服务端支持)
-  # smux:                                       # 多路复用
+  # packet-encoding: xudp                       # 数据包编码 (xudp/packetaddr)
+  # smux:                                       # 多路复用 (可选)
   #   enabled: true
   #   protocol: smux
   #   max-connections: 4

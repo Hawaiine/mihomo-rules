@@ -7,15 +7,16 @@
   type: trojan
   server: server.example.com
   port: 443
-  password: "your-password"
+  udp: true
+  password:
+    - "your-password"                          # 密码 (支持多密码)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  sni: example.com
+  sni: example.com                              # TLS SNI
   alpn:
     - h2
     - http/1.1
-  # skip-cert-verify: true            # 跳过证书验证 (不推荐)
-  # tfo: false                        # TCP Fast Open
-  # mptcp: false                      # Multipath TCP
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

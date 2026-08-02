@@ -1,5 +1,5 @@
 # ===========================================
-# Shadowsocks + v2ray-plugin (WebSocket 伪装)
+# Shadowsocks + v2ray-plugin
 # 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
 # ===========================================
 
@@ -7,20 +7,15 @@
   type: ss
   server: server.example.com
   port: 443
-  cipher: chacha20-ietf-poly1305
-  password: "your-password"
+  udp: true
+  cipher: chacha20-ietf-poly1305               # 加密方式
+  password: "your-password"                    # 密码
+  plugin: v2ray-plugin
+  plugin-opts:
+    mode: websocket                            # 伪装模式: websocket / http
+    host: example.com                          # 混淆域名
+    path: /                                    # 路径
+    # tls: true                               # 启用 TLS (可选)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  plugin: v2ray-plugin
-  plugin-opts:
-    mode: websocket                    # 固定为 websocket
-    host: example.com                  # 伪装域名
-    path: /ss                          # 路径
-    # tls: true                        # 启用 WSS (推荐)
-    # skip-cert-verify: true
-    # multiplex: true                  # 多路复用 (需 server 端支持)
-    # multiplex-options:
-    #   protocol: h2mux
-    #   stream-concurrency: 256

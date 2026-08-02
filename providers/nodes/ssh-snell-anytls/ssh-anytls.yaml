@@ -1,5 +1,5 @@
 # ===========================================
-# AnyTLS 代理
+# AnyTLS 基础配置
 # 参考: https://wiki.metacubex.one/en/config/proxies/anytls
 # ===========================================
 
@@ -7,11 +7,13 @@
   type: anytls
   server: server.example.com
   port: 443
-  username: "your-username"
-  password: "your-password"
+  udp: true
+  username: "username"                         # 用户名
+  password: "your-password"                    # 密码
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  # sni: example.com
-  # skip-cert-verify: false
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
+  # idle-session-check-interval: 30             # 空闲会话检测间隔 (秒)
+  # client-id: ""                               # 客户端 ID (可选)

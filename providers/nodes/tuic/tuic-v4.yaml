@@ -1,5 +1,5 @@
 # ===========================================
-# TUIC v4 (旧版)
+# TUIC v4
 # 参考: https://wiki.metacubex.one/en/config/proxies/tuic
 # ===========================================
 
@@ -7,13 +7,19 @@
   type: tuic
   server: server.example.com
   port: 443
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  password: "your-password"         # TUIC v4 使用密码认证
+  udp: true
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # 用户 UUID
+  password: "your-password"                    # 用户密码
+  sni: server.example.com                      # TLS SNI
+  alpn:
+    - h3
+  # congestion-controller: bbr                 # 拥塞控制: cubic / bbr (默认 bbr)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  sni: server.example.com
-  alpn:
-    - h3
-  # congestion-controller: bbr
+  # udp-relay-mode: native                      # UDP 中继模式: native / quic
+  # heartbeat-interval: 10000                   # 心跳间隔 (毫秒)
+  # request-timeout: 8000                       # 请求超时 (毫秒)
+  # max-udp-relay-packet-size: 1500             # UDP 最大包大小
+  # disable-sni: false                          # 禁用 SNI
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)

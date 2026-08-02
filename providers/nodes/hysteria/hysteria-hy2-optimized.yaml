@@ -1,20 +1,26 @@
 # ===========================================
-# Hysteria2 优化配置 (适合低延迟场景)
+# Hysteria 2 优化配置
+# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria2
 # ===========================================
 
 - name: "hy2-optimized"
   type: hysteria2
   server: server.example.com
   port: 443
-  password: "your-password"
+  udp: true
+  password: "your-password"                    # 认证密码
+  up: "50 Mbps"                                # 上行带宽
+  down: "200 Mbps"                             # 下行带宽
+  sni: example.com                             # TLS SNI
+  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
+  alpn:
+    - h3
+  # obfs:
+  #   type: salamander
+  #   password: "your-obfs-password"           # 混淆密码
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  up: "50 Mbps"
-  down: "200 Mbps"
-  sni: example.com
-  # 以下参数可优化延迟
-  # recv-window-cc: 8388608         # 接收窗口拥塞控制
-  # max-conn-br: 16777216           # 最大连接数 (bits)
-  # disable-mtu-discovery: false    # 禁用 Path MTU 发现
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
+  # disable-mtu-discovery: false                # 禁用 MTU 发现

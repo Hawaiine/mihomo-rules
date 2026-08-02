@@ -1,5 +1,5 @@
 # ===========================================
-# Hysteria v1 基础配置 (旧协议)
+# Hysteria 1 基础配置
 # 参考: https://wiki.metacubex.one/en/config/proxies/hysteria
 # ===========================================
 
@@ -7,13 +7,20 @@
   type: hysteria
   server: server.example.com
   port: 443
-  auth_str: "your-auth-string"     # 认证字符串
+  udp: true
+  auth_str: "your-auth-string"                 # 认证字符串
+  # up: "50 Mbps"                              # 上行带宽
+  # down: "200 Mbps"                           # 下行带宽
+  # sni: example.com                           # TLS SNI
+  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
+  # alpn:
+  #   - h3
+  # obfs:
+  #   type: salamander
+  #   password: "your-obfs-password"           # 混淆密码
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  # obfs: "your-obfs-password"     # 混淆密码
-  # protocol: udp                   # 协议 (默认 udp)
-  # up: "50 Mbps"
-  # down: "200 Mbps"
-  # fast-open: true                 # 启用 TCP Fast Open
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
+  # disable-mtu-discovery: false                # 禁用 MTU 发现

@@ -1,5 +1,5 @@
 # ===========================================
-# SSH 代理
+# SSH 基础配置
 # 参考: https://wiki.metacubex.one/en/config/proxies/ssh
 # ===========================================
 
@@ -7,13 +7,15 @@
   type: ssh
   server: server.example.com
   port: 22
-  username: "your-username"
-  password: "your-password"        # 或使用 private-key
-  # private-key: "your-private-key-path"  # SSH 私钥路径
-  # private-key-passphrase: "..."   # 私钥密码
+  udp: false                                   # SSH 仅支持 TCP
+  user: "username"                             # 用户名
+  password: "your-password"                    # 密码
+  # private-key: ""                            # 私钥路径
+  # passphrase: ""                             # 私钥密码
+  # host-key: ""                               # 服务器公钥 (可选)
+  # host-key-algorithms: []                    # 公钥算法列表
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  # skip-cert-verify: true
-  # tfo: false
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

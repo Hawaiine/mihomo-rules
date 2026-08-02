@@ -7,22 +7,22 @@
   type: vless
   server: server.example.com
   port: 443
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
   udp: true
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   tls: true
-  network: tcp                                # 传输方式: tcp / ws / grpc
-  servername: yahoo.com                         # 回退域名 (推荐大站如 yahoo.com/google.com)
-  client-fingerprint: chrome                    # 推荐 chrome; 可选 firefox/safari/random/edge
+  network: tcp                                 # 传输方式: tcp / ws / grpc
+  servername: yahoo.com                        # 回退域名, 建议使用大站
+  client-fingerprint: chrome                    # 推荐 chrome; firefox/safari/random 也可用
                                                 # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
                                                 # 握手不兼容导致 "REALITY authentication failed"
                                                 # 遇到此报错可临时换成 firefox 规避
   reality-opts:
     public-key: "your-reality-public-key"
     short-id: "your-short-id"                   # 允许为空字符串, 留空则使用全 0
-  # flow: xtls-rprx-vision                     # XTLS 流控 (需服务端支持 Vision 子协议)
+  # flow: xtls-rprx-vision                      # XTLS Vision 子协议标志 (非 Vision 可不填)
+  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
+  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
+  # routing-mark: 0                             # 路由标记
   # xudp: true                                  # 启用 XUDP (QUIC)
   # packet-encoding: xudp                       # 数据包编码 (xudp/packetaddr)
   # smux:                                       # 多路复用 (可选)

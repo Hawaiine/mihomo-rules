@@ -7,28 +7,19 @@
   type: trojan
   server: server.example.com
   port: 443
-  password: "your-password"
+  udp: true
+  password:
+    - "your-password"                          # 密码
+  tls: true
+  network: tcp
+  servername: example.com                      # 回退域名
+  client-fingerprint: chrome                    # 推荐 chrome/firefox/safari/random
+  reality-opts:
+    public-key: "your-reality-public-key"
+    short-id: "your-short-id"                  # 允许为空字符串, 留空则使用全 0
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  network: tcp                                # 传输方式: tcp / ws
-  sni: yahoo.com                                # TLS SNI (推荐大站如 yahoo.com)
-  client-fingerprint: chrome                    # 推荐 chrome; 可选 firefox/safari/random/edge
-                                                # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
-                                                # 握手不兼容导致 "REALITY authentication failed"
-                                                # 遇到此报错可临时换成 firefox 规避
-  alpn:
-    - h2
-    - http/1.1
-  reality-opts:
-    public-key: "your-reality-public-key"
-    short-id: "your-short-id"                   # 允许为空字符串, 留空则使用全 0
-  # smux:                                       # 多路复用 (可选)
-  #   enabled: true
-  #   protocol: smux
-  #   max-connections: 4
-  #   min-streams: 4
-  #   statistic: false
-  #   only-tcp: false
-  #   padding: true
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

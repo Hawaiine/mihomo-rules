@@ -7,16 +7,29 @@
   type: vless
   server: server.example.com
   port: 443
+  udp: true
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  tls: true
+  network: grpc
+  servername: example.com                      # TLS SNI
+  client-fingerprint: chrome                   # 推荐 chrome/firefox/safari/random
+  grpc-opts:
+    grpc-service-name: "service"               # gRPC 服务名
+  # alpn:
+  #   - h2
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  tls: true
-  servername: example.com
-  network: grpc
-  grpc-opts:
-    grpc-service-name: "service"
-  # reality-opts:                      # 可叠加 REALITY
-  #   public-key: "..."
-  #   short-id: "..."
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
+  # xudp: true                                  # 启用 XUDP (QUIC)
+  # packet-encoding: xudp                       # 数据包编码 (xudp/packetaddr)
+  # smux:                                       # 多路复用 (可选)
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true

@@ -1,5 +1,5 @@
 # ===========================================
-# VMess + TCP (基础)
+# VMess + TCP
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
 
@@ -7,15 +7,15 @@
   type: vmess
   server: server.example.com
   port: 443
+  udp: true
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  alter-id: 0                          # 建议 0 (部分机场不支持)
-  cipher: auto                         # 加密: auto / aes-128-gcm / chacha20-ietf / none
+  alter-id: 0                                   # 建议 0 (部分机场不支持)
+  cipher: auto                                  # 加密方式: auto / aes-128-gcm / chacha20-ietf / none
+  # tls: false                                 # 未启用 TLS
+  # servername: example.com                    # TLS SNI (启用 tls 时必填)
+  # client-fingerprint: random                 # TLS 指纹
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  # tfo: false                         # TCP Fast Open
-  # mptcp: false                       # Multipath TCP
-  # proxy-alive: false                 # 虚假存活连接 (对抗 QoS)
-
-# 注意: VMess 的 alter-id > 0 会降低安全性，建议使用 alter-id: 0
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP

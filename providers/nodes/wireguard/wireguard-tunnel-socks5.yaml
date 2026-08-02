@@ -1,15 +1,24 @@
 # ===========================================
 # WireGuard + SOCKS5 隧道
+# 参考: https://wiki.metacubex.one/en/config/proxies/wireguard
 # ===========================================
 
 - name: "wg-tunnel-socks5"
   type: wireguard
   server: server.example.com
-  port: 1080
-  ip: 10.0.0.2/32
-  private-key: "your-private-key"
+  port: 443
+  udp: true
+  ip: 10.0.0.2/32                              # 虚拟 IP (必填)
+  ipv6: "::2/128"                              # IPv6 (可选)
+  private-key: "your-private-key"              # Base64 编码的私钥
+  # public-key: "your-public-key"              # 对等方公钥
+  # preshared-key: "your-preshared-key"        # 预共享密钥
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: false
-  # 注意: SOCKS5 隧道需要服务端支持
+  # peer-dns: true                              # 使用服务端 DNS
+  # reserved: [0, 0, 0]                        # 保留字段
+  # allowed-ips:
+  #   - "0.0.0.0/0"
+  #   - "::/0"
+  # persistent-keepalive: 30                    # 保活间隔 (秒)

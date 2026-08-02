@@ -1,5 +1,5 @@
 # ===========================================
-# VMess + gRPC (抗封锁)
+# VMess + gRPC
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
 
@@ -7,16 +7,30 @@
   type: vmess
   server: server.example.com
   port: 443
+  udp: true
   uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  alter-id: 0
-  cipher: auto
+  alter-id: 0                                   # 建议 0 (部分机场不支持)
+  cipher: auto                                  # 加密方式: auto / aes-128-gcm / chacha20-ietf / none
+  tls: true                                     # 启用 TLS (必须)
+  network: grpc
+  servername: example.com                       # TLS SNI
+  client-fingerprint: chrome                    # 推荐 chrome/firefox/safari/random
+  grpc-opts:
+    grpc-service-name: "service"               # gRPC 服务名
+  # alpn:
+  #   - h2
+  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
   # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
-  udp: true
-  tls: true
-  servername: example.com
-  network: grpc
-  grpc-opts:
-    grpc-service-name: "service"       # gRPC 服务名
-  # 注意: gRPC 需要服务端支持 H2 传输
+  # tfo: false                                  # TCP Fast Open
+  # mptcp: false                                # Multipath TCP
+  # proxy-alive: false                          # 虚假存活连接 (对抗 QoS)
+  # smux:                                       # 多路复用
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true
