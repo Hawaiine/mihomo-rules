@@ -26,14 +26,18 @@ from lib.canonical import CanonicalRule, count_by_type, TYPES_ORDER
 # ── 策略组映射 ─────────────────────────────────────────────────
 
 STRATEGY_GROUP_MAP: dict[str, str] = {
-    "PTChina": "PT China",
-    "PornChina": "Porn China",
+    "PT": "💊 PT",
+    "PTChina": "💊 PT China",
     "F1TV": "F1 TV",
     "SiriAI": "Siri AI",
     "YouTubeMusic": "YouTube Music",
     "ZLibrary": "Z-Library",
     "iCloudPrivateRelay": "iCloud Private Relay",
-    "GeneralAI": "General AI",
+    "GeneralAI": "🤖 General AI",
+    "Porn": "🔞 Porn",
+    "PornChina": "🔞 Porn China",
+    "Bank": "🏦 Bank",
+    "OasisicSelf": "🏠 Oasisic Self",
     "DMMTV": "DMM TV",
     "RakutenTV": "Rakuten TV",
     "AppleTV": "Apple TV",

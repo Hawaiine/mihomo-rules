@@ -123,8 +123,8 @@ def _count_payload_rules(yaml_path: Path) -> int:
 def collect_repo_stats():
     """扫描 ruleset 目录，返回实时统计。
 
-    - brand_count: 业务品牌数（排除 7 兜底，期望 99）
-    - ruleset_count: 规则集目录总数（期望 106）
+    - brand_count: 业务品牌数（排除 7 兜底，随 ruleset 目录动态计算）
+    - ruleset_count: 规则集目录总数（含 7 兜底，随 ruleset 目录动态计算）
     - rules_total: **全部**规则集（含 7 兜底）payload 规则行合计
     """
     ruleset_dir = ROOT / 'ruleset'
@@ -452,11 +452,7 @@ def validate():
     brands = sorted([d.name for d in (ROOT / 'ruleset').iterdir()
                      if d.is_dir() and d.name not in BASE_BRANDS])
 
-    # 1. 品牌数量
-    if len(brands) != 99:
-        rollback('校验', f'品牌数异常: {len(brands)}（应为 99）')
-
-    # 2. 空壳检查
+    # 1. 空壳检查
     empty = []
     for b in brands:
         yaml = ROOT / 'ruleset' / b / f'{b}.yaml'

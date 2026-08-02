@@ -793,7 +793,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "Bank"
+  - name: "🏦 Bank"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -836,14 +836,6 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "D Anime Store"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
   - name: "DAZN"
     type: select
     proxies:
@@ -853,6 +845,14 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN-1.png"
+  - name: "D Anime Store"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
   - name: "DMM TV"
     type: select
     proxies:
@@ -914,7 +914,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "General AI"
+  - name: "🤖 General AI"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -922,7 +922,6 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/AI.png"
   - name: "HBO"
     type: select
     proxies:
@@ -968,14 +967,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV.png"
-  - name: "Karaoke@DAM"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
   - name: "LINE TV"
     type: select
     proxies:
@@ -1095,6 +1086,14 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NowE.png"
+  - name: "🏠 Oasisic Self"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
   - name: "OpenAI"
     type: select
     proxies:
@@ -1104,7 +1103,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI-4.png"
-  - name: "PT"
+  - name: "💊 PT"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1112,7 +1111,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "PT China"
+  - name: "💊 PT China"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1174,7 +1173,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe-1.png"
-  - name: "Porn"
+  - name: "🔞 Porn"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1182,7 +1181,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "Porn China"
+  - name: "🔞 Porn China"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1407,6 +1406,14 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDay.png"
+  - name: "Karaoke@DAM"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
   - name: "myTV Super"
     type: select
     proxies:
@@ -1780,6 +1787,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NowE/NowE.yaml"
     interval: 86400
     path: ./ruleset/NowE.yaml
+  OasisicSelf:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OasisicSelf/OasisicSelf.yaml"
+    interval: 86400
+    path: ./ruleset/OasisicSelf.yaml
   OneDrive:
     type: http
     behavior: classical

@@ -145,15 +145,15 @@ def sort_brands(brands, sg_map):
         result.append(parent)
         done.add(parent)
 
-    # 其他：按策略组名字母序
+    # 其他：按 provider key 字母序
     other = sorted(
         [b for b in brands if b not in done and b not in LAST_BRANDS],
-        key=lambda b: sg_map.get(b, b)
+        key=lambda b: b
     )
     # 置底品牌移到最后
     last = sorted(
         [b for b in brands if b in LAST_BRANDS],
-        key=lambda b: sg_map.get(b, b)
+        key=lambda b: b
     )
     return result + other + last
 

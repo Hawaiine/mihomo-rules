@@ -1,4 +1,4 @@
-# 📦 Porn 规则集
+# 📦 🔞 Porn 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: Porn
+- **策略组**: 🔞 Porn

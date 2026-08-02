@@ -941,7 +941,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "Bank"
+  - name: "🏦 Bank"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -989,15 +989,6 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "D Anime Store"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
-
   - name: "DAZN"
     type: select
     proxies:
@@ -1007,6 +998,15 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN-1.png"
+
+  - name: "D Anime Store"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
 
   - name: "DMM TV"
     type: select
@@ -1076,7 +1076,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "General AI"
+  - name: "🤖 General AI"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1084,7 +1084,6 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/AI.png"
 
   - name: "HBO"
     type: select
@@ -1135,15 +1134,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV.png"
-
-  - name: "Karaoke@DAM"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-    use:
-      - provider1
 
   - name: "LINE TV"
     type: select
@@ -1278,6 +1268,15 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NowE.png"
 
+  - name: "🏠 Oasisic Self"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
+
   - name: "OpenAI"
     type: select
     proxies:
@@ -1288,7 +1287,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI-4.png"
 
-  - name: "PT"
+  - name: "💊 PT"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1297,7 +1296,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "PT China"
+  - name: "💊 PT China"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1366,7 +1365,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe-1.png"
 
-  - name: "Porn"
+  - name: "🔞 Porn"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1375,7 +1374,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "Porn China"
+  - name: "🔞 Porn China"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1625,6 +1624,15 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDay.png"
+
+  - name: "Karaoke@DAM"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+    use:
+      - provider1
 
   - name: "myTV Super"
     type: select
@@ -2060,6 +2068,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/NowE.yaml
 
+  OasisicSelf:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OasisicSelf/OasisicSelf.yaml"
+    interval: 86400
+    path: ./ruleset/OasisicSelf.yaml
+
   OneDrive:
     type: http
     behavior: classical
@@ -2423,13 +2438,13 @@ rules:
                                                     # - RULE-SET,Anthropic,Anthropic
                                                     # - RULE-SET,Bahamut,Bahamut
                                                     # - RULE-SET,Bangumi,Bangumi
-                                                    # - RULE-SET,Bank,Bank
+                                                    # - RULE-SET,Bank,🏦 Bank
                                                     # - RULE-SET,Bilibili,Bilibili
                                                     # - RULE-SET,Bluesky,Bluesky
                                                     # - RULE-SET,CATCHPLAY,CATCHPLAY+
                                                     # - RULE-SET,Cursor,Cursor
-                                                    # - RULE-SET,DAnimeStore,D Anime Store
                                                     # - RULE-SET,DAZN,DAZN
+                                                    # - RULE-SET,DAnimeStore,D Anime Store
                                                     # - RULE-SET,DMMTV,DMM TV
                                                     # - RULE-SET,Deezer,Deezer
                                                     # - RULE-SET,Discord,Discord
@@ -2437,13 +2452,12 @@ rules:
                                                     # - RULE-SET,F1TV,F1 TV
                                                     # - RULE-SET,FujiTV,Fuji TV
                                                     # - RULE-SET,GameJapan,Game Japan
-                                                    # - RULE-SET,GeneralAI,General AI
+                                                    # - RULE-SET,GeneralAI,🤖 General AI
                                                     # - RULE-SET,HBO,HBO
                                                     # - RULE-SET,HOYTV,HOY TV
                                                     # - RULE-SET,HamiVideo,Hami Video
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,KKTV,KKTV
-                                                    # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,LINETV,LINE TV
                                                     # - RULE-SET,Lemino,Lemino
                                                     # - RULE-SET,LiTV,LiTV
@@ -2458,17 +2472,18 @@ rules:
                                                     # - RULE-SET,Niconico,Niconico
                                                     # - RULE-SET,Nintendo,Nintendo
                                                     # - RULE-SET,NowE,Now E
+                                                    # - RULE-SET,OasisicSelf,🏠 Oasisic Self
                                                     # - RULE-SET,OpenAI,OpenAI
-                                                    # - RULE-SET,PT,PT
-                                                    # - RULE-SET,PTChina,PT China
+                                                    # - RULE-SET,PT,💊 PT
+                                                    # - RULE-SET,PTChina,💊 PT China
                                                     # - RULE-SET,PayPal,PayPal
                                                     # - RULE-SET,Perplexity,Perplexity
                                                     # - RULE-SET,Pinterest,Pinterest
                                                     # - RULE-SET,Pixiv,Pixiv
                                                     # - RULE-SET,Podcast,Podcast
                                                     # - RULE-SET,Poe,Poe
-                                                    # - RULE-SET,Porn,Porn
-                                                    # - RULE-SET,PornChina,Porn China
+                                                    # - RULE-SET,Porn,🔞 Porn
+                                                    # - RULE-SET,PornChina,🔞 Porn China
                                                     # - RULE-SET,Qobuz,Qobuz
                                                     # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
@@ -2494,6 +2509,7 @@ rules:
                                                     # - RULE-SET,X,X
                                                     # - RULE-SET,ZLibrary,Z-Library
                                                     # - RULE-SET,friDayvideo,friDay video
+                                                    # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,myTVSuper,myTV Super
                                                     # - RULE-SET,Cloudflare,Cloudflare
 

@@ -1,4 +1,4 @@
-# 📦 PT China 规则集
+# 📦 💊 PT China 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: PT China
+- **策略组**: 💊 PT China
