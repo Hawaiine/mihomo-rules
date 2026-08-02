@@ -13,11 +13,22 @@
   # routing-mark: 0                             # 路由标记
   udp: true
   tls: true
-  servername: yahoo.com
-  fingerprint: random
+  servername: yahoo.com                        # 必须与服务端 REALITY dest 一致
+  client-fingerprint: chrome                    # 推荐 chrome; firefox/safari/random 也可用
+                                                # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
+                                                # 握手不兼容导致 "REALITY authentication failed"
+                                                # 遇到此报错可临时换成 firefox 规避
   reality-opts:
     public-key: "your-reality-public-key"
-    short-id: "your-short-id"
-  flow: xtls-rprx-vision               # XTLS Vision 模式
-  # xudp: true
-  # packet-encoding: xudp
+    short-id: "your-short-id"                   # 允许为空字符串, 留空则使用全 0
+  flow: xtls-rprx-vision                       # XTLS Vision 子协议标志 (必须写)
+  # xudp: true                                  # 启用 XUDP (QUIC)
+  # packet-encoding: xudp                       # 数据包编码 (xudp/packetaddr)
+  # smux:                                       # 多路复用 (可选)
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true

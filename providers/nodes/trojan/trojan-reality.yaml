@@ -12,11 +12,23 @@
   # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
   # routing-mark: 0                             # 路由标记
   udp: true
-  sni: yahoo.com
+  sni: yahoo.com                                # TLS SNI (推荐大站如 yahoo.com)
+  client-fingerprint: chrome                    # 推荐 chrome; 可选 firefox/safari/random/edge
+                                                # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
+                                                # 握手不兼容导致 "REALITY authentication failed"
+                                                # 遇到此报错可临时换成 firefox 规避
   alpn:
     - h2
     - http/1.1
-  fingerprint: random
   reality-opts:
     public-key: "your-reality-public-key"
-    short-id: "your-short-id"
+    short-id: "your-short-id"                   # 允许为空字符串, 留空则使用全 0
+  # network: tcp                                # 传输方式: tcp / ws
+  # smux:                                       # 多路复用 (可选)
+  #   enabled: true
+  #   protocol: smux
+  #   max-connections: 4
+  #   min-streams: 4
+  #   statistic: false
+  #   only-tcp: false
+  #   padding: true
