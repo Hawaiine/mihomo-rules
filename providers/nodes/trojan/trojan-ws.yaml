@@ -1,15 +1,20 @@
 # ===========================================
-# Trojan + WebSocket
+# Trojan + WS (WebSocket)
 # 参考: https://wiki.metacubex.one/en/config/proxies/trojan
 # ===========================================
+
 - name: "trojan-ws"
   type: trojan
   server: server.example.com
   port: 443
   password: "your-password"
   udp: true
+  sni: example.com
+  alpn:
+    - h2
+    - http/1.1
   network: ws
   ws-opts:
     path: "/trojan"
     headers:
-      Host: server.example.com
+      Host: example.com

@@ -1,21 +1,29 @@
-# Trojan 是基于 TLS 的安全代理协议，使用 HTTPS 封装，难以被检测。
+# Trojan 协议
+
+> 基于 TLS 的安全代理协议，使用 HTTPS 封装。
 
 ## 关键参数
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `password` | string | 密码（支持多个） |
+| `type` | string | `trojan` |
+| `password` | string | 密码 (支持多个) |
 | `sni` | string | TLS Server Name Indication |
-| `ss-opts` | object | Shadowsocks AEAD 加密参数（可选） |
-| `reality-opts` | object | REALITY 参数：`public-key`、`short-id` |
 | `alpn` | list | TLS ALPN 列表 |
+| `network` | string | 传输方式: `tcp`, `ws` |
+| `reality-opts` | object | REALITY 参数 |
 
-## 用法
+## 变体说明
 
-将 YAML 文件放在 `providers/nodes/` 下，在 `proxies` 或 `proxy-providers` 中引用。
+| 文件 | 说明 |
+|------|------|
+| `trojan-base.yaml` | 基础 TCP 配置 |
+| `trojan-ws.yaml` | WebSocket 传输 |
+| `trojan-reality.yaml` | REALITY 抗封锁 |
+| `trojan-ss-aead.yaml` | Trojan + Shadowsocks 双层加密 |
 
-```yaml
-- name: trojan-base
-  type: yaml
-  path: providers/nodes/trojan/trojan-base.yaml
-```
+## 注意事项
+
+- 建议使用 TLS 1.3
+- `alpn` 建议包含 `h2` 和 `http/1.1`
+- REALITY 模式可大幅降低被检测概率

@@ -1,19 +1,22 @@
 # ===========================================
-# VMess + WebSocket + TLS
+# VMess + WebSocket + TLS (抗封锁)
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
+
 - name: "vmess-ws-tls"
   type: vmess
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   alter-id: 0
   cipher: auto
   udp: true
   tls: true
-  servername: cloudflare.com
+  servername: cloudflare.com           # 伪装域名 (推荐大站)
   network: ws
   ws-opts:
-    path: "/ws?ed=2048"
+    path: "/ws?ed=2048"                # 路径 + ED (Extended Data)
     headers:
-      Host: cloudflare.com
+      Host: cloudflare.com             # Host 头 (与 servername 一致)
+    # max-early-data: 2048             # 早期数据 (同 path ed 参数)
+    # early-data-header-name: Sec-WebSocket-Protocol  # 早期数据头名

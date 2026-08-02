@@ -1,15 +1,20 @@
 # ===========================================
-# VLESS + XTLS Vision (推荐, 性能最佳)
+# VLESS + REALITY + Vision (XTLS)
 # 参考: https://wiki.metacubex.one/en/config/proxies/vless
 # ===========================================
-- name: "vless-vision"
+
+- name: "vless-reality-vision"
   type: vless
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   udp: true
   tls: true
-  servername: cloudflare.com
-  flow: xtls-rprx-vision          # XTLS Vision 流控
-  fingerprint: random             # TLS 指纹 (可选: random / chrome / safari / firefox / ios / android / edge / 360 / qq)
-  # client-fingerprint: chrome    # uTLS 客户端指纹模拟
+  servername: yahoo.com
+  fingerprint: random
+  reality-opts:
+    public-key: "your-reality-public-key"
+    short-id: "your-short-id"
+  flow: xtls-rprx-vision               # XTLS Vision 模式
+  # xudp: true
+  # packet-encoding: xudp

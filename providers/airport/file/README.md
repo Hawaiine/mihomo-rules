@@ -19,4 +19,11 @@ proxy-providers:
       enable: true
       url: https://cp.cloudflare.com/generate_204
       interval: 300
+      lazy: true
 ```
+
+## 注意事项
+
+- `path` 是必填项，指向本地文件路径
+- 文件必须是有效的 Mihomo/Clash 订阅格式
+- 本地文件不会自动更新，需手动替换

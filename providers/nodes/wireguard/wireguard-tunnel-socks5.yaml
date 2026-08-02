@@ -1,19 +1,12 @@
 # ===========================================
-# WireGuard + Tunnel via SOCKS5 Proxy
-# 参考: https://wiki.metacubex.one/en/config/proxies/wireguard
+# WireGuard + SOCKS5 隧道
 # ===========================================
+
 - name: "wg-tunnel-socks5"
   type: wireguard
-  server: wg.example.com
-  port: 51820
-  ip:
-    - "10.0.0.4/32"
-  private-key: "your-private-key-base64"
-  public-key: "your-peer-public-key"
-  allowed-ips:                     # 允许的 IP 段 (留空=所有)
-    - "0.0.0.0/0"
-    - "::/0"
-  udp: true
-  mtu: 1420
-  remote-dns-resolve: true
-  dialer-proxy: "socks5-proxy"     # 通过 SOCKS5 代理连接
+  server: server.example.com
+  port: 1080
+  ip: 10.0.0.2/32
+  private-key: "your-private-key"
+  udp: false
+  # 注意: SOCKS5 隧道需要服务端支持

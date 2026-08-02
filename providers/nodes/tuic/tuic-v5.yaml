@@ -2,6 +2,7 @@
 # TUIC v5 (推荐)
 # 参考: https://wiki.metacubex.one/en/config/proxies/tuic
 # ===========================================
+
 - name: "tuic-v5"
   type: tuic
   server: server.example.com
@@ -9,10 +10,12 @@
   token: "your-token"               # TUIC v5 认证 token
   udp: true
   sni: server.example.com
-  skip-cert-verify: false
+  # skip-cert-verify: false         # 跳过证书验证 (不推荐)
   alpn:
     - h3
   # congestion-controller: bbr      # 拥塞控制: cubic / bbr (默认 bbr)
   # udp-relay-mode: native          # UDP 中继模式: native / quic
   # heartbeat-interval: 10000       # 心跳间隔 (毫秒)
   # request-timeout: 8000           # 请求超时 (毫秒)
+  # max-udp-relay-packet-size: 1500 # UDP 最大包大小
+  # disable-sni: false              # 禁用 SNI

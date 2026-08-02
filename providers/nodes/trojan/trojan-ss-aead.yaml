@@ -1,18 +1,16 @@
 # ===========================================
-# Trojan + Shadowsocks AEAD 加密 (trojan-go)
+# Trojan + Shadowsocks AEAD (双层加密)
 # 参考: https://wiki.metacubex.one/en/config/proxies/trojan
 # ===========================================
-- name: "trojan-ss"
+
+- name: "trojan-ss-aead"
   type: trojan
   server: server.example.com
   port: 443
-  password: "your-password"
+  password: "your-trojan-password"
   udp: true
-  sni: server.example.com
-  alpn:
-    - h2
-    - http/1.1
   ss-opts:
     enabled: true
-    method: aes-128-gcm            # 可选: aes-128-gcm / aes-256-gcm / chacha20-ietf-poly1305
-    password: "ss-password"
+    method: aes-128-gcm
+    password: "your-ss-password"
+  # 注意: 此配置需要服务端也启用 ss-opts

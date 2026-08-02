@@ -1,11 +1,20 @@
 # ===========================================
-# Shadowsocks 2022 (新式 AEAD 2022 加密)
+# Shadowsocks 2022 (SS 2022 标准)
 # 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
 # ===========================================
+
 - name: "ss-2022"
   type: ss
   server: server.example.com
   port: 443
-  cipher: 2022-blake3-aes-256-gcm   # 2022 系列加密
-  password: "your-32-byte-base64-key"
+  cipher: 2022-blake3-aes-256-gcm    # SS 2022 加密
+  password: "your-2022-password"      # 必须是 32 字节 Base64 编码
   udp: true
+  # plugin: obfs
+  # plugin-opts:
+  #   mode: tls
+  #   host: example.com
+
+# 注意: SS 2022 使用新的密钥派生方式，密码必须是 32 字节 (256位)
+# 格式: base64(Blake3(auth_key + cipher_key))
+# 可使用 https://github.com/ShadowsocksNFT/ss-2022-keygen 生成

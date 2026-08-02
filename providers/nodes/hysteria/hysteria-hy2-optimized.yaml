@@ -1,16 +1,17 @@
 # ===========================================
-# Hysteria2 + QUIC 参数调优
-# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria2
+# Hysteria2 优化配置 (适合低延迟场景)
 # ===========================================
+
 - name: "hy2-optimized"
   type: hysteria2
   server: server.example.com
   port: 443
   password: "your-password"
-  up: "100 Mbps"
-  down: "500 Mbps"
-  sni: server.example.com
-  skip-cert-verify: false
-  alpn:
-    - h3
-  # bbr-profile: "conservative"     # BBR 配置: standard / conservative / aggressive
+  udp: true
+  up: "50 Mbps"
+  down: "200 Mbps"
+  sni: example.com
+  # 以下参数可优化延迟
+  # recv-window-cc: 8388608         # 接收窗口拥塞控制
+  # max-conn-br: 16777216           # 最大连接数 (bits)
+  # disable-mtu-discovery: false    # 禁用 Path MTU 发现

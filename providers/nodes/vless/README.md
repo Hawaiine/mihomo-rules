@@ -1,21 +1,29 @@
-# VLESS 是 VMess 的改进版协议，去除了 alter-id，支持 XTLS 和 REALITY，性能更优。
+# VLESS 协议
+
+> VMess 的改进版，去除 alter-id，支持 XTLS 和 REALITY。
 
 ## 关键参数
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
+| `type` | string | `vless` |
 | `uuid` | string | 用户 UUID |
-| `flow` | string | 流控：`xtls-rprx-vision` (XTLS) |
-| `network` | string | 传输方式：`ws`、`grpc`、`tcp` |
-| `reality-opts` | object | REALITY 参数：`public-key`、`short-id` |
 | `tls` | bool | 是否启用 TLS |
+| `network` | string | 传输方式: `tcp`, `ws`, `grpc` |
+| `reality-opts` | object | REALITY 参数: `public-key`, `short-id` |
+| `flow` | string | 流控: `xtls-rprx-vision` |
 
-## 用法
+## 变体说明
 
-将 YAML 文件放在 `providers/nodes/` 下，在 `proxies` 或 `proxy-providers` 中引用。
+| 文件 | 说明 |
+|------|------|
+| `vless-reality.yaml` | REALITY 抗封锁 (推荐) |
+| `vless-reality-vision.yaml` | REALITY + XTLS Vision |
+| `vless-ws-tls.yaml` | WebSocket + TLS |
+| `vless-grpc.yaml` | gRPC 传输 |
 
-```yaml
-- name: vless-reality
-  type: yaml
-  path: providers/nodes/vless/vless-reality.yaml
-```
+## 注意事项
+
+- **REALITY**: 无需证书，抗封锁能力最强
+- **servername**: 回退域名，建议使用大站如 `yahoo.com`
+- **fingerprint**: 建议设为 `random` 对抗检测

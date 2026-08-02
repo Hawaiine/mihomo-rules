@@ -1,11 +1,15 @@
 # ===========================================
-# Snell v3
-# 参考: https://wiki.metacubex.one/en/config/proxies/
+# Snell 基础配置 (v3)
+# 参考: https://wiki.metacubex.one/en/config/proxies/snell
 # ===========================================
+
 - name: "snell-v3"
   type: snell
   server: server.example.com
-  port: 443
-  psk: "your-psk"
-  version: 3                       # Snell 协议版本
-  reuse: true                      # 连接复用 (v3 支持)
+  port: 440
+  psk: "your-pre-shared-key"
+  udp: true
+  version: 3                        # Snell 版本: 2 / 3
+  # obfs-opts:
+  #   mode: tls
+  #   host: example.com

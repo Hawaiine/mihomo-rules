@@ -2,16 +2,17 @@
 # VLESS + WebSocket + TLS
 # 参考: https://wiki.metacubex.one/en/config/proxies/vless
 # ===========================================
+
 - name: "vless-ws-tls"
   type: vless
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   udp: true
   tls: true
-  servername: cloudflare.com
+  servername: example.com
   network: ws
   ws-opts:
-    path: "/ws"
+    path: "/"
     headers:
-      Host: cloudflare.com
+      Host: example.com

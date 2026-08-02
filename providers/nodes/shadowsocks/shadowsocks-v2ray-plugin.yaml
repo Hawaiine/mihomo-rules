@@ -1,8 +1,9 @@
 # ===========================================
-# Shadowsocks + v2ray-plugin
+# Shadowsocks + v2ray-plugin (WebSocket 伪装)
 # 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
 # ===========================================
-- name: "ss-v2ray"
+
+- name: "ss-v2ray-plugin"
   type: ss
   server: server.example.com
   port: 443
@@ -11,8 +12,12 @@
   udp: true
   plugin: v2ray-plugin
   plugin-opts:
-    mode: websocket                 # 传输模式: websocket / quic / grpc
-    tls: true                       # 启用 TLS
-    host: cloudflare.com
-    path: "/ws"
-    # mux: true                     # 多路复用
+    mode: websocket                    # 固定为 websocket
+    host: example.com                  # 伪装域名
+    path: /ss                          # 路径
+    # tls: true                        # 启用 WSS (推荐)
+    # skip-cert-verify: true
+    # multiplex: true                  # 多路复用 (需 server 端支持)
+    # multiplex-options:
+    #   protocol: h2mux
+    #   stream-concurrency: 256

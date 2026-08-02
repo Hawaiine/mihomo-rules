@@ -1,13 +1,14 @@
 # ===========================================
-# AnyTLS (任意 TLS 隧道)
-# 参考: https://wiki.metacubex.one/en/config/proxies/
+# AnyTLS 代理
+# 参考: https://wiki.metacubex.one/en/config/proxies/anytls
 # ===========================================
-- name: "anytls"
+
+- name: "anytls-basic"
   type: anytls
   server: server.example.com
   port: 443
+  username: "your-username"
   password: "your-password"
   udp: true
-  sni: cloudflare.com
-  skip-cert-verify: false
-  # client-fingerprint: chrome     # TLS 指纹模拟
+  # sni: example.com
+  # skip-cert-verify: false

@@ -3,7 +3,6 @@
 # 适用: Mihomo / clash-meta proxy-providers
 # ===========================================
 
-# 本地订阅
 my_provider:
   type: file
   path: ./providers/my_provider.yaml

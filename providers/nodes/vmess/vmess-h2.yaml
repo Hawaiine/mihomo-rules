@@ -1,17 +1,21 @@
 # ===========================================
-# VMess + HTTP/2 (伪装成 HTTP 上行)
+# VMess + HTTP/2 (H2 传输)
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
+
 - name: "vmess-h2"
   type: vmess
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   alter-id: 0
   cipher: auto
   udp: true
+  tls: true
+  servername: example.com
   network: h2
   h2-opts:
     host:
-      - cloudflare.com
-    path: "/"
+      - example.com
+      - www.example.com                # 多域名伪装
+    path: "/video"                     # 路径

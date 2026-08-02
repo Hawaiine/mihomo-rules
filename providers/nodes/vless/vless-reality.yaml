@@ -2,15 +2,20 @@
 # VLESS + REALITY (抗封锁, 无需证书)
 # 参考: https://wiki.metacubex.one/en/config/proxies/vless
 # ===========================================
+
 - name: "vless-reality"
   type: vless
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   udp: true
   tls: true
-  servername: yahoo.com             # 回 Fallback 域名 (推荐大站)
-  fingerprint: random
+  servername: yahoo.com                # 回退域名 (推荐大站)
+  fingerprint: random                  # 伪造指纹 (对抗检测)
   reality-opts:
     public-key: "your-reality-public-key"
-    short-id: "your-short-id"
+    short-id: "your-short-id"          # 可选, 留空则使用全 0
+  # flow: xtls-rprx-vision             # XTLS 流控 (需服务端支持)
+  # network: tcp
+  # xudp: true                         # 启用 XUDP (QUIC)
+  # packet-encoding: xudp              # 数据包编码

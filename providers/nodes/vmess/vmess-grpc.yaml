@@ -1,18 +1,19 @@
 # ===========================================
-# VMess + gRPC
+# VMess + gRPC (抗封锁)
 # 参考: https://wiki.metacubex.one/en/config/proxies/vmess
 # ===========================================
+
 - name: "vmess-grpc"
   type: vmess
   server: server.example.com
   port: 443
-  uuid: "your-uuid-here"
+  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   alter-id: 0
   cipher: auto
   udp: true
   tls: true
-  servername: cloudflare.com
+  servername: example.com
   network: grpc
   grpc-opts:
-    grpc-service-name: "example"
-    # grpc-mode: multi              # gRPC 多路复用模式
+    grpc-service-name: "service"       # gRPC 服务名
+  # 注意: gRPC 需要服务端支持 H2 传输
