@@ -37,7 +37,6 @@ dns:
   listen: 127.0.0.1:53
   ipv6: true
   default-nameserver:
-    - 119.29.29.29
     - 223.5.5.5
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
@@ -69,14 +68,14 @@ dns:
       - 119.29.29.29
       - 223.5.5.5
     "geosite:geolocation-!cn":
-      - 1.1.1.1
-      - 8.8.8.8
+      - tls://1.1.1.1
+      - tls://8.8.8.8
   nameserver:
     - 119.29.29.29
     - 223.5.5.5
   fallback:
-    - 1.1.1.1
-    - 8.8.8.8
+    - tls://1.1.1.1
+    - tls://8.8.8.8
   proxy-server-nameserver:
     - 119.29.29.29
     - 223.5.5.5
@@ -85,6 +84,9 @@ dns:
     geoip-code: CN
     ipcidr:
       - 240.0.0.0/4
+      - 0.0.0.0/32
+      - 127.0.0.1/32
+      - 100.64.0.0/10
 sniffer:
   enable: true
   force-dns-mapping: true

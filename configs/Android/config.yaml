@@ -84,7 +84,6 @@ dns:
   listen: 127.0.0.1:53                              # DNS 监听端口 (Android VPN 本地, 127.0.0.1 避免端口冲突)
   ipv6: true                                        # 支持 IPv6 DNS 查询
   default-nameserver:                               # 默认 DNS (仅用于解析 nameserver 域名本身的 IP)
-    - 119.29.29.29                                  # DNSPod DNS (腾讯, 国内推荐)
     - 223.5.5.5                                     # 阿里 DNS (国内, 低延迟)
   enhanced-mode: fake-ip                            # fake-ip 模式, 劫持所有 DNS 请求
   fake-ip-range: 198.18.0.1/16                      # fake-ip 地址段
@@ -125,18 +124,18 @@ dns:
       - 119.29.29.29                                # DNSPod UDP (腾讯)
       - 223.5.5.5                                   # 阿里 UDP
                                                     # geosite:geolocation-!cn → 境外 DNS, 防止国内 DNS 污染
-                                                    # 使用境外公共 UDP DNS (IP 直连)
+                                                    # 使用境外 DoT DNS (IP 直连)
     "geosite:geolocation-!cn":
-      - 1.1.1.1                                     # Cloudflare UDP
-      - 8.8.8.8                                     # Google UDP
+      - tls://1.1.1.1                               # Cloudflare DoT
+      - tls://8.8.8.8                               # Google DoT
   nameserver:                                       # 常规 DNS 查询 (不匹配 nameserver-policy 的域名)
     - 119.29.29.29                                  # DNSPod UDP (腾讯)
     - 223.5.5.5                                     # 阿里 UDP
   fallback:                                         # 兜底 DNS (并发查询, 取最快响应)
                                                     # 当 nameserver 结果不可信时 (如被污染的域名), 使用 fallback 结果
-                                                    # 使用境外公共 UDP DNS (IP 直连)
-    - 1.1.1.1                                       # Cloudflare UDP
-    - 8.8.8.8                                       # Google UDP
+                                                    # 使用境外 DoT DNS (IP 直连)
+    - tls://1.1.1.1                                 # Cloudflare DoT
+    - tls://8.8.8.8                                 # Google DoT
   proxy-server-nameserver:                          # 代理服务器域名解析专用 DNS
                                                     # 避免陷入: 解析代理域名 → 走代理 → 解析不了 → 死循环
                                                     # 例: 订阅链接 proxy.example.com → 用此 DNS 直连解析, 不走代理
@@ -147,6 +146,9 @@ dns:
     geoip-code: CN                                  # IP 属于中国 → nameserver 结果可信, 丢弃 fallback
     ipcidr:                                         # 以下 IP 段的 nameserver 结果不可信
       - 240.0.0.0/4                                 # 组播地址 (通常是被污染的返回值)
+      - 0.0.0.0/32                                  # 非法地址 (污染常见返回值)
+      - 127.0.0.1/32                                # 回环地址 (污染常见返回值)
+      - 100.64.0.0/10                                # CGNAT 保留段
 
 # TLS/HTTP 嗅探 (fake-ip 模式下识别真实域名, 否则 HTTPS 网站会因 fake-ip 访问异常)
 # 参考: https://wiki.metacubex.one/config/sniff/
