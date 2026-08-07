@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Cloudflare
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-08-07 09:28:01
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 69
+# DOMAIN-SUFFIX: 71
 # IP-CIDR: 15
 # IP-CIDR6: 7
 # IP-ASN: 0
@@ -34,9 +34,11 @@ payload:
   - DOMAIN-SUFFIX,cloudflare-ipfs.com
   - DOMAIN-SUFFIX,cloudflare-quic.com
   - DOMAIN-SUFFIX,cloudflare-terms-of-service-abuse.com
+  - DOMAIN-SUFFIX,cloudflare.app
   - DOMAIN-SUFFIX,cloudflare.com
   - DOMAIN-SUFFIX,cloudflare.dev
   - DOMAIN-SUFFIX,cloudflare.net
+  - DOMAIN-SUFFIX,cloudflare.pay
   - DOMAIN-SUFFIX,cloudflare.tv
   - DOMAIN-SUFFIX,cloudflareaccess.com
   - DOMAIN-SUFFIX,cloudflareapps.com
