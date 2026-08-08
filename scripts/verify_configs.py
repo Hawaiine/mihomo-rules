@@ -15,8 +15,8 @@ CONFIG_DIRS = {
 }
 VARIANTS = ['android_full', 'android_min', 'nikki_full', 'nikki_min']
 
-# 基础 provider (7)
-BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR'}
+# 基础 provider (9)
+BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR', 'DNSDirect', 'DNSProxy'}
 
 # 系统组 (28)
 SYSTEM_GROUPS = [
@@ -162,9 +162,9 @@ def check_proxy_groups_count(lines, variant):
     return True
 
 def check_rule_providers_count(lines, variant):
-    """rule-providers = 7 基础 + 99 品牌 = 106"""
+    """rule-providers = 9 基础 + 100 品牌 = 109"""
     keys = extract_rule_provider_keys(lines)
-    expected = 7 + len(ALL_BRANDS)
+    expected = len(BASE_PROVIDERS) + len(ALL_BRANDS)
     if len(keys) != expected:
         print(f'  FAIL: {variant} — rule-providers={len(keys)}, expected {expected}')
         return False
@@ -273,16 +273,16 @@ def check_full_min_rules_equivalence(variant, lines):
     is_nikki = 'nikki' in variant
     rules = extract_rules_lines(lines)
     # 检查基本结构
-    expected_lines = 9 if not is_nikki else 8  # Android 9条, Nikki 8条(无Applications)
+    expected_lines = 11 if not is_nikki else 10  # Android 11条, Nikki 10条(无Applications)
     if len(rules) != expected_lines:
         print(f'  FAIL: {variant} — active rules={len(rules)}, expected {expected_lines}')
         return False
     return True
 
 def check_rule_providers_base_order(lines, variant):
-    """前 7 个 rule-provider 必须是固定顺序: Reject,Direct,Proxy,Applications,Private,LanCIDR,CNCIDR"""
+    """前 9 个 rule-provider 必须是固定顺序: DNSDirect,DNSProxy,Reject,Direct,Proxy,Applications,Private,LanCIDR,CNCIDR"""
     keys = extract_rule_provider_keys(lines)
-    base_order = ['Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR']
+    base_order = ['DNSDirect', 'DNSProxy', 'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR']
     for i, expected in enumerate(base_order):
         if i >= len(keys) or keys[i] != expected:
             print(f'  FAIL: {variant} — base provider #{i} expected "{expected}", got "{keys[i] if i < len(keys) else "N/A"}"')

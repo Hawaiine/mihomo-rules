@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # 排除的基础规则集
-BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
+BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
 
 from lib.ownership_map import SUB_PARENT
 
@@ -24,6 +24,8 @@ GLOBAL_DIRECT_PROXY = '🎯 全球直连'
 
 # 基础 provider 配置（本仓库 ruleset 全部使用 TYPE,value classical 格式）
 BASE_PROVIDERS = {
+    'DNSDirect':    'classical',
+    'DNSProxy':     'classical',
     'Reject':       'classical',
     'Direct':       'classical',
     'Proxy':        'classical',
@@ -387,6 +389,12 @@ def gen_rules(brand_info, variant):
     
     lines = []
     lines.append('rules:')
+    
+    # 段 0: DNS 分流 (最高优先级, 确保 DNS 先走正确路由)
+    if is_full:
+        lines.append('                                                    # ----- 0. DNS 分流 (最高优先级) -----')
+    lines.append('  - RULE-SET,DNSDirect,🎯 全球直连')
+    lines.append('  - RULE-SET,DNSProxy,🔧 手动切换')
     
     # 段 1: 拦截
     if is_full:

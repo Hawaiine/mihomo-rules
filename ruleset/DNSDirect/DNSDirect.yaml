@@ -1,0 +1,30 @@
+# ===========================================
+# Rule Name: 🇨🇳 DNSDirect
+# Author: Hawaiine
+# Updated: 2026-08-07
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 3
+# IP-CIDR: 13
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,114dns.com
+  - DOMAIN-SUFFIX,dns.alidns.com
+  - DOMAIN-SUFFIX,doh.pub
+  - IP-CIDR,1.2.4.8/32
+  - IP-CIDR,101.226.4.6/32
+  - IP-CIDR,114.114.114.114/32
+  - IP-CIDR,114.114.115.115/32
+  - IP-CIDR,119.29.29.29/32
+  - IP-CIDR,123.125.81.6/32
+  - IP-CIDR,180.76.76.76/32
+  - IP-CIDR,182.254.116.116/32
+  - IP-CIDR,182.254.118.118/32
+  - IP-CIDR,210.2.4.8/32
+  - IP-CIDR,218.30.118.6/32
+  - IP-CIDR,223.5.5.5/32
+  - IP-CIDR,223.6.6.6/32

@@ -15,7 +15,7 @@ from lib.ownership_map import SUB_PARENT
 from lib.canonical import parse_rule_line, sort_rules, CanonicalRule
 from commit_writer import write_ruleset
 
-BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
+BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
 
 
 def parse_rules_to_canonical(yaml_path):

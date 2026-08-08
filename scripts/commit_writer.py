@@ -38,6 +38,8 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "PornChina": "🔞 Porn China",
     "Bank": "🏦 Bank",
     "OasisicSelf": "🏠 Oasisic Self",
+    "DNSDirect": "🇨🇳 DNSDirect",
+    "DNSProxy": "🌍 DNSProxy",
     "DMMTV": "DMM TV",
     "RakutenTV": "Rakuten TV",
     "AppleTV": "Apple TV",

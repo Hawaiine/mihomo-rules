@@ -81,6 +81,7 @@ dns:
   cache-algorithm: arc                              # 自适应替换缓存 (ARC), 比默认 LRU 效率更高
   use-hosts: true                                   # 使用配置文件中的 hosts: 段自定义域名映射
   use-system-hosts: true                            # 使用系统 /etc/hosts 文件
+  respect-rules: true                              # DNS 查询遵守路由规则 (让国外 DNS 走代理)
   listen: 127.0.0.1:53                              # DNS 监听端口 (Android VPN 本地, 127.0.0.1 避免端口冲突)
   ipv6: true                                        # 支持 IPv6 DNS 查询
   default-nameserver:                               # 默认 DNS (仅用于解析 nameserver 域名本身的 IP)
@@ -139,7 +140,9 @@ dns:
   proxy-server-nameserver:                          # 代理服务器域名解析专用 DNS
                                                     # 避免陷入: 解析代理域名 → 走代理 → 解析不了 → 死循环
                                                     # 例: 订阅链接 proxy.example.com → 用此 DNS 直连解析, 不走代理
-    - 119.29.29.29                                  # DNSPod UDP (腾讯)
+    - 223.5.5.5                                     # 阿里 UDP
+  direct-nameserver:                                # 直连流量 DNS 专用通道
+                                                    # 直连域名直接走此 DNS 解析, 跳过 nameserver→fallback 全链路
     - 223.5.5.5                                     # 阿里 UDP
   fallback-filter:                                  # fallback 过滤: 以下条件的 nameserver 结果可信, 不使用 fallback
     geoip: true                                     # 检查 nameserver 返回的 IP 归属地
@@ -1646,6 +1649,20 @@ proxy-groups:
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 
 rule-providers:
+  DNSDirect:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSDirect/DNSDirect.yaml"
+    interval: 86400
+    path: ./ruleset/DNSDirect.yaml
+
+  DNSProxy:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSProxy/DNSProxy.yaml"
+    interval: 86400
+    path: ./ruleset/DNSProxy.yaml
+
   Reject:
     type: http
     behavior: classical
@@ -2396,6 +2413,9 @@ rule-providers:
     path: ./ruleset/myTVSuper.yaml
 
 rules:
+                                                    # ----- 0. DNS 分流 (最高优先级) -----
+  - RULE-SET,DNSDirect,🎯 全球直连
+  - RULE-SET,DNSProxy,🔧 手动切换
                                                     # ----- 1. 拦截 (最高优先级) -----
   - RULE-SET,Reject,🛑 全球拦截
 

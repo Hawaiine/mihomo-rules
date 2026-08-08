@@ -34,6 +34,7 @@ dns:
   cache-algorithm: arc
   use-hosts: true
   use-system-hosts: true
+  respect-rules: true
   listen: 127.0.0.1:53
   ipv6: true
   default-nameserver:
@@ -77,7 +78,8 @@ dns:
     - tls://1.1.1.1
     - tls://8.8.8.8
   proxy-server-nameserver:
-    - 119.29.29.29
+    - 223.5.5.5
+  direct-nameserver:
     - 223.5.5.5
   fallback-filter:
     geoip: true
@@ -1426,6 +1428,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 rule-providers:
+  DNSDirect:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSDirect/DNSDirect.yaml"
+    interval: 86400
+    path: ./ruleset/DNSDirect.yaml
+  DNSProxy:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSProxy/DNSProxy.yaml"
+    interval: 86400
+    path: ./ruleset/DNSProxy.yaml
   Reject:
     type: http
     behavior: classical
@@ -2069,6 +2083,8 @@ rule-providers:
     interval: 86400
     path: ./ruleset/myTVSuper.yaml
 rules:
+  - RULE-SET,DNSDirect,🎯 全球直连
+  - RULE-SET,DNSProxy,🔧 手动切换
   - RULE-SET,Reject,🛑 全球拦截
   - RULE-SET,Applications,🎯 全球直连
   - RULE-SET,LanCIDR,🎯 全球直连

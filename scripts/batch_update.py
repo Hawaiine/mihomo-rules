@@ -33,8 +33,8 @@ GITHUB_RUN_URL = os.environ.get('GITHUB_RUN_URL', '')
 GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY', 'Hawaiine/mihomo-rules')
 GITHUB_SHA = os.environ.get('GITHUB_SHA', '')
 
-# 7 个兜底品牌（排除不计数）
-BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR'}
+# 9 个基础品牌（排除不计数）
+BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
 
 # 8 步流程
 STEPS = [
@@ -123,9 +123,9 @@ def _count_payload_rules(yaml_path: Path) -> int:
 def collect_repo_stats():
     """扫描 ruleset 目录，返回实时统计。
 
-    - brand_count: 业务品牌数（排除 7 兜底，随 ruleset 目录动态计算）
-    - ruleset_count: 规则集目录总数（含 7 兜底，随 ruleset 目录动态计算）
-    - rules_total: **全部**规则集（含 7 兜底）payload 规则行合计
+    - brand_count: 业务品牌数（排除 9 基础，随 ruleset 目录动态计算）
+    - ruleset_count: 规则集目录总数（含 9 基础，随 ruleset 目录动态计算）
+    - rules_total: **全部**规则集（含 9 基础）payload 规则行合计
     """
     ruleset_dir = ROOT / 'ruleset'
     all_dirs = sorted([d.name for d in ruleset_dir.iterdir() if d.is_dir()])
