@@ -75,17 +75,17 @@ dns:
     - 'geosite:cn'
   nameserver-policy:
     "geosite:private,cn":
-      - 119.29.29.29
-      - 223.5.5.5
+      - https://doh.pub/dns-query
+      - https://dns.alidns.com/dns-query
     "geosite:geolocation-!cn":
-      - tls://1.1.1.1
-      - tls://8.8.8.8
+      - https://cloudflare-dns.com/dns-query
+      - https://dns.google/dns-query
   nameserver:
-    - 119.29.29.29
-    - 223.5.5.5
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
   fallback:
-    - tls://1.1.1.1
-    - tls://8.8.8.8
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
   proxy-server-nameserver:
     - 223.5.5.5
   direct-nameserver:

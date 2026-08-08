@@ -122,21 +122,21 @@ dns:
   nameserver-policy:                                # 按 geosite 分流 DNS 查询 (优先于 nameserver)
                                                     # geosite:cn → 国内 DNS, 防止境外 DNS 返回错误 IP
     "geosite:private,cn":
-      - 119.29.29.29                                # DNSPod UDP (腾讯)
-      - 223.5.5.5                                   # 阿里 UDP
+      - https://doh.pub/dns-query                               # 腾讯 DNSPod DoH
+      - https://dns.alidns.com/dns-query                        # 阿里 DoH
                                                     # geosite:geolocation-!cn → 境外 DNS, 防止国内 DNS 污染
-                                                    # 使用境外 DoT DNS (IP 直连)
+                                                    # 使用境外 DoH DNS (走代理)
     "geosite:geolocation-!cn":
-      - tls://1.1.1.1                               # Cloudflare DoT
-      - tls://8.8.8.8                               # Google DoT
+      - https://cloudflare-dns.com/dns-query                   # Cloudflare DoH 走代理
+      - https://dns.google/dns-query                           # Google DoH 走代理
   nameserver:                                       # 常规 DNS 查询 (不匹配 nameserver-policy 的域名)
-    - 119.29.29.29                                  # DNSPod UDP (腾讯)
-    - 223.5.5.5                                     # 阿里 UDP
+    - https://doh.pub/dns-query                               # 腾讯 DNSPod DoH
+    - https://dns.alidns.com/dns-query                        # 阿里 DoH
   fallback:                                         # 兜底 DNS (并发查询, 取最快响应)
                                                     # 当 nameserver 结果不可信时 (如被污染的域名), 使用 fallback 结果
-                                                    # 使用境外 DoT DNS (IP 直连)
-    - tls://1.1.1.1                                 # Cloudflare DoT
-    - tls://8.8.8.8                                 # Google DoT
+                                                    # 使用境外 DoH DNS (走代理)
+    - https://cloudflare-dns.com/dns-query                   # Cloudflare DoH 走代理
+    - https://dns.google/dns-query                           # Google DoH 走代理
   proxy-server-nameserver:                          # 代理服务器域名解析专用 DNS
                                                     # 避免陷入: 解析代理域名 → 走代理 → 解析不了 → 死循环
                                                     # 例: 订阅链接 proxy.example.com → 用此 DNS 直连解析, 不走代理
