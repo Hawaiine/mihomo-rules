@@ -53,6 +53,36 @@ class FetchResult(NamedTuple):
 
 # ── 工具函数 ──────────────────────────────────────────────────
 
+
+def _retry_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None,
+               max_retries: int = 3, base_delay: float = 2.0) -> tuple[int, str]:
+    """运行命令，失败时指数退避重试，失败自动清理 git 操作残留。
+
+    Args:
+        cmd:         命令列表
+        timeout:     单次超时秒数
+        cwd:         工作目录
+        max_retries: 最大重试次数（默认 3）
+        base_delay:  基础延迟秒数（默认 2s，每次翻倍: 2, 4, 8）
+
+    Returns:
+        (exit_code, stdout)
+    """
+    last_code = -1
+    last_out = ""
+    for attempt in range(1, max_retries + 1):
+        code, out = _run_cmd(cmd, timeout=timeout, cwd=cwd)
+        if code == 0:
+            return code, out
+        last_code = code
+        last_out = out
+        if attempt < max_retries:
+            delay = base_delay * (2 ** (attempt - 1))
+            print(f"  ⚠️ 重试 {attempt}/{max_retries} ({delay:.0f}s) — {cmd[0]} {' '.join(cmd[1:3])}...")
+            time.sleep(delay)
+    return last_code, last_out
+
+
 def _run_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None) -> tuple[int, str]:
     """运行命令并返回 (exit_code, stdout)"""
     try:
@@ -97,23 +127,28 @@ def _ensure_upstream_repo(
     if os.path.isdir(local_dir):
         # 已存在，拉取最新
         branch = config.get("branch", "main")
-        # 先确保本地分支跟踪远程分支
+        # 先确保本地分支跟踪远程分支（失败可容忍，不阻塞）
         _run_cmd(["git", "branch", f"--set-upstream-to=origin/{branch}", branch], timeout=10, cwd=local_dir)
-        code, out = _run_cmd(["git", "pull", "--ff-only"], timeout=60, cwd=local_dir)
+        code, out = _retry_cmd(["git", "pull", "--ff-only"], timeout=60, cwd=local_dir)
         if code != 0:
             print(f"  ⚠️ {name}: git pull 失败 ({code})，尝试 fetch + reset")
-            _run_cmd(["git", "fetch", "origin"], timeout=60, cwd=local_dir)
-            _run_cmd(["git", "reset", "--hard", f"origin/{branch}"], timeout=60, cwd=local_dir)
+            code2, out2 = _retry_cmd(["git", "fetch", "origin"], timeout=60, cwd=local_dir)
+            if code2 != 0:
+                raise RuntimeError(f"{name}: git fetch 失败（重试后仍失败）: {out2[:500]}")
+            _retry_cmd(["git", "reset", "--hard", f"origin/{branch}"], timeout=60, cwd=local_dir)
     else:
-        # 克隆
+        # 克隆（带重试 + 失败清理半成品目录）
         branch = config.get("branch", "main")
         os.makedirs(os.path.dirname(local_dir), exist_ok=True)
-        code, out = _run_cmd(
+        code, out = _retry_cmd(
             ["git", "clone", "--depth", "1", "--branch", branch, url, local_dir],
             timeout=120,
         )
         if code != 0:
-            raise RuntimeError(f"克隆 {name} 失败: {out[:500]}")
+            # 清理半成品目录，避免下次误判为已存在
+            if os.path.isdir(local_dir):
+                shutil.rmtree(local_dir, ignore_errors=True)
+            raise RuntimeError(f"克隆 {name} 失败（重试后仍失败）: {out[:500]}")
 
     return local_dir, data_dir
 

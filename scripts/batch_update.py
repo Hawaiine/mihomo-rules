@@ -26,8 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LOCK_FILE = Path('/tmp/mihomo-batch-update.lock')
-LOG_FILE = Path('/var/log/mihomo-sync.log')
+LOCK_FILE = ROOT / '.mihomo-lock'
+LOG_FILE = ROOT / 'logs' / 'mihomo-sync.log'
 DISCORD_WEBHOOK = os.environ.get('MIHOMO_DISCORD_WEBHOOK', '')
 GITHUB_RUN_URL = os.environ.get('GITHUB_RUN_URL', '')
 GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY', 'Hawaiine/mihomo-rules')
@@ -394,7 +394,7 @@ def release_lock():
 def backup():
     global BACKUP_DIR
     ts = datetime.now().strftime('%Y%m%d-%H%M%S')
-    BACKUP_DIR = Path(f'/tmp/mihomo-backup-{ts}')
+    BACKUP_DIR = ROOT / '.mihomo-backup' / ts
     BACKUP_DIR.mkdir(parents=True)
 
     # 备份关键目录

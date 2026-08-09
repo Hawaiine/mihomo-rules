@@ -194,6 +194,14 @@ def main():
     print(f'  PASS: {total_pass}')
     print(f'  FAIL: {total_fail}')
 
+    # 额外: 校验 STRATEGY_GROUP_MAP 无漂移
+    sg_orphans = [k for k in SG_MAP if k not in brands]
+    if sg_orphans:
+        total_fail += 1
+        all_errors.setdefault('__STRATEGY_GROUP_MAP__', []).append(
+            f'  STRATEGY_GROUP_MAP 中存在已不存在的品牌: {sorted(sg_orphans)}'
+        )
+
     if all_errors:
         print()
         print('--- 失败明细 ---')

@@ -7,3 +7,7 @@ upstream/
 .vscode/
 __pycache__/
 *.pyc
+# 运行时文件（锁/备份/日志）
+.mihomo-lock
+.mihomo-backup/
+logs/
