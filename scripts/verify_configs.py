@@ -18,7 +18,7 @@ VARIANTS = ['android_full', 'android_min', 'nikki_full', 'nikki_min']
 # 基础 provider (9)
 BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR', 'DNSDirect', 'DNSProxy'}
 
-# 系统组 (28)
+# 系统组 (30)
 SYSTEM_GROUPS = [
     '♻️ 自动选择',
     '🇭🇰 香港节点',
@@ -44,6 +44,7 @@ SYSTEM_GROUPS = [
     '🇮🇩 印尼节点',
     '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
+    '🇨🇳 DNSDirect', '🌍 DNSProxy',
 ]
 
 from lib.ownership_map import SUB_PARENT
@@ -153,9 +154,9 @@ def check_rules_blank_line_before(lines, variant):
     return False
 
 def check_proxy_groups_count(lines, variant):
-    """proxy-groups 总数 = 127 (28 系统 + 99 品牌)"""
+    """proxy-groups 总数 = 127 (30 系统 + 99 品牌)"""
     names = extract_proxy_group_names(lines)
-    expected = 28 + len(ALL_BRANDS)
+    expected = 30 + len(ALL_BRANDS)
     if len(names) != expected:
         print(f'  FAIL: {variant} — proxy-groups={len(names)}, expected {expected}')
         return False
@@ -171,7 +172,7 @@ def check_rule_providers_count(lines, variant):
     return True
 
 def check_system_groups_first(names, variant):
-    """前 28 组必须是系统组"""
+    """前 30 组必须是系统组"""
     for i, sg in enumerate(SYSTEM_GROUPS):
         if i >= len(names) or names[i] != sg:
             print(f'  FAIL: {variant} — system group #{i} expected "{sg}", got "{names[i] if i < len(names) else "N/A"}"')
@@ -180,7 +181,7 @@ def check_system_groups_first(names, variant):
 
 def check_brand_set_equality(names, variant):
     """品牌组集合必须与 BRAND_DISPLAYS 全等"""
-    brand_names = set(names[28:])  # skip 28 system groups
+    brand_names = set(names[30:])  # skip 28 system groups
     only_old = brand_names - BRAND_DISPLAYS
     only_new = BRAND_DISPLAYS - brand_names
     if only_old or only_new:
@@ -194,7 +195,7 @@ def check_brand_set_equality(names, variant):
 
 def check_sub_parent_order(names, variant):
     """子品牌必须在父品牌前"""
-    brand_names = names[28:]
+    brand_names = names[30:]
     for child, parent in SUB_PARENT.items():
         child_display = get_display(child)
         parent_display = get_display(parent)
@@ -212,7 +213,7 @@ def check_naming_consistency(lines, variant):
     providers = extract_rule_provider_keys(lines)
     provider_set = set(providers)
     names = extract_proxy_group_names(lines)
-    brand_names = names[28:]  # skip 28 system groups
+    brand_names = names[30:]  # skip 28 system groups
 
     errors = []
     for line in lines:
@@ -295,7 +296,7 @@ def check_full_comment_order(lines, variant):
     if 'full' not in variant:
         return True  # min 版无注释，跳过
     names = extract_proxy_group_names(lines)
-    brand_names = names[28:]  # skip 28 system groups
+    brand_names = names[30:]  # skip 28 system groups
 
     # 提取 # - RULE-SET 注释行中的策略组名
     commented_sgs = []
@@ -533,7 +534,7 @@ def check_cross_variant_rules(configs, all_lines):
 
 def print_order_summary(names, variant):
     """打印品牌组顺序摘要"""
-    brand_names = names[28:]  # skip 28 system groups
+    brand_names = names[30:]  # skip 28 system groups
     print(f'  ORDER: {variant} — {len(brand_names)} brands')
     # 显示前 5 和后 5
     print(f'    first 5: {brand_names[:5]}')

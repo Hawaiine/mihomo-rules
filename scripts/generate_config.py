@@ -61,6 +61,7 @@ SYSTEM_GROUPS = [
     '🇮🇩 印尼节点',
     '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
+    '🇨🇳 DNSDirect', '🌍 DNSProxy',
 ]
 
 GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main'
@@ -393,8 +394,8 @@ def gen_rules(brand_info, variant):
     # 段 0: DNS 分流 (最高优先级, 确保 DNS 先走正确路由)
     if is_full:
         lines.append('                                                    # ----- 0. DNS 分流 (最高优先级) -----')
-    lines.append('  - RULE-SET,DNSDirect,🎯 全球直连')
-    lines.append('  - RULE-SET,DNSProxy,🔧 手动切换')
+    lines.append('  - RULE-SET,DNSDirect,🇨🇳 DNSDirect')
+    lines.append('  - RULE-SET,DNSProxy,🌍 DNSProxy')
     
     # 段 1: 拦截
     if is_full:
