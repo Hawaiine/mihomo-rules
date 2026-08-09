@@ -63,7 +63,7 @@ def get_display(key):
     return SG_MAP.get(key, key)
 
 def get_brands():
-    """扫描 ruleset/ 获取所有品牌 (排除 7 基础)"""
+    """获取所有品牌 (排除 9 基础)"""
     brands = []
     ruleset_dir = ROOT / 'ruleset'
     for d in sorted(os.listdir(ruleset_dir)):
@@ -154,7 +154,7 @@ def check_rules_blank_line_before(lines, variant):
     return False
 
 def check_proxy_groups_count(lines, variant):
-    """proxy-groups 总数 = 127 (30 系统 + 99 品牌)"""
+    """proxy-groups 总数 = 130 (30 系统 + 100 品牌)"""
     names = extract_proxy_group_names(lines)
     expected = 30 + len(ALL_BRANDS)
     if len(names) != expected:
