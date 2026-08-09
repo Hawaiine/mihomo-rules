@@ -1,7 +1,28 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 106 规则集（含 7 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 109 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+
+---
+
+## 2026-08-09
+
+### Added
+- **DNS 独立策略组** — 新增 `🇨🇳 DNSDirect` / `🌍 DNSProxy` 两个 select 策略组（参考漏网之鱼架构），不绑定系统组
+- **DNS 规则集 IPv6 补全** — DNSDirect 新增 9 条国内 IPv6（阿里/腾讯/百度/CNNIC/运营商）；DNSProxy 新增 8 条国外 IPv6（Google/Cloudflare/Quad9/AdGuard）
+- **新增 DNS 服务商** — Control D / CleanBrowsing / DNS.SB（IPv4 + 域名覆盖）
+- **DNSDirect/DNSProxy README** — 简介 + 覆盖服务表格 + 统计更新
+
+### Changed
+- **DNS 配置升级** — 全面切换至 DoH（国内 DNSPod/阿里 DoH，国外 Cloudflare/Google DoH）；`respect-rules: true` 使国外 DNS 走代理；`direct-nameserver` 独立通道
+- **系统组架构** — 28 → 30（新增 `🇨🇳 DNSDirect`、`🌍 DNSProxy`），所有脚本偏移同步更新
+- **verify_configs.py** — 检查项从 10 项增至 23 项；基础规则集计数 7→9；docstring 修正
+- **README / CHANGELOG** — 全面对齐当前架构
+
+### Fixed
+- **Nikki README** — 品牌策略组计数 105→100
+- **verify_configs.py docstring** — 硬编码 127 (30系统+99品牌) → 130 (30系统+100品牌)
+- **PROVIDERS_AUDIT_REPORT.md** — 删除误提交的临时审查文件
 
 ---
 

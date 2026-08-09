@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/github/last-commit/Hawaiine/mihomo-rules" alt="最后更新">
   <img src="https://img.shields.io/github/actions/workflow/status/Hawaiine/mihomo-rules/daily-sync.yml?label=CI" alt="CI状态">
   <img src="https://img.shields.io/badge/platform-Nikki%20%7C%20Android-lightgrey" alt="支持平台">
-  <img src="https://img.shields.io/badge/rulesets-106-blue" alt="规则集数量">
+  <img src="https://img.shields.io/badge/rulesets-109-blue" alt="规则集数量">
   <img src="https://img.shields.io/badge/brands-100-orange" alt="品牌数量">
   <img src="https://img.shields.io/github/license/Hawaiine/mihomo-rules" alt="许可证">
 </p>
@@ -50,7 +50,7 @@
 ```
 mihomo-rules/
 ├── ruleset/                      # 规则集（每个品牌独立子目录）
-│   ├── Direct/                   # 基础规则集 (7个)
+│   ├── Direct/                   # 基础规则集 (9个, 含 DNSDirect/DNSProxy)
 │   │   ├── Direct.yaml           # 规则集文件（Header + payload）
 │   │   └── README.md             # 品牌说明（统计/behavior/使用方式）
 │   ├── Netflix/                  # 品牌规则集 (100个)
@@ -82,7 +82,7 @@ mihomo-rules/
 │   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌）
 │   ├── match_icons.py            # Oasisic-Icons 品牌图标映射
 │   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
-│   ├── verify_configs.py         # 配置校验（10 项检查）
+│   ├── verify_configs.py         # 配置校验（23 项检查）
 │   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README）
 │   └── lib/                      # 共享库
 │       ├── canonical.py          # 规则解析、标准化、排序
@@ -160,17 +160,25 @@ geox-url → tun → dns → proxy-providers → proxy-groups → rule-providers
 | dns.listen | 0.0.0.0:53 | 0.0.0.0:1053 |
 | external-controller | 127.0.0.1:9090 | 0.0.0.0:9090 |
 
-### DNS 三段式分流
+### DNS 三段式分流 + 规则集分流
 
-```
-default-nameserver: 119.29.29.29, 223.5.5.5       ← DNSPod 优先
-nameserver:         DNSPod DoH, 阿里 DoH           ← 国内 DoH
-proxy-server-ns:    Cloudflare DoH                 ← 代理服务器专用（防死循环）
-nameserver-policy:
-  geosite:cn              → 国内 DNS               ← 按 geosite 分流
-  geosite:geolocation-!cn → 国际 DNS
-fallback:                 Cloudflare/Google DoH    ← 兜底
-fallback-filter:          geoip:cn + geosite:cn    ← CN 域名不经过 fallback
+| 层级 | DNS 服务器 | 说明 |
+|------|-----------|------|
+| `default-nameserver` | `223.5.5.5` | 纯 IP，仅用于解析 upstream DNS 域名，不参与域名解析 |
+| `proxy-server-nameserver` | `223.5.5.5` | 代理节点域名专用（防 DNS 套娃） |
+| `direct-nameserver` | `223.5.5.5` | 直连流量专用 DNS 通道 |
+| `nameserver` | 腾讯 DNSPod DoH, 阿里 DoH | 国内 DoH，默认解析 |
+| `nameserver-policy` | `geosite:cn` → 国内 DNS | 国内域名走国内 DNS |
+| | `geosite:geolocation-!cn` → 国际 DoH (走代理) | 境外域名走境外 DNS，`respect-rules: true` 使规则生效 |
+| `fallback` | Cloudflare DoH, Google DoH | 兜底（走代理），过滤后取可信结果 |
+| `fallback-filter` | `geoip:cn` + `ipcidr` | CN 域名不经过 fallback |
+| `respect-rules` | `true` | DNS 查询遵守路由规则，国外 DNS 走代理 |
+
+**DNS 规则集**（独立策略组，可单独选节点/直连）：
+- `RULE-SET,DNSDirect,🇨🇳 DNSDirect` → 国内 DNS 域名/IP 直连
+- `RULE-SET,DNSProxy,🌍 DNSProxy` → 国外 DNS 域名/IP 走代理
+
+```yaml
 fake-ip-filter-mode:      blacklist                ← 黑名单模式
 fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 ```
@@ -229,9 +237,9 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 | 区块 | 顺序规则 | 说明 |
 |------|---------|------|
-| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 7 控制组 + 21 地区组（共 28）固定在前 |
+| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 9 系统组 + 21 地区组 + DNS 组（共 30）固定在前 |
 | **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
-| **rule-providers** | 7 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
+| **rule-providers** | 9 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR→DNSDirect→DNSProxy）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
 
 ### 格式约定
 
@@ -259,7 +267,7 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
-| 2026-07-24 | CI 门禁加固（verify_configs + verify_rulesets 双门禁，失败 sys.exit(1)）；git add 白名单；setup-python 升级消除 Node 20 警告；写入幂等加固（YAML/README 独立判断，无实质变化不写盘）；日更无实质 diff 不 commit；PROCESS 大小写保护；min rules 去空行；verify_rulesets 新增（header/payload/README/behavior 一致性） |
+| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DNSDirect/DNSProxy 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 23 项检查 · 品牌策略组计数修正 105→100 |
 | 2026-07-22 | SUB_PARENT 单源化（ownership_map.py）；resolve_ownership 噪音修复；generate_config 幂等加固；命名两线文档 |
 | 2026-07-17 | 品牌级 6 路并发拉取、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理 |
 | 2026-07-10 | 地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + geo 每周更新 + config.min.yaml 无注释版 |
@@ -284,9 +292,9 @@ python3 scripts/generate_config.py
 
 | 分类 | 数量 | 规则数 | 说明 |
 |------|:----:|:------:|------|
-| 基础规则集 | 7 | 312,828 | Reject(167K) · Direct(112K) · Proxy(27K) · CNCIDR(5.8K) · Private · Applications · LanCIDR |
+|| 基础规则集 | 9 | 312,891 | Reject(167K) · Direct(112K) · Proxy(26K) · CNCIDR(5.8K) · Private · Applications · LanCIDR · DNSDirect(25) · DNSProxy(38) |
 | 品牌规则集 | 100 | 13,290 | 流媒体 / AI / 社交 / 云服务 / 游戏 / 电商 / 音乐 / 金融 |
-| **合计** | **109** | **326,118** | DOMAIN + DOMAIN-SUFFIX + DOMAIN-KEYWORD + IP-CIDR + IP-CIDR6 + PROCESS-NAME + IP-ASN |
+|| **合计** | **109** | **325,600** | DOMAIN + DOMAIN-SUFFIX + DOMAIN-KEYWORD + IP-CIDR + IP-CIDR6 + PROCESS-NAME + IP-ASN |
 
 ### 品牌分类统计
 
