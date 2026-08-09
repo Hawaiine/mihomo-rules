@@ -17,4 +17,3 @@ payload:
   - DOMAIN-SUFFIX,apple-relay.fastly-edge.com
   - DOMAIN-SUFFIX,apple-relay.mask.apple-dns.net
   - DOMAIN-SUFFIX,gspe1-ssl.ls.apple.com
-

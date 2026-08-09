@@ -166,6 +166,21 @@ def check_brand(brand):
     if readme_bhv and readme_bhv != expected_bhv:
         errors.append(f'  {brand}: README behavior="{readme_bhv}" ≠ 官方格式预期="{expected_bhv}"')
 
+    # 检查 payload 段内是否有空行或行尾空白
+    lines = open(yaml_path).read().split('\n')
+    in_payload = False
+    for i, ln in enumerate(lines, 1):
+        s = ln.strip()
+        if s.startswith('payload'):
+            in_payload = True
+            continue
+        if not in_payload:
+            continue
+        if s == '' and i < len(lines):
+            errors.append(f'  {brand}: payload 段内空行 (第 {i} 行)')
+        if ln != ln.rstrip():
+            errors.append(f'  {brand}: 行尾空白 (第 {i} 行)')
+
     return len(errors) == 0, errors
 
 
