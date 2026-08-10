@@ -33,8 +33,8 @@
 |------|------|
 | 🔄 **每日自动同步** | 北京时间 06:00 自动从 3 个上游合并最新规则，Discord 通知 |
 | 📦 **即用配置** | 内置 Android + Nikki 完整配置，带注释版 + 无注释精简版，替换订阅链接即可使用 |
-| 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（100 品牌），`scripts/match_icons.py` 生成映射 |
-| ⚡ **Python 管线** | 8 步串联（fetch → parse → merge → write → resolve → icons → config → verify），全自动幂等运行 |
+| 🎨 **品牌图标注入** | 匹配 Oasisic-Icons 品牌图标（100 品牌），`scripts/match_icons.py` 手动执行生成映射（不在每日 CI 内） |
+| ⚡ **Python 管线** | 4 步自动（fetch → write → resolve → config）+ 循环外 verify 双脚本；`match_icons` 为手动步骤 |
 | 🛡️ **双 verify 门禁** | `verify_configs` + `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
 | 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
 | 🔧 **写入幂等** | `has_meaningful_diff` 忽略 `Updated:` 噪音；payload 不变不写 YAML，统计不变不写 README |
@@ -72,7 +72,7 @@ mihomo-rules/
 │   │   └── filter/               # 地区过滤正则
 │   └── nodes/                    # 单节点配置（按协议分组）
 ├── scripts/                      # Python 核心管线
-│   ├── batch_update.py           # 日更入口：8 步串联 + 校验 + Discord 通知
+│   ├── batch_update.py           # 日更入口：4 步自动 + 校验 + Discord 通知
 │   ├── fetch_upstream.py         # 从 3 个上游拉取原始数据
 │   ├── parse_v2fly.py            # v2fly 数据解析
 │   ├── parse_loyalsoldier.py     # Loyalsoldier 数据解析
@@ -82,7 +82,7 @@ mihomo-rules/
 │   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌）
 │   ├── match_icons.py            # Oasisic-Icons 品牌图标映射
 │   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
-│   ├── verify_configs.py         # 配置校验（23 项检查）
+│   ├── verify_configs.py         # 配置校验（19 项检查）
 │   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README）
 │   └── lib/                      # 共享库
 │       ├── canonical.py          # 规则解析、标准化、排序
@@ -251,7 +251,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 ### 校验与幂等
 
 ```bash
-# 全量校验（10 项检查，失败 exit≠0）
+# 全量校验（19 项检查，失败 exit≠0）
 python3 scripts/verify_configs.py
 
 # ruleset 一致性校验（header/payload/README/behavior，失败 exit≠0）
@@ -267,7 +267,7 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
-| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DNSDirect/DNSProxy 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 23 项检查 · 品牌策略组计数修正 105→100 |
+| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DNSDirect/DNSProxy 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 19 项检查 · 品牌策略组计数修正 105→100 |
 | 2026-07-22 | SUB_PARENT 单源化（ownership_map.py）；resolve_ownership 噪音修复；generate_config 幂等加固；命名两线文档 |
 | 2026-07-17 | 品牌级 6 路并发拉取、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理 |
 | 2026-07-10 | 地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + geo 每周更新 + config.min.yaml 无注释版 |
@@ -276,8 +276,8 @@ python3 scripts/generate_config.py
 
 | 脚本 | 说明 | 用法 |
 |------|------|------|
-| `batch_update.py` | 日更入口：8 步串联（fetch → parse → merge → write → resolve → icons → config → verify） | `python3 scripts/batch_update.py` 或 `--no-commit` |
-| `verify_configs.py` | 配置校验（10 项检查，集合等价/命名两线/顺序约束/格式约定） | `python3 scripts/verify_configs.py` |
+| `batch_update.py` | 日更入口：4 步自动（fetch → write → resolve → config）+ 循环外 verify 双脚本 | `python3 scripts/batch_update.py` 或 `--no-commit` |
+| `verify_configs.py` | 配置校验（19 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性） | `python3 scripts/verify_configs.py` |
 | `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
 | `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
 | `resolve_ownership.py` | 品牌归属去重（子品牌规则移到父品牌目录） | `python3 scripts/resolve_ownership.py --apply` |

@@ -16,7 +16,7 @@
 ### Changed
 - **DNS 配置升级** — 全面切换至 DoH（国内 DNSPod/阿里 DoH，国外 Cloudflare/Google DoH）；`respect-rules: true` 使国外 DNS 走代理；`direct-nameserver` 独立通道
 - **系统组架构** — 28 → 30（新增 `🇨🇳 DNSDirect`、`🌍 DNSProxy`），所有脚本偏移同步更新
-- **verify_configs.py** — 检查项从 10 项增至 23 项；基础规则集计数 7→9；docstring 修正
+- **verify_configs.py** — 检查项从 10 项增至 19 项；基础规则集计数 7→9；docstring 修正
 - **README / CHANGELOG** — 全面对齐当前架构
 
 ### Fixed

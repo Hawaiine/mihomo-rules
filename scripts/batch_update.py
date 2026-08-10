@@ -5,8 +5,8 @@ batch_update.py — 上游拉取 → 自动生成 → 校验 → 提交 → Disc
 每日定时同步（cron 6:00）：
   1. git pull 同步远程
   2. 备份当前状态
-  3. 执行 8 步（fetch→parse→merge→write→ownership→config）
-  4. 校验（品牌数/空壳/YAML/随机50*3轮）
+  3. 执行 4 步自动流程（fetch → write → resolve → config）
+  4. 校验（verify_configs + verify_rulesets）
   5. 通过 → 提交 + 推送；失败 → 回滚 + 通知
 
 CLI 通知模式（由 workflow 在 filter/check 后调用）：
@@ -36,7 +36,7 @@ GITHUB_SHA = os.environ.get('GITHUB_SHA', '')
 # 9 个基础品牌（排除不计数）
 BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
 
-# 8 步流程
+# 4 步流程
 STEPS = [
     ("fetch_upstream", "拉取上游数据", 300),
     ("batch_write", "批量写入规则集", 600),
@@ -555,7 +555,7 @@ def main():
         # 3. 备份
         backup()
 
-        # 4. 执行 8 步
+        # 4. 执行 4 步自动流程
         sys.path.insert(0, str(ROOT / 'scripts'))
         from commit_writer import STRATEGY_GROUP_MAP
 

@@ -490,6 +490,9 @@ def check_use_provider_exists(lines, variant):
                 continue
             if not line.startswith(' ') and not line.startswith('#'):
                 break
+            if stripped.startswith('- name:'):
+                in_use = False  # 新组定义，重置 use 标志
+                continue
             if stripped == 'use:':
                 in_use = True
                 continue
@@ -602,6 +605,7 @@ def main():
             ('min proxy-groups no blank lines', check_min_proxy_groups_no_blank_lines(lines, variant)),
             ('min proxy-providers no blank lines', check_min_proxy_providers_no_blank_lines(lines, variant)),
             ('rules no quoted strategy', check_rules_no_quoted_strategy(lines, variant)),
+            ('use provider exists', check_use_provider_exists(lines, variant)),
         ]
 
         variant_pass = all(r for _, r in checks)
