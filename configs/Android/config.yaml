@@ -677,7 +677,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "🇨🇳 DNSDirect"
+  - name: "🇨🇳 DNS直连"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -686,7 +686,7 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "🌍 DNSProxy"
+  - name: "🌍 DNS代理"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -2432,8 +2432,8 @@ rule-providers:
 
 rules:
                                                     # ----- 0. DNS 分流 (最高优先级) -----
-  - RULE-SET,DNSDirect,🇨🇳 DNSDirect
-  - RULE-SET,DNSProxy,🌍 DNSProxy
+  - RULE-SET,DNSDirect,🇨🇳 DNS直连
+  - RULE-SET,DNSProxy,🌍 DNS代理
                                                     # ----- 1. 拦截 (最高优先级) -----
   - RULE-SET,Reject,🛑 全球拦截
 

@@ -44,7 +44,7 @@ SYSTEM_GROUPS = [
     '🇮🇩 印尼节点',
     '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
-    '🇨🇳 DNSDirect', '🌍 DNSProxy',
+    '🇨🇳 DNS直连', '🌍 DNS代理',
 ]
 
 from lib.ownership_map import SUB_PARENT

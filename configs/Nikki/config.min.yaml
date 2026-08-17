@@ -565,7 +565,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "🇨🇳 DNSDirect"
+  - name: "🇨🇳 DNS直连"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -573,7 +573,7 @@ proxy-groups:
       - "🔧 手动切换"
     use:
       - provider1
-  - name: "🌍 DNSProxy"
+  - name: "🌍 DNS代理"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -2108,8 +2108,8 @@ rule-providers:
     interval: 86400
     path: ./ruleset/myTVSuper.yaml
 rules:
-  - RULE-SET,DNSDirect,🇨🇳 DNSDirect
-  - RULE-SET,DNSProxy,🌍 DNSProxy
+  - RULE-SET,DNSDirect,🇨🇳 DNS直连
+  - RULE-SET,DNSProxy,🌍 DNS代理
   - RULE-SET,Reject,🛑 全球拦截
   - RULE-SET,LanCIDR,🎯 全球直连
   - RULE-SET,Private,🎯 全球直连

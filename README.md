@@ -175,8 +175,8 @@ geox-url → tun → dns → proxy-providers → proxy-groups → rule-providers
 | `respect-rules` | `true` | DNS 查询遵守路由规则，国外 DNS 走代理 |
 
 **DNS 规则集**（独立策略组，可单独选节点/直连）：
-- `RULE-SET,DNSDirect,🇨🇳 DNSDirect` → 国内 DNS 域名/IP 直连
-- `RULE-SET,DNSProxy,🌍 DNSProxy` → 国外 DNS 域名/IP 走代理
+- `RULE-SET,DNSDirect,🇨🇳 DNS直连` → 国内 DNS 域名/IP 直连
+- `RULE-SET,DNSProxy,🌍 DNS代理` → 国外 DNS 域名/IP 走代理
 
 ```yaml
 fake-ip-filter-mode:      blacklist                ← 黑名单模式
