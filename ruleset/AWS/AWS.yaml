@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: AWS
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-08-20 06:15:04
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 1
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 47
+# DOMAIN-SUFFIX: 50
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -26,6 +26,7 @@ payload:
   - DOMAIN-SUFFIX,amazonaws.tv
   - DOMAIN-SUFFIX,amazoncognito.com
   - DOMAIN-SUFFIX,amazonses.com
+  - DOMAIN-SUFFIX,amazonwebservices.com
   - DOMAIN-SUFFIX,amazonworkdocs.com
   - DOMAIN-SUFFIX,amplifyapp.com
   - DOMAIN-SUFFIX,amplifyframework.com
@@ -34,6 +35,8 @@ payload:
   - DOMAIN-SUFFIX,amzndns.net
   - DOMAIN-SUFFIX,amzndns.org
   - DOMAIN-SUFFIX,aws-iot-hackathon.com
+  - DOMAIN-SUFFIX,aws.a2z.com
+  - DOMAIN-SUFFIX,aws.amazon.com
   - DOMAIN-SUFFIX,aws.com
   - DOMAIN-SUFFIX,aws.dev
   - DOMAIN-SUFFIX,awsapprunner.com
