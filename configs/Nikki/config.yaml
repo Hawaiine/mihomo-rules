@@ -685,24 +685,24 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
-  - name: "🇨🇳 DNS直连"
+  - name: "🇨🇳 直连DNS"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+
+  - name: "🌍 代理DNS"
     type: select
     proxies:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
-    use:
-      - provider1
-
-  - name: "🌍 DNS代理"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -712,6 +712,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/AWS.png"
@@ -722,6 +724,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo-1.png"
@@ -732,6 +736,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Amazon.png"
@@ -742,6 +748,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -751,6 +759,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV.png"
@@ -761,6 +771,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI.png"
@@ -771,6 +783,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud.png"
@@ -781,6 +795,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
@@ -791,6 +807,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
@@ -801,6 +819,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
@@ -811,6 +831,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Instagram-2.png"
@@ -821,6 +843,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Messenger.png"
@@ -831,6 +855,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Threads-1.png"
@@ -841,6 +867,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp-2.png"
@@ -851,6 +879,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
@@ -861,6 +891,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTubeMusic.png"
@@ -871,6 +903,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Gemini.png"
@@ -881,6 +915,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/YouTube-5.png"
@@ -891,6 +927,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Google-2.png"
@@ -901,6 +939,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub-1.png"
@@ -911,6 +951,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Drive/OneDrive.png"
@@ -921,6 +963,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Microsoft-4.png"
@@ -931,6 +975,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AbemaTV.png"
@@ -941,6 +987,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic-1.png"
@@ -951,6 +999,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bahamut-1.png"
@@ -961,6 +1011,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -970,6 +1022,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -979,6 +1033,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bilibili-1.png"
@@ -989,6 +1045,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Bluesky-1.png"
@@ -999,6 +1057,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
@@ -1009,6 +1069,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1018,6 +1080,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN-1.png"
@@ -1028,6 +1092,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1037,6 +1103,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DMMTV-1.png"
@@ -1047,6 +1115,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Deezer.png"
@@ -1057,6 +1127,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord-2.png"
@@ -1067,6 +1139,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Docker.png"
@@ -1077,6 +1151,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/F1TV.png"
@@ -1087,6 +1163,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1096,6 +1174,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1105,6 +1185,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1114,6 +1196,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HBO-1.png"
@@ -1124,6 +1208,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HOY.png"
@@ -1134,6 +1220,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo-1.png"
@@ -1144,6 +1232,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hulu.png"
@@ -1154,6 +1244,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV.png"
@@ -1164,6 +1256,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LineTV.png"
@@ -1174,6 +1268,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1183,6 +1279,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV.png"
@@ -1193,6 +1291,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1202,6 +1302,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1211,6 +1313,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1220,6 +1324,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1229,6 +1335,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1238,6 +1346,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MyVideo.png"
@@ -1248,6 +1358,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1257,6 +1369,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Netflix-2.png"
@@ -1267,6 +1381,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Niconico.png"
@@ -1277,6 +1393,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Nintendo.png"
@@ -1287,6 +1405,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NowE.png"
@@ -1297,6 +1417,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1306,6 +1428,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI-4.png"
@@ -1316,6 +1440,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1325,6 +1451,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1334,6 +1462,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/PayPal-1.png"
@@ -1344,6 +1474,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Perplexity.png"
@@ -1354,6 +1486,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pinterest.png"
@@ -1364,6 +1498,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pixiv.png"
@@ -1374,6 +1510,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Podcasts.png"
@@ -1384,6 +1522,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe-1.png"
@@ -1394,6 +1534,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1403,6 +1545,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1412,6 +1556,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Qobuz.png"
@@ -1422,6 +1568,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1431,6 +1579,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1440,6 +1590,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1449,6 +1601,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Reddit-2.png"
@@ -1459,6 +1613,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Spotify-3.png"
@@ -1469,6 +1625,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Steam-1.png"
@@ -1479,6 +1637,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Synology.png"
@@ -1489,6 +1649,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/TMDB.png"
@@ -1499,6 +1661,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TVer.png"
@@ -1509,6 +1673,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1518,6 +1684,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Telegram-3.png"
@@ -1528,6 +1696,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL-1.png"
@@ -1538,6 +1708,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/TikTok-3.png"
@@ -1548,6 +1720,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1557,6 +1731,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Twitch-2.png"
@@ -1567,6 +1743,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1576,6 +1754,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/VideoMarket.png"
@@ -1586,6 +1766,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Viu.png"
@@ -1596,6 +1778,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1605,6 +1789,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1614,6 +1800,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Wallpaper.png"
@@ -1624,6 +1812,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/X-1.png"
@@ -1634,6 +1824,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/Z-Library.png"
@@ -1644,6 +1836,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDay.png"
@@ -1654,6 +1848,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
 
@@ -1663,6 +1859,8 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
@@ -1673,24 +1871,26 @@ proxy-groups:
       - "🎯 全球直连"
       - "♻️ 自动选择"
       - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 
 rule-providers:
-  DNSDirect:
+  DirectDNS:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSDirect/DNSDirect.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DirectDNS/DirectDNS.yaml"
     interval: 86400
-    path: ./ruleset/DNSDirect.yaml
+    path: ./ruleset/DirectDNS.yaml
 
-  DNSProxy:
+  ProxyDNS:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DNSProxy/DNSProxy.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ProxyDNS/ProxyDNS.yaml"
     interval: 86400
-    path: ./ruleset/DNSProxy.yaml
+    path: ./ruleset/ProxyDNS.yaml
 
   Reject:
     type: http
@@ -2443,8 +2643,8 @@ rule-providers:
 
 rules:
                                                     # ----- 0. DNS 分流 (最高优先级) -----
-  - RULE-SET,DNSDirect,🇨🇳 DNS直连
-  - RULE-SET,DNSProxy,🌍 DNS代理
+  - RULE-SET,DirectDNS,🇨🇳 直连DNS
+  - RULE-SET,ProxyDNS,🌍 代理DNS
                                                     # ----- 1. 拦截 (最高优先级) -----
   - RULE-SET,Reject,🛑 全球拦截
 

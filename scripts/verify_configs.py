@@ -16,7 +16,7 @@ CONFIG_DIRS = {
 VARIANTS = ['android_full', 'android_min', 'nikki_full', 'nikki_min']
 
 # 基础 provider (9)
-BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR', 'DNSDirect', 'DNSProxy'}
+BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR', 'DirectDNS', 'ProxyDNS'}
 
 # 系统组 (30)
 SYSTEM_GROUPS = [
@@ -44,7 +44,7 @@ SYSTEM_GROUPS = [
     '🇮🇩 印尼节点',
     '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
-    '🇨🇳 DNS直连', '🌍 DNS代理',
+    '🇨🇳 直连DNS', '🌍 代理DNS',
 ]
 
 from lib.ownership_map import SUB_PARENT
@@ -281,9 +281,9 @@ def check_full_min_rules_equivalence(variant, lines):
     return True
 
 def check_rule_providers_base_order(lines, variant):
-    """前 9 个 rule-provider 必须是固定顺序: DNSDirect,DNSProxy,Reject,Direct,Proxy,Applications,Private,LanCIDR,CNCIDR"""
+    """前 9 个 rule-provider 必须是固定顺序: DirectDNS,ProxyDNS,Reject,Direct,Proxy,Applications,Private,LanCIDR,CNCIDR"""
     keys = extract_rule_provider_keys(lines)
-    base_order = ['DNSDirect', 'DNSProxy', 'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR']
+    base_order = ['DirectDNS', 'ProxyDNS', 'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR']
     for i, expected in enumerate(base_order):
         if i >= len(keys) or keys[i] != expected:
             print(f'  FAIL: {variant} — base provider #{i} expected "{expected}", got "{keys[i] if i < len(keys) else "N/A"}"')

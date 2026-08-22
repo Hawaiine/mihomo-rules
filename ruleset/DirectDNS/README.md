@@ -1,4 +1,4 @@
-# 📦 🇨🇳 DNS直连 规则集
+# 📦 🇨🇳 直连DNS 规则集
 
 国内 DNS 直连规则集，涵盖主流国内公共 DNS 的 IPv4/IPv6 地址与 DoH 域名，用于保证国内域名解析低延迟、不被境外 DNS 干扰。
 
@@ -25,4 +25,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: 🇨🇳 DNS直连
+- **策略组**: 🇨🇳 直连DNS

@@ -34,7 +34,7 @@ GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY', 'Hawaiine/mihomo-rules')
 GITHUB_SHA = os.environ.get('GITHUB_SHA', '')
 
 # 9 个基础品牌（排除不计数）
-BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
+BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 # 4 步流程
 STEPS = [

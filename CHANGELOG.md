@@ -8,14 +8,14 @@
 ## 2026-08-09
 
 ### Added
-- **DNS 独立策略组** — 新增 `🇨🇳 DNS直连` / `🌍 DNS代理` 两个 select 策略组（参考漏网之鱼架构），不绑定系统组
-- **DNS 规则集 IPv6 补全** — DNSDirect 新增 9 条国内 IPv6（阿里/腾讯/百度/CNNIC/运营商）；DNSProxy 新增 8 条国外 IPv6（Google/Cloudflare/Quad9/AdGuard）
+- **DNS 独立策略组** — 新增 `🇨🇳 直连DNS` / `🌍 代理DNS` 两个 select 策略组（参考漏网之鱼架构），不绑定系统组
+- **DNS 规则集 IPv6 补全** — DirectDNS 新增 9 条国内 IPv6（阿里/腾讯/百度/CNNIC/运营商）；ProxyDNS 新增 8 条国外 IPv6（Google/Cloudflare/Quad9/AdGuard）
 - **新增 DNS 服务商** — Control D / CleanBrowsing / DNS.SB（IPv4 + 域名覆盖）
-- **DNSDirect/DNSProxy README** — 简介 + 覆盖服务表格 + 统计更新
+- **DirectDNS/ProxyDNS README** — 简介 + 覆盖服务表格 + 统计更新
 
 ### Changed
 - **DNS 配置升级** — 全面切换至 DoH（国内 DNSPod/阿里 DoH，国外 Cloudflare/Google DoH）；`respect-rules: true` 使国外 DNS 走代理；`direct-nameserver` 独立通道
-- **系统组架构** — 28 → 30（新增 `🇨🇳 DNS直连`、`🌍 DNS代理`），所有脚本偏移同步更新
+- **系统组架构** — 28 → 30（新增 `🇨🇳 直连DNS`、`🌍 代理DNS`），所有脚本偏移同步更新
 - **verify_configs.py** — 检查项从 10 项增至 19 项；基础规则集计数 7→9；docstring 修正
 - **README / CHANGELOG** — 全面对齐当前架构
 

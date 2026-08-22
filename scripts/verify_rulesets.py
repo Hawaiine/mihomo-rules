@@ -16,7 +16,7 @@ from commit_writer import get_strategy_group, STRATEGY_GROUP_MAP
 
 SG_MAP = STRATEGY_GROUP_MAP
 
-BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
+BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 # 规则类型正则（用于 payload 计数）
 TYPE_RE = re.compile(r'^\s*[-–]\s*([A-Z][A-Z0-9_-]+)\s*,')

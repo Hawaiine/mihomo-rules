@@ -50,4 +50,4 @@
 
 ### 品牌策略组
 
-每个品牌对应一个策略组（如 Netflix → Netflix 组），支持从 `provider1` 拉取节点。
+每个品牌对应一个策略组（如 Netflix → Netflix 组），支持 DIRECT → ♻️ → 🔧 → 🔯 → 🔀 多种出站策略，从 `provider1` 拉取节点。

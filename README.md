@@ -50,7 +50,7 @@
 ```
 mihomo-rules/
 ├── ruleset/                      # 规则集（每个品牌独立子目录）
-│   ├── Direct/                   # 基础规则集 (9个, 含 DNSDirect/DNSProxy)
+│   ├── Direct/                   # 基础规则集 (9个, 含 DirectDNS/ProxyDNS)
 │   │   ├── Direct.yaml           # 规则集文件（Header + payload）
 │   │   └── README.md             # 品牌说明（统计/behavior/使用方式）
 │   ├── Netflix/                  # 品牌规则集 (100个)
@@ -175,8 +175,8 @@ geox-url → tun → dns → proxy-providers → proxy-groups → rule-providers
 | `respect-rules` | `true` | DNS 查询遵守路由规则，国外 DNS 走代理 |
 
 **DNS 规则集**（独立策略组，可单独选节点/直连）：
-- `RULE-SET,DNSDirect,🇨🇳 DNS直连` → 国内 DNS 域名/IP 直连
-- `RULE-SET,DNSProxy,🌍 DNS代理` → 国外 DNS 域名/IP 走代理
+- `RULE-SET,DirectDNS,🇨🇳 直连DNS` → 国内 DNS 域名/IP 直连
+- `RULE-SET,ProxyDNS,🌍 代理DNS` → 国外 DNS 域名/IP 走代理
 
 ```yaml
 fake-ip-filter-mode:      blacklist                ← 黑名单模式
@@ -201,7 +201,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 ♻️ 自动选择 → 🇭🇰 🇯🇵 🇺🇸 🇸🇬 🇹🇼 / DIRECT
 🔧 手动切换 → ♻️ 自动选择 / DIRECT / use: provider1
 🇭🇰 香港节点 → DIRECT / use: provider_hk (过滤后只显示香港节点)
-品牌组      → ♻️ 自动选择 / 🔧 手动切换 / DIRECT
+品牌组      → ♻️ 自动选择 / 🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / DIRECT
 ```
 
 ### 规则匹配顺序
@@ -239,7 +239,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 |------|---------|------|
 | **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 9 系统组 + 21 地区组 + DNS 组（共 30）固定在前 |
 | **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
-| **rule-providers** | 9 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR→DNSDirect→DNSProxy）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
+| **rule-providers** | 9 兜底固定序（Reject→Direct→Proxy→Applications→Private→LanCIDR→CNCIDR→DirectDNS→ProxyDNS）+ 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
 
 ### 格式约定
 
@@ -267,7 +267,7 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
-| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DNSDirect/DNSProxy 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 19 项检查 · 品牌策略组计数修正 105→100 |
+| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DirectDNS/ProxyDNS 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 19 项检查 · 品牌策略组计数修正 105→100 |
 | 2026-07-22 | SUB_PARENT 单源化（ownership_map.py）；resolve_ownership 噪音修复；generate_config 幂等加固；命名两线文档 |
 | 2026-07-17 | 品牌级 6 路并发拉取、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理 |
 | 2026-07-10 | 地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + geo 每周更新 + config.min.yaml 无注释版 |
@@ -292,7 +292,7 @@ python3 scripts/generate_config.py
 
 | 分类 | 数量 | 规则数 | 说明 |
 |------|:----:|:------:|------|
-|| 基础规则集 | 9 | 312,891 | Reject(167K) · Direct(112K) · Proxy(26K) · CNCIDR(5.8K) · Private · Applications · LanCIDR · DNSDirect(25) · DNSProxy(38) |
+|| 基础规则集 | 9 | 312,891 | Reject(167K) · Direct(112K) · Proxy(26K) · CNCIDR(5.8K) · Private · Applications · LanCIDR · DirectDNS(25) · ProxyDNS(38) |
 | 品牌规则集 | 100 | 13,290 | 流媒体 / AI / 社交 / 云服务 / 游戏 / 电商 / 音乐 / 金融 |
 || **合计** | **109** | **325,600** | DOMAIN + DOMAIN-SUFFIX + DOMAIN-KEYWORD + IP-CIDR + IP-CIDR6 + PROCESS-NAME + IP-ASN |
 

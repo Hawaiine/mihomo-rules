@@ -18,7 +18,7 @@ GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/ico
 sys.path.insert(0, str(ROOT / 'scripts'))
 from commit_writer import STRATEGY_GROUP_MAP
 
-BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
+BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 
 def scan_icons():

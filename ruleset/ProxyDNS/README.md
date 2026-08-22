@@ -1,4 +1,4 @@
-# 📦 🌍 DNS代理 规则集
+# 📦 🌍 代理DNS 规则集
 
 国外 DNS 代理规则集，涵盖主流国外公共 DNS 的 IPv4/IPv6 地址与 DoH/DoT 域名，用于保证国外域名解析走代理、避免 DNS 污染。
 
@@ -29,4 +29,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: 🌍 DNS代理
+- **策略组**: 🌍 代理DNS

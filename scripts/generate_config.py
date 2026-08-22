@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # 排除的基础规则集
-BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DNSDirect', 'DNSProxy'}
+BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 from lib.ownership_map import SUB_PARENT
 
@@ -24,8 +24,8 @@ GLOBAL_DIRECT_PROXY = '🎯 全球直连'
 
 # 基础 provider 配置（本仓库 ruleset 全部使用 TYPE,value classical 格式）
 BASE_PROVIDERS = {
-    'DNSDirect':    'classical',
-    'DNSProxy':     'classical',
+    'DirectDNS':    'classical',
+    'ProxyDNS':     'classical',
     'Reject':       'classical',
     'Direct':       'classical',
     'Proxy':        'classical',
@@ -61,7 +61,7 @@ SYSTEM_GROUPS = [
     '🇮🇩 印尼节点',
     '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
-    '🇨🇳 DNS直连', '🌍 DNS代理',
+    '🇨🇳 直连DNS', '🌍 代理DNS',
 ]
 
 GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main'
@@ -340,6 +340,8 @@ def gen_proxy_groups(brand_info, icons, blank_between=False):
         lines.append(f'      - "{GLOBAL_DIRECT_PROXY}"')
         lines.append('      - "♻️ 自动选择"')
         lines.append('      - "🔧 手动切换"')
+        lines.append('      - "🔯 故障转移"')
+        lines.append('      - "🔀 负载均衡"')
         lines.append('    use:')
         lines.append('      - provider1')
         if bi['sg'] in icons:
@@ -394,8 +396,8 @@ def gen_rules(brand_info, variant):
     # 段 0: DNS 分流 (最高优先级, 确保 DNS 先走正确路由)
     if is_full:
         lines.append('                                                    # ----- 0. DNS 分流 (最高优先级) -----')
-    lines.append('  - RULE-SET,DNSDirect,🇨🇳 DNS直连')
-    lines.append('  - RULE-SET,DNSProxy,🌍 DNS代理')
+    lines.append('  - RULE-SET,DirectDNS,🇨🇳 直连DNS')
+    lines.append('  - RULE-SET,ProxyDNS,🌍 代理DNS')
     
     # 段 1: 拦截
     if is_full:
