@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: 🔞 Porn
 # Author: Hawaiine
-# Updated: 2026-07-23 18:41:51
+# Updated: 2026-08-27 10:25:01
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 140
 # DOMAIN: 3
-# DOMAIN-SUFFIX: 6511
+# DOMAIN-SUFFIX: 6512
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -4027,6 +4027,7 @@ payload:
   - DOMAIN-SUFFIX,newsexwap.com
   - DOMAIN-SUFFIX,newsexxxx.com
   - DOMAIN-SUFFIX,newxxx24.cc
+  - DOMAIN-SUFFIX,ngfiles.com
   - DOMAIN-SUFFIX,nhentai.com
   - DOMAIN-SUFFIX,nhentai.io
   - DOMAIN-SUFFIX,nhentai.net
