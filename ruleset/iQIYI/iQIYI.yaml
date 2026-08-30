@@ -1,0 +1,24 @@
+# ===========================================
+# Rule Name: 爱奇艺
+# Author: Hawaiine
+# Updated: 2026-08-30 14:29:45
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 10
+# DOMAIN-SUFFIX: 0
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,71.am
+  - DOMAIN,71edge.com
+  - DOMAIN,iq.com
+  - DOMAIN,iqiyi.com
+  - DOMAIN,iqiyipic.com
+  - DOMAIN,pps.tv
+  - DOMAIN,ppsimg.com
+  - DOMAIN,qiyi.com
+  - DOMAIN,qiyipic.com
+  - DOMAIN,qy.net

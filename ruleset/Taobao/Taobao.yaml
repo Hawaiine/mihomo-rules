@@ -1,0 +1,35 @@
+# ===========================================
+# Rule Name: 淘宝
+# Author: Hawaiine
+# Updated: 2026-08-30 14:29:45
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 20
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 1
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,1688.com
+  - DOMAIN-SUFFIX,hz.pre.tbusergw.taobao.net
+  - DOMAIN-SUFFIX,hz.tbusergw.taobao.net
+  - DOMAIN-SUFFIX,rj.m.taobao.co
+  - DOMAIN-SUFFIX,taobao.cn
+  - DOMAIN-SUFFIX,taobao.com
+  - DOMAIN-SUFFIX,taobao.org
+  - DOMAIN-SUFFIX,taobao.wang
+  - DOMAIN-SUFFIX,taobaocdn.com
+  - DOMAIN-SUFFIX,taobaotest.com
+  - DOMAIN-SUFFIX,taobaotesting.com
+  - DOMAIN-SUFFIX,tmall.com
+  - DOMAIN-SUFFIX,tmall.hk
+  - DOMAIN-SUFFIX,tmall.ru
+  - DOMAIN-SUFFIX,tmallgenie.com
+  - DOMAIN-SUFFIX,tmallgenieapi.com
+  - DOMAIN-SUFFIX,tmallplay.cn
+  - DOMAIN-SUFFIX,tmallplay.com.cn
+  - DOMAIN-SUFFIX,tmallplay.net
+  - DOMAIN-SUFFIX,tmalltv.com
+  - PROCESS-NAME,com.taobao.taobao

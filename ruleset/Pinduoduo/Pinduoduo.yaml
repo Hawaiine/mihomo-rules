@@ -1,0 +1,21 @@
+# ===========================================
+# Rule Name: 拼多多
+# Author: Hawaiine
+# Updated: 2026-08-30 14:29:45
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 7
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,pddcdn.com
+  - DOMAIN-SUFFIX,pddim.com
+  - DOMAIN-SUFFIX,pddpic.com
+  - DOMAIN-SUFFIX,pddugc.com
+  - DOMAIN-SUFFIX,pinduoduo.com
+  - DOMAIN-SUFFIX,pinduoduo.net
+  - DOMAIN-SUFFIX,yangkeduo.com

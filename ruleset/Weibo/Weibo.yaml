@@ -1,0 +1,18 @@
+# ===========================================
+# Rule Name: 微博
+# Author: Hawaiine
+# Updated: 2026-08-30 14:29:45
+# DOMAIN-KEYWORD: 1
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 3
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-KEYWORD,weibo
+  - DOMAIN-SUFFIX,weibo.cn
+  - DOMAIN-SUFFIX,weibo.com
+  - DOMAIN-SUFFIX,weibocdn.com

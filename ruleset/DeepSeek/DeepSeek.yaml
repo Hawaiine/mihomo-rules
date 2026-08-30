@@ -1,0 +1,15 @@
+# ===========================================
+# Rule Name: DeepSeek
+# Author: Hawaiine
+# Updated: 2026-08-30 14:29:45
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 1
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,deepseek.com
