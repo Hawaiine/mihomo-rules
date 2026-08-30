@@ -2129,14 +2129,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AliPay/AliPay.yaml"
     interval: 86400
 
-
   DeepSeek:
     type: http
     behavior: classical
     path: ./ruleset/DeepSeek.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DeepSeek/DeepSeek.yaml"
     interval: 86400
-
 
   Doubao:
     type: http
@@ -2145,14 +2143,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Doubao/Doubao.yaml"
     interval: 86400
 
-
   Douyin:
     type: http
     behavior: classical
     path: ./ruleset/Douyin.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Douyin/Douyin.yaml"
     interval: 86400
-
 
   iQIYI:
     type: http
@@ -2161,14 +2157,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iQIYI/iQIYI.yaml"
     interval: 86400
 
-
   JD:
     type: http
     behavior: classical
     path: ./ruleset/JD.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/JD/JD.yaml"
     interval: 86400
-
 
   Meituan:
     type: http
@@ -2177,14 +2171,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Meituan/Meituan.yaml"
     interval: 86400
 
-
   Pinduoduo:
     type: http
     behavior: classical
     path: ./ruleset/Pinduoduo.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pinduoduo/Pinduoduo.yaml"
     interval: 86400
-
 
   QQ:
     type: http
@@ -2193,14 +2185,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQ/QQ.yaml"
     interval: 86400
 
-
   RedNote:
     type: http
     behavior: classical
     path: ./ruleset/RedNote.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RedNote/RedNote.yaml"
     interval: 86400
-
 
   Taobao:
     type: http
@@ -2209,14 +2199,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Taobao/Taobao.yaml"
     interval: 86400
 
-
   TencentVideo:
     type: http
     behavior: classical
     path: ./ruleset/TencentVideo.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
-
 
   WeChat:
     type: http
@@ -2225,14 +2213,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WeChat/WeChat.yaml"
     interval: 86400
 
-
   Weibo:
     type: http
     behavior: classical
     path: ./ruleset/Weibo.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Weibo/Weibo.yaml"
     interval: 86400
-
 
   Youku:
     type: http
@@ -2241,14 +2227,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Youku/Youku.yaml"
     interval: 86400
 
-
   Zhihu:
     type: http
     behavior: classical
     path: ./ruleset/Zhihu.yaml
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Zhihu/Zhihu.yaml"
     interval: 86400
-
 
   AWS:
     type: http
