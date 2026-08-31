@@ -1016,18 +1016,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
 
-  - name: "Cloudflare"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
-
   - name: "Cursor"
     type: select
     proxies:
@@ -2058,6 +2046,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
 
+  - name: "Cloudflare"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
+
 rule-providers:
   DirectDNS:
     type: http
@@ -2310,13 +2310,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CATCHPLAY/CATCHPLAY.yaml"
     interval: 86400
     path: ./ruleset/CATCHPLAY.yaml
-
-  Cloudflare:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cloudflare/Cloudflare.yaml"
-    interval: 86400
-    path: ./ruleset/Cloudflare.yaml
 
   Cursor:
     type: http
@@ -2934,6 +2927,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/myTVSuper.yaml
 
+  Cloudflare:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cloudflare/Cloudflare.yaml"
+    interval: 86400
+    path: ./ruleset/Cloudflare.yaml
+
 rules:
                                                     # ----- 0. DNS 分流 (最高优先级) -----
   - RULE-SET,DirectDNS,🇨🇳 直连DNS
@@ -2972,7 +2972,6 @@ rules:
                                                     # - RULE-SET,Bilibili,Bilibili
                                                     # - RULE-SET,Bluesky,Bluesky
                                                     # - RULE-SET,CATCHPLAY,CATCHPLAY+
-                                                    # - RULE-SET,Cloudflare,Cloudflare
                                                     # - RULE-SET,Cursor,Cursor
                                                     # - RULE-SET,DAZN,DAZN
                                                     # - RULE-SET,DAnimeStore,D Anime Store
@@ -3061,6 +3060,7 @@ rules:
                                                     # - RULE-SET,iQIYI,爱奇艺
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,myTVSuper,myTV Super
+                                                    # - RULE-SET,Cloudflare,Cloudflare
 
                                                     # ----- 3. 应用程序直连 (进程匹配, 如迅雷/QQ/微信等不走代理) -----
   - RULE-SET,Applications,🎯 全球直连

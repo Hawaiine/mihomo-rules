@@ -128,7 +128,13 @@ def sort_brands(brands, sg_map):
         return d
 
     # 全局排序：深度大的先（子品牌在前），同深度按 provider key 字母序
-    return sorted(brands, key=lambda b: (-depth_of(b), b))
+    sorted_brands = sorted(brands, key=lambda b: (-depth_of(b), b))
+
+    # 置底品牌（Cloudflare 含 IP-CIDR，放最后避免截胡其他品牌域名规则）
+    LAST_BRANDS = {'Cloudflare'}
+    main = [b for b in sorted_brands if b not in LAST_BRANDS]
+    last = [b for b in sorted_brands if b in LAST_BRANDS]
+    return main + last
 
 
 def build_brand_info(brands, sg_map):

@@ -875,17 +875,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
-  - name: "Cloudflare"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
   - name: "Cursor"
     type: select
     proxies:
@@ -1828,6 +1817,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
+  - name: "Cloudflare"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 rule-providers:
   DirectDNS:
     type: http
@@ -2045,12 +2045,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CATCHPLAY/CATCHPLAY.yaml"
     interval: 86400
     path: ./ruleset/CATCHPLAY.yaml
-  Cloudflare:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cloudflare/Cloudflare.yaml"
-    interval: 86400
-    path: ./ruleset/Cloudflare.yaml
   Cursor:
     type: http
     behavior: classical
@@ -2579,6 +2573,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
     interval: 86400
     path: ./ruleset/myTVSuper.yaml
+  Cloudflare:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Cloudflare/Cloudflare.yaml"
+    interval: 86400
+    path: ./ruleset/Cloudflare.yaml
 rules:
   - RULE-SET,DirectDNS,🇨🇳 直连DNS
   - RULE-SET,ProxyDNS,🌍 代理DNS
