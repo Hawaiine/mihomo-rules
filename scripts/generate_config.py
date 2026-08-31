@@ -117,48 +117,18 @@ def detect_behavior(yaml_path):
 
 
 def sort_brands(brands, sg_map):
-    """排序品牌：子品牌→父品牌→字母序，LAST_BRANDS 置底"""
-    sub_brands_set = set(SUB_PARENT.keys())
-    parent_brands_set = set(SUB_PARENT.values()) - sub_brands_set
+    """排序品牌：全局 depth 优先 + 字母序"""
+    # 计算品牌深度（沿 SUB_PARENT 链向上计数）
+    def depth_of(b):
+        d = 0
+        cur = b
+        while cur in SUB_PARENT:
+            d += 1
+            cur = SUB_PARENT[cur]
+        return d
 
-    # 置底品牌（放所有品牌规则最后，避免 IP-CIDR 截胡其他品牌域名规则）
-    LAST_BRANDS = {'Cloudflare'}
-
-    # 递归收集所有子品牌（含嵌套），返回 (品牌名, 深度) 列表
-    def collect_children(parent, brands_set, depth=1):
-        kids = []
-        for b in brands_set:
-            if b in SUB_PARENT and SUB_PARENT[b] == parent:
-                kids.append((b, depth))
-                kids.extend(collect_children(b, brands_set, depth+1))
-        # 排序：深度大的先（嵌套深的先），同深度按 provider key 字母序
-        def sort_key(item):
-            return (-item[1], item[0])
-        return sorted(kids, key=sort_key)
-
-    # 按父品牌分组：父品牌内子品牌(含嵌套)按 provider key 字母序排在父品牌前
-    result = []
-    done = set()
-    for parent in sorted(parent_brands_set, key=lambda p: p):
-        children = collect_children(parent, set(brands))
-        for c, _ in children:
-            if c not in done:
-                result.append(c)
-                done.add(c)
-        result.append(parent)
-        done.add(parent)
-
-    # 其他：按 provider key 字母序
-    other = sorted(
-        [b for b in brands if b not in done and b not in LAST_BRANDS],
-        key=lambda b: b
-    )
-    # 置底品牌移到最后
-    last = sorted(
-        [b for b in brands if b in LAST_BRANDS],
-        key=lambda b: b
-    )
-    return result + other + last
+    # 全局排序：深度大的先（子品牌在前），同深度按 provider key 字母序
+    return sorted(brands, key=lambda b: (-depth_of(b), b))
 
 
 def build_brand_info(brands, sg_map):
@@ -367,8 +337,8 @@ def gen_rule_providers(brand_info, blank_between=False):
             f'    path: ./ruleset/{name}.yaml',
         ]
         blocks.append('\n'.join(lines))
-    # 品牌 provider（按 provider key 字母序）
-    for bi in sorted(brand_info, key=lambda x: x['key']):
+    # 品牌 provider（按 sort_brands 已排好的顺序：子品牌优先+字母序）
+    for bi in brand_info:
         lines = [
             f'  {bi["key"]}:',
             '    type: http',

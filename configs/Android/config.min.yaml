@@ -572,6 +572,27 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+  - name: "YouTube Music"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTubeMusic.png"
+  - name: "iCloud Private Relay"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
   - name: "AWS"
     type: select
     proxies:
@@ -583,38 +604,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/AWS.png"
-  - name: "Prime Video"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo-1.png"
-  - name: "Amazon"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Amazon.png"
-  - name: "iCloud Private Relay"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
   - name: "Apple TV"
     type: select
     proxies:
@@ -626,7 +615,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV.png"
-  - name: "Siri AI"
+  - name: "GitHub"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -636,8 +625,8 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI.png"
-  - name: "iCloud"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub-1.png"
+  - name: "Google AI"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -647,18 +636,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud.png"
-  - name: "Apple"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Gemini.png"
   - name: "Hotstar"
     type: select
     proxies:
@@ -670,17 +648,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
-  - name: "Disney"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
   - name: "Instagram"
     type: select
     proxies:
@@ -703,6 +670,39 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Messenger.png"
+  - name: "OneDrive"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Drive/OneDrive.png"
+  - name: "Prime Video"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo-1.png"
+  - name: "Siri AI"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI.png"
   - name: "Threads"
     type: select
     proxies:
@@ -725,39 +725,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp-2.png"
-  - name: "Facebook"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
-  - name: "YouTube Music"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTubeMusic.png"
-  - name: "Google AI"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Gemini.png"
   - name: "YouTube"
     type: select
     proxies:
@@ -769,7 +736,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/YouTube-5.png"
-  - name: "Google"
+  - name: "iCloud"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -779,40 +746,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Google-2.png"
-  - name: "GitHub"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub-1.png"
-  - name: "OneDrive"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Drive/OneDrive.png"
-  - name: "Microsoft"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Microsoft-4.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud.png"
   - name: "AbemaTV"
     type: select
     proxies:
@@ -835,6 +769,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AliPay.png"
+  - name: "Amazon"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Amazon.png"
   - name: "Anthropic"
     type: select
     proxies:
@@ -846,6 +791,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic-1.png"
+  - name: "Apple"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
   - name: "Bahamut"
     type: select
     proxies:
@@ -910,6 +866,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CatchPlay-Plus-1.png"
+  - name: "Cloudflare"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
   - name: "Cursor"
     type: select
     proxies:
@@ -985,6 +952,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord-2.png"
+  - name: "Disney"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Disney-1.png"
   - name: "Docker"
     type: select
     proxies:
@@ -1029,6 +1007,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/F1TV.png"
+  - name: "Facebook"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
   - name: "Fuji TV"
     type: select
     proxies:
@@ -1059,6 +1048,17 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+  - name: "Google"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Google-2.png"
   - name: "HBO"
     type: select
     proxies:
@@ -1188,6 +1188,17 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+  - name: "Microsoft"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Microsoft-4.png"
   - name: "Mora"
     type: select
     proxies:
@@ -1808,17 +1819,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER.png"
-  - name: "Cloudflare"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Cloudflare.png"
 rule-providers:
   DirectDNS:
     type: http
@@ -1874,12 +1874,102 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CNCIDR/CNCIDR.yaml"
     interval: 86400
     path: ./ruleset/CNCIDR.yaml
+  YouTubeMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTubeMusic/YouTubeMusic.yaml"
+    interval: 86400
+    path: ./ruleset/YouTubeMusic.yaml
+  iCloudPrivateRelay:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloudPrivateRelay/iCloudPrivateRelay.yaml"
+    interval: 86400
+    path: ./ruleset/iCloudPrivateRelay.yaml
   AWS:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AWS/AWS.yaml"
     interval: 86400
     path: ./ruleset/AWS.yaml
+  AppleTV:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleTV/AppleTV.yaml"
+    interval: 86400
+    path: ./ruleset/AppleTV.yaml
+  GitHub:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GitHub/GitHub.yaml"
+    interval: 86400
+    path: ./ruleset/GitHub.yaml
+  GoogleAI:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleAI.yaml
+  Hotstar:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hotstar/Hotstar.yaml"
+    interval: 86400
+    path: ./ruleset/Hotstar.yaml
+  Instagram:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Instagram/Instagram.yaml"
+    interval: 86400
+    path: ./ruleset/Instagram.yaml
+  Messenger:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Messenger/Messenger.yaml"
+    interval: 86400
+    path: ./ruleset/Messenger.yaml
+  OneDrive:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OneDrive/OneDrive.yaml"
+    interval: 86400
+    path: ./ruleset/OneDrive.yaml
+  PrimeVideo:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PrimeVideo/PrimeVideo.yaml"
+    interval: 86400
+    path: ./ruleset/PrimeVideo.yaml
+  SiriAI:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/SiriAI/SiriAI.yaml"
+    interval: 86400
+    path: ./ruleset/SiriAI.yaml
+  Threads:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Threads/Threads.yaml"
+    interval: 86400
+    path: ./ruleset/Threads.yaml
+  WhatsApp:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WhatsApp/WhatsApp.yaml"
+    interval: 86400
+    path: ./ruleset/WhatsApp.yaml
+  YouTube:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTube/YouTube.yaml"
+    interval: 86400
+    path: ./ruleset/YouTube.yaml
+  iCloud:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloud/iCloud.yaml"
+    interval: 86400
+    path: ./ruleset/iCloud.yaml
   AbemaTV:
     type: http
     behavior: classical
@@ -1910,12 +2000,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Apple/Apple.yaml"
     interval: 86400
     path: ./ruleset/Apple.yaml
-  AppleTV:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleTV/AppleTV.yaml"
-    interval: 86400
-    path: ./ruleset/AppleTV.yaml
   Bahamut:
     type: http
     behavior: classical
@@ -2054,24 +2138,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GeneralAI/GeneralAI.yaml"
     interval: 86400
     path: ./ruleset/GeneralAI.yaml
-  GitHub:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GitHub/GitHub.yaml"
-    interval: 86400
-    path: ./ruleset/GitHub.yaml
   Google:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Google/Google.yaml"
     interval: 86400
     path: ./ruleset/Google.yaml
-  GoogleAI:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
-    interval: 86400
-    path: ./ruleset/GoogleAI.yaml
   HBO:
     type: http
     behavior: classical
@@ -2090,24 +2162,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HamiVideo/HamiVideo.yaml"
     interval: 86400
     path: ./ruleset/HamiVideo.yaml
-  Hotstar:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hotstar/Hotstar.yaml"
-    interval: 86400
-    path: ./ruleset/Hotstar.yaml
   Hulu:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hulu/Hulu.yaml"
     interval: 86400
     path: ./ruleset/Hulu.yaml
-  Instagram:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Instagram/Instagram.yaml"
-    interval: 86400
-    path: ./ruleset/Instagram.yaml
   JD:
     type: http
     behavior: classical
@@ -2150,12 +2210,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Meituan/Meituan.yaml"
     interval: 86400
     path: ./ruleset/Meituan.yaml
-  Messenger:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Messenger/Messenger.yaml"
-    interval: 86400
-    path: ./ruleset/Messenger.yaml
   MetaBrainz:
     type: http
     behavior: classical
@@ -2228,12 +2282,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OasisicSelf/OasisicSelf.yaml"
     interval: 86400
     path: ./ruleset/OasisicSelf.yaml
-  OneDrive:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OneDrive/OneDrive.yaml"
-    interval: 86400
-    path: ./ruleset/OneDrive.yaml
   OpenAI:
     type: http
     behavior: classical
@@ -2306,12 +2354,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PornChina/PornChina.yaml"
     interval: 86400
     path: ./ruleset/PornChina.yaml
-  PrimeVideo:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PrimeVideo/PrimeVideo.yaml"
-    interval: 86400
-    path: ./ruleset/PrimeVideo.yaml
   QQ:
     type: http
     behavior: classical
@@ -2354,12 +2396,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reddit/Reddit.yaml"
     interval: 86400
     path: ./ruleset/Reddit.yaml
-  SiriAI:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/SiriAI/SiriAI.yaml"
-    interval: 86400
-    path: ./ruleset/SiriAI.yaml
   Spotify:
     type: http
     behavior: classical
@@ -2414,12 +2450,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
     path: ./ruleset/TencentVideo.yaml
-  Threads:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Threads/Threads.yaml"
-    interval: 86400
-    path: ./ruleset/Threads.yaml
   Tidal:
     type: http
     behavior: classical
@@ -2492,30 +2522,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Weibo/Weibo.yaml"
     interval: 86400
     path: ./ruleset/Weibo.yaml
-  WhatsApp:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WhatsApp/WhatsApp.yaml"
-    interval: 86400
-    path: ./ruleset/WhatsApp.yaml
   X:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/X/X.yaml"
     interval: 86400
     path: ./ruleset/X.yaml
-  YouTube:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTube/YouTube.yaml"
-    interval: 86400
-    path: ./ruleset/YouTube.yaml
-  YouTubeMusic:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/YouTubeMusic/YouTubeMusic.yaml"
-    interval: 86400
-    path: ./ruleset/YouTubeMusic.yaml
   Youku:
     type: http
     behavior: classical
@@ -2540,18 +2552,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
     interval: 86400
     path: ./ruleset/friDayvideo.yaml
-  iCloud:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloud/iCloud.yaml"
-    interval: 86400
-    path: ./ruleset/iCloud.yaml
-  iCloudPrivateRelay:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloudPrivateRelay/iCloudPrivateRelay.yaml"
-    interval: 86400
-    path: ./ruleset/iCloudPrivateRelay.yaml
   iQIYI:
     type: http
     behavior: classical
