@@ -1,7 +1,22 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 109 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 125 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+
+---
+
+## 2026-08-30
+
+### Added
+- **新增 16 个国内品牌规则集** — AliPay / DeepSeek / Doubao / Douyin / iQIYI / JD / Meituan / Pinduoduo / QQ / RedNote / Taobao / TencentVideo / WeChat / Weibo / Youku / Zhihu
+- **4 个 config 接入** — Nikki/Android × full/min 均加入 rule-providers + proxy-groups + 注释 RULE-SET
+
+### Changed
+- **全量品牌排序规范化** — rule-providers / proxy-groups / 注释 RULE-SET 三段统一按「子品牌优先 + 字母序」（`(-depth, provider_key)`）排列，base 9 个 provider 保持固定顺序
+- **README/CHANGELOG 计数对齐** — 品牌 100→116，规则集 109→125（9 基础 + 116 品牌），品牌策略组 100→116
+
+### Fixed
+- **AliPay 裸域名** — 移除 `DOMAIN-SUFFIX,alipay`（无 TLD 的裸后缀，避免误匹配 malipay.com 等）
 
 ---
 

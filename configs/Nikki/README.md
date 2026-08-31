@@ -107,7 +107,7 @@ fallback-filter:            geoip:cn + ipcidr           ← CN 结果可信时�
 | 🔯 故障转移 | fallback | 自动切换可用节点（♻️→🔧） |
 | 🔀 负载均衡 | load-balance | 多节点并发复用 |
 | 🌍 地区节点 | select × 5 | 🇭🇰🇯🇵🇺🇸🇸🇬🇹🇼 地区分组 |
-| 品牌策略组(100个) | select | DIRECT → ♻️ → 🔧 → 🔯 → 🔀，每个品牌一个组 |
+| 品牌策略组(116个) | select | DIRECT → ♻️ → 🔧 → 🔯 → 🔀，每个品牌一个组 |
 
 ## 📡 数据库下载
 

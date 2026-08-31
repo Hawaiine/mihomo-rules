@@ -706,198 +706,6 @@ proxy-groups:
     use:
       - provider1
 
-  - name: "支付宝"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AliPay.png"
-
-  - name: "DeepSeek"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DeepSeek.png"
-
-  - name: "豆包"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Doubao.png"
-
-  - name: "抖音"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Douyin.png"
-
-  - name: "爱奇艺"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/iQIYI.png"
-
-  - name: "京东"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/JD.png"
-
-  - name: "美团"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Meituan.png"
-
-  - name: "拼多多"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Pinduoduo.png"
-
-  - name: "腾讯QQ"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/QQ.png"
-
-  - name: "小红书"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RedNote.png"
-
-  - name: "淘宝"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Taobao.png"
-
-  - name: "腾讯视频"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo.png"
-
-  - name: "微信"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/WeChat.png"
-
-  - name: "微博"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Weibo.png"
-
-  - name: "优酷"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Youku.png"
-
-  - name: "知乎"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Zhihu.png"
-
   - name: "AWS"
     type: select
     proxies:
@@ -1173,6 +981,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AbemaTV.png"
 
+  - name: "支付宝"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AliPay.png"
+
   - name: "Anthropic"
     type: select
     proxies:
@@ -1301,6 +1121,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DMMTV-1.png"
 
+  - name: "DeepSeek"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DeepSeek.png"
+
   - name: "Deezer"
     type: select
     proxies:
@@ -1336,6 +1168,30 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Docker.png"
+
+  - name: "豆包"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Doubao.png"
+
+  - name: "抖音"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Douyin.png"
 
   - name: "F1 TV"
     type: select
@@ -1430,6 +1286,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hulu.png"
 
+  - name: "京东"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/JD.png"
+
   - name: "KKTV"
     type: select
     proxies:
@@ -1487,6 +1355,18 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+
+  - name: "美团"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Meituan.png"
 
   - name: "MetaBrainz"
     type: select
@@ -1672,6 +1552,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Perplexity.png"
 
+  - name: "拼多多"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Pinduoduo.png"
+
   - name: "Pinterest"
     type: select
     proxies:
@@ -1742,6 +1634,18 @@ proxy-groups:
     use:
       - provider1
 
+  - name: "腾讯QQ"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/QQ.png"
+
   - name: "Qobuz"
     type: select
     proxies:
@@ -1786,6 +1690,18 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+
+  - name: "小红书"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RedNote.png"
 
   - name: "Reddit"
     type: select
@@ -1859,6 +1775,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TVer.png"
 
+  - name: "淘宝"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Taobao.png"
+
   - name: "Telasa"
     type: select
     proxies:
@@ -1881,6 +1809,18 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Telegram-3.png"
+
+  - name: "腾讯视频"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo.png"
 
   - name: "Tidal"
     type: select
@@ -1998,6 +1938,30 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Wallpaper.png"
 
+  - name: "微信"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/WeChat.png"
+
+  - name: "微博"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Weibo.png"
+
   - name: "X"
     type: select
     proxies:
@@ -2009,6 +1973,18 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/X-1.png"
+
+  - name: "优酷"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Youku.png"
 
   - name: "Z-Library"
     type: select
@@ -2022,6 +1998,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/Z-Library.png"
 
+  - name: "知乎"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Zhihu.png"
+
   - name: "friDay video"
     type: select
     proxies:
@@ -2033,6 +2021,18 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDay.png"
+
+  - name: "爱奇艺"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/iQIYI.png"
 
   - name: "Karaoke@DAM"
     type: select
@@ -2133,118 +2133,6 @@ rule-providers:
     interval: 86400
     path: ./ruleset/CNCIDR.yaml
 
-  AliPay:
-    type: http
-    behavior: classical
-    path: ./ruleset/AliPay.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AliPay/AliPay.yaml"
-    interval: 86400
-
-  DeepSeek:
-    type: http
-    behavior: classical
-    path: ./ruleset/DeepSeek.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DeepSeek/DeepSeek.yaml"
-    interval: 86400
-
-  Doubao:
-    type: http
-    behavior: classical
-    path: ./ruleset/Doubao.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Doubao/Doubao.yaml"
-    interval: 86400
-
-  Douyin:
-    type: http
-    behavior: classical
-    path: ./ruleset/Douyin.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Douyin/Douyin.yaml"
-    interval: 86400
-
-  iQIYI:
-    type: http
-    behavior: classical
-    path: ./ruleset/iQIYI.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iQIYI/iQIYI.yaml"
-    interval: 86400
-
-  JD:
-    type: http
-    behavior: classical
-    path: ./ruleset/JD.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/JD/JD.yaml"
-    interval: 86400
-
-  Meituan:
-    type: http
-    behavior: classical
-    path: ./ruleset/Meituan.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Meituan/Meituan.yaml"
-    interval: 86400
-
-  Pinduoduo:
-    type: http
-    behavior: classical
-    path: ./ruleset/Pinduoduo.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pinduoduo/Pinduoduo.yaml"
-    interval: 86400
-
-  QQ:
-    type: http
-    behavior: classical
-    path: ./ruleset/QQ.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQ/QQ.yaml"
-    interval: 86400
-
-  RedNote:
-    type: http
-    behavior: classical
-    path: ./ruleset/RedNote.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RedNote/RedNote.yaml"
-    interval: 86400
-
-  Taobao:
-    type: http
-    behavior: classical
-    path: ./ruleset/Taobao.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Taobao/Taobao.yaml"
-    interval: 86400
-
-  TencentVideo:
-    type: http
-    behavior: classical
-    path: ./ruleset/TencentVideo.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
-    interval: 86400
-
-  WeChat:
-    type: http
-    behavior: classical
-    path: ./ruleset/WeChat.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WeChat/WeChat.yaml"
-    interval: 86400
-
-  Weibo:
-    type: http
-    behavior: classical
-    path: ./ruleset/Weibo.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Weibo/Weibo.yaml"
-    interval: 86400
-
-  Youku:
-    type: http
-    behavior: classical
-    path: ./ruleset/Youku.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Youku/Youku.yaml"
-    interval: 86400
-
-  Zhihu:
-    type: http
-    behavior: classical
-    path: ./ruleset/Zhihu.yaml
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Zhihu/Zhihu.yaml"
-    interval: 86400
-
   AWS:
     type: http
     behavior: classical
@@ -2258,6 +2146,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AbemaTV/AbemaTV.yaml"
     interval: 86400
     path: ./ruleset/AbemaTV.yaml
+
+  AliPay:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AliPay/AliPay.yaml"
+    interval: 86400
+    path: ./ruleset/AliPay.yaml
 
   Amazon:
     type: http
@@ -2364,6 +2259,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/DMMTV.yaml
 
+  DeepSeek:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DeepSeek/DeepSeek.yaml"
+    interval: 86400
+    path: ./ruleset/DeepSeek.yaml
+
   Deezer:
     type: http
     behavior: classical
@@ -2391,6 +2293,20 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Docker/Docker.yaml"
     interval: 86400
     path: ./ruleset/Docker.yaml
+
+  Doubao:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Doubao/Doubao.yaml"
+    interval: 86400
+    path: ./ruleset/Doubao.yaml
+
+  Douyin:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Douyin/Douyin.yaml"
+    interval: 86400
+    path: ./ruleset/Douyin.yaml
 
   F1TV:
     type: http
@@ -2490,6 +2406,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Instagram.yaml
 
+  JD:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/JD/JD.yaml"
+    interval: 86400
+    path: ./ruleset/JD.yaml
+
   KKTV:
     type: http
     behavior: classical
@@ -2524,6 +2447,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Manus/Manus.yaml"
     interval: 86400
     path: ./ruleset/Manus.yaml
+
+  Meituan:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Meituan/Meituan.yaml"
+    interval: 86400
+    path: ./ruleset/Meituan.yaml
 
   Messenger:
     type: http
@@ -2658,6 +2588,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Perplexity.yaml
 
+  Pinduoduo:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pinduoduo/Pinduoduo.yaml"
+    interval: 86400
+    path: ./ruleset/Pinduoduo.yaml
+
   Pinterest:
     type: http
     behavior: classical
@@ -2707,6 +2644,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/PrimeVideo.yaml
 
+  QQ:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQ/QQ.yaml"
+    interval: 86400
+    path: ./ruleset/QQ.yaml
+
   Qobuz:
     type: http
     behavior: classical
@@ -2734,6 +2678,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
     interval: 86400
     path: ./ruleset/ReadsJapan.yaml
+
+  RedNote:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RedNote/RedNote.yaml"
+    interval: 86400
+    path: ./ruleset/RedNote.yaml
 
   Reddit:
     type: http
@@ -2784,6 +2735,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/TVer.yaml
 
+  Taobao:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Taobao/Taobao.yaml"
+    interval: 86400
+    path: ./ruleset/Taobao.yaml
+
   Telasa:
     type: http
     behavior: classical
@@ -2797,6 +2755,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Telegram/Telegram.yaml"
     interval: 86400
     path: ./ruleset/Telegram.yaml
+
+  TencentVideo:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
+    interval: 86400
+    path: ./ruleset/TencentVideo.yaml
 
   Threads:
     type: http
@@ -2875,6 +2840,20 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Wallpaper.yaml
 
+  WeChat:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WeChat/WeChat.yaml"
+    interval: 86400
+    path: ./ruleset/WeChat.yaml
+
+  Weibo:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Weibo/Weibo.yaml"
+    interval: 86400
+    path: ./ruleset/Weibo.yaml
+
   WhatsApp:
     type: http
     behavior: classical
@@ -2903,12 +2882,26 @@ rule-providers:
     interval: 86400
     path: ./ruleset/YouTubeMusic.yaml
 
+  Youku:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Youku/Youku.yaml"
+    interval: 86400
+    path: ./ruleset/Youku.yaml
+
   ZLibrary:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ZLibrary/ZLibrary.yaml"
     interval: 86400
     path: ./ruleset/ZLibrary.yaml
+
+  Zhihu:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Zhihu/Zhihu.yaml"
+    interval: 86400
+    path: ./ruleset/Zhihu.yaml
 
   friDayvideo:
     type: http
@@ -2930,6 +2923,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iCloudPrivateRelay/iCloudPrivateRelay.yaml"
     interval: 86400
     path: ./ruleset/iCloudPrivateRelay.yaml
+
+  iQIYI:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/iQIYI/iQIYI.yaml"
+    interval: 86400
+    path: ./ruleset/iQIYI.yaml
 
   karaokeDAM:
     type: http
@@ -2956,22 +2956,6 @@ rules:
                                                     # 顺序说明: 子品牌/重叠品牌排父品牌前, 避免被宽泛规则截胡
                                                     # 例: AppleTV/SiriAI/iCloud 在 Apple 前
                                                     # 全量品牌, 按需取消注释即可
-                                                    # - RULE-SET,AliPay,支付宝
-                                                    # - RULE-SET,DeepSeek,DeepSeek
-                                                    # - RULE-SET,Doubao,豆包
-                                                    # - RULE-SET,Douyin,抖音
-                                                    # - RULE-SET,iQIYI,爱奇艺
-                                                    # - RULE-SET,JD,京东
-                                                    # - RULE-SET,Meituan,美团
-                                                    # - RULE-SET,Pinduoduo,拼多多
-                                                    # - RULE-SET,QQ,腾讯QQ
-                                                    # - RULE-SET,RedNote,小红书
-                                                    # - RULE-SET,Taobao,淘宝
-                                                    # - RULE-SET,TencentVideo,腾讯视频
-                                                    # - RULE-SET,WeChat,微信
-                                                    # - RULE-SET,Weibo,微博
-                                                    # - RULE-SET,Youku,优酷
-                                                    # - RULE-SET,Zhihu,知乎
                                                     # - RULE-SET,AWS,AWS
                                                     # - RULE-SET,PrimeVideo,Prime Video
                                                     # - RULE-SET,Amazon,Amazon
@@ -2995,6 +2979,7 @@ rules:
                                                     # - RULE-SET,OneDrive,OneDrive
                                                     # - RULE-SET,Microsoft,Microsoft
                                                     # - RULE-SET,AbemaTV,AbemaTV
+                                                    # - RULE-SET,AliPay,支付宝
                                                     # - RULE-SET,Anthropic,Anthropic
                                                     # - RULE-SET,Bahamut,Bahamut
                                                     # - RULE-SET,Bangumi,Bangumi
@@ -3006,9 +2991,12 @@ rules:
                                                     # - RULE-SET,DAZN,DAZN
                                                     # - RULE-SET,DAnimeStore,D Anime Store
                                                     # - RULE-SET,DMMTV,DMM TV
+                                                    # - RULE-SET,DeepSeek,DeepSeek
                                                     # - RULE-SET,Deezer,Deezer
                                                     # - RULE-SET,Discord,Discord
                                                     # - RULE-SET,Docker,Docker
+                                                    # - RULE-SET,Doubao,豆包
+                                                    # - RULE-SET,Douyin,抖音
                                                     # - RULE-SET,F1TV,F1 TV
                                                     # - RULE-SET,FujiTV,Fuji TV
                                                     # - RULE-SET,GameJapan,Game Japan
@@ -3017,11 +3005,13 @@ rules:
                                                     # - RULE-SET,HOYTV,HOY TV
                                                     # - RULE-SET,HamiVideo,Hami Video
                                                     # - RULE-SET,Hulu,Hulu
+                                                    # - RULE-SET,JD,京东
                                                     # - RULE-SET,KKTV,KKTV
                                                     # - RULE-SET,LINETV,LINE TV
                                                     # - RULE-SET,Lemino,Lemino
                                                     # - RULE-SET,LiTV,LiTV
                                                     # - RULE-SET,Manus,Manus
+                                                    # - RULE-SET,Meituan,美团
                                                     # - RULE-SET,MetaBrainz,MetaBrainz
                                                     # - RULE-SET,Mora,Mora
                                                     # - RULE-SET,MusicJapan,Music Japan
@@ -3038,24 +3028,29 @@ rules:
                                                     # - RULE-SET,PTChina,💊 PT China
                                                     # - RULE-SET,PayPal,PayPal
                                                     # - RULE-SET,Perplexity,Perplexity
+                                                    # - RULE-SET,Pinduoduo,拼多多
                                                     # - RULE-SET,Pinterest,Pinterest
                                                     # - RULE-SET,Pixiv,Pixiv
                                                     # - RULE-SET,Podcast,Podcast
                                                     # - RULE-SET,Poe,Poe
                                                     # - RULE-SET,Porn,🔞 Porn
                                                     # - RULE-SET,PornChina,🔞 Porn China
+                                                    # - RULE-SET,QQ,腾讯QQ
                                                     # - RULE-SET,Qobuz,Qobuz
                                                     # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
                                                     # - RULE-SET,ReadsJapan,Reads Japan
+                                                    # - RULE-SET,RedNote,小红书
                                                     # - RULE-SET,Reddit,Reddit
                                                     # - RULE-SET,Spotify,Spotify
                                                     # - RULE-SET,Steam,Steam
                                                     # - RULE-SET,Synology,Synology
                                                     # - RULE-SET,TMDB,TMDB
                                                     # - RULE-SET,TVer,TVer
+                                                    # - RULE-SET,Taobao,淘宝
                                                     # - RULE-SET,Telasa,Telasa
                                                     # - RULE-SET,Telegram,Telegram
+                                                    # - RULE-SET,TencentVideo,腾讯视频
                                                     # - RULE-SET,Tidal,Tidal
                                                     # - RULE-SET,TikTok,TikTok
                                                     # - RULE-SET,Tubi,Tubi
@@ -3066,9 +3061,14 @@ rules:
                                                     # - RULE-SET,WOWOW,WOWOW
                                                     # - RULE-SET,WSJ,WSJ
                                                     # - RULE-SET,Wallpaper,Wallpaper
+                                                    # - RULE-SET,WeChat,微信
+                                                    # - RULE-SET,Weibo,微博
                                                     # - RULE-SET,X,X
+                                                    # - RULE-SET,Youku,优酷
                                                     # - RULE-SET,ZLibrary,Z-Library
+                                                    # - RULE-SET,Zhihu,知乎
                                                     # - RULE-SET,friDayvideo,friDay video
+                                                    # - RULE-SET,iQIYI,爱奇艺
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,myTVSuper,myTV Super
                                                     # - RULE-SET,Cloudflare,Cloudflare
