@@ -593,6 +593,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloudPrivateRelay.png"
   - name: "AWS"
     type: select
     proxies:
@@ -636,7 +637,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Gemini.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleAI.png"
   - name: "Hotstar"
     type: select
     proxies:
@@ -647,7 +648,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HotStar-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hotstar-1.png"
   - name: "Instagram"
     type: select
     proxies:
@@ -658,7 +659,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Instagram-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Instagram.png"
   - name: "Messenger"
     type: select
     proxies:
@@ -691,7 +692,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PrimeVideo.png"
   - name: "Siri AI"
     type: select
     proxies:
@@ -713,7 +714,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Threads-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Threads.png"
   - name: "WhatsApp"
     type: select
     proxies:
@@ -724,7 +725,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp.png"
   - name: "YouTube"
     type: select
     proxies:
@@ -735,7 +736,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/YouTube-5.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTube.png"
   - name: "iCloud"
     type: select
     proxies:
@@ -768,7 +769,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AliPay.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/AliPay.png"
   - name: "Amazon"
     type: select
     proxies:
@@ -790,7 +791,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic.png"
   - name: "Apple"
     type: select
     proxies:
@@ -801,7 +802,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple.png"
   - name: "Bahamut"
     type: select
     proxies:
@@ -918,7 +919,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DeepSeek.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/DeepSeek.png"
   - name: "Deezer"
     type: select
     proxies:
@@ -940,7 +941,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Discord.png"
   - name: "Disney"
     type: select
     proxies:
@@ -973,7 +974,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Doubao.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Doubao.png"
   - name: "抖音"
     type: select
     proxies:
@@ -1006,7 +1007,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-4.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Facebook-1.png"
   - name: "Fuji TV"
     type: select
     proxies:
@@ -1069,7 +1070,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HOY.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HOYTV.png"
   - name: "Hami Video"
     type: select
     proxies:
@@ -1080,7 +1081,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo.png"
   - name: "Hulu"
     type: select
     proxies:
@@ -1102,7 +1103,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/JD.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/JD-2.png"
   - name: "KKTV"
     type: select
     proxies:
@@ -1166,7 +1167,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Meituan.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Meituan-1.png"
   - name: "MetaBrainz"
     type: select
     proxies:
@@ -1218,6 +1219,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Musixmatch.png"
   - name: "MyVideo"
     type: select
     proxies:
@@ -1239,6 +1241,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NHK.png"
   - name: "Netflix"
     type: select
     proxies:
@@ -1249,7 +1252,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Netflix-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Netflix.png"
   - name: "Niconico"
     type: select
     proxies:
@@ -1303,7 +1306,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI-4.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI.png"
   - name: "💊 PT"
     type: select
     proxies:
@@ -1356,7 +1359,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Pinduoduo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Pinduoduo.png"
   - name: "Pinterest"
     type: select
     proxies:
@@ -1400,7 +1403,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe.png"
   - name: "🔞 Porn"
     type: select
     proxies:
@@ -1431,7 +1434,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/QQ.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/QQ.png"
   - name: "Qobuz"
     type: select
     proxies:
@@ -1505,7 +1508,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Spotify-3.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Spotify-2.png"
   - name: "Steam"
     type: select
     proxies:
@@ -1560,7 +1563,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Taobao.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Taobao-1.png"
   - name: "Telasa"
     type: select
     proxies:
@@ -1614,7 +1617,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/TikTok-3.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/TikTok.png"
   - name: "Tubi"
     type: select
     proxies:
@@ -1625,6 +1628,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Tubi.png"
   - name: "Twitch"
     type: select
     proxies:
@@ -1635,7 +1639,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Twitch-2.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Twitch.png"
   - name: "U-NEXT"
     type: select
     proxies:
@@ -1646,6 +1650,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/UNEXT.png"
   - name: "Video Market"
     type: select
     proxies:
@@ -1709,7 +1714,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/WeChat.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WeChat.png"
   - name: "微博"
     type: select
     proxies:
@@ -1720,7 +1725,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Weibo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Weibo.png"
   - name: "X"
     type: select
     proxies:
@@ -1731,7 +1736,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/X-1.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/X.png"
   - name: "优酷"
     type: select
     proxies:
@@ -1764,7 +1769,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Zhihu.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Zhihu.png"
   - name: "friDay video"
     type: select
     proxies:
@@ -1786,7 +1791,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/iQIYI.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/iqiyi-1.png"
   - name: "Karaoke@DAM"
     type: select
     proxies:
