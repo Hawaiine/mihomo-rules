@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-08-02 10:59:46
+# Updated: 2026-09-01 16:47:37
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
 # DOMAIN: 107
-# DOMAIN-SUFFIX: 711
+# DOMAIN-SUFFIX: 709
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -721,8 +721,6 @@ payload:
   - DOMAIN-SUFFIX,play-fe.googleapis.com
   - DOMAIN-SUFFIX,play-games.googleusercontent.com
   - DOMAIN-SUFFIX,play-lh.googleusercontent.com
-  - DOMAIN-SUFFIX,play.google.com
-  - DOMAIN-SUFFIX,play.googleapis.com
   - DOMAIN-SUFFIX,plus.codes
   - DOMAIN-SUFFIX,polymer-project.org
   - DOMAIN-SUFFIX,polymerproject.org
