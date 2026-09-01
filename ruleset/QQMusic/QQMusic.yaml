@@ -1,0 +1,20 @@
+# ===========================================
+# Rule Name: QQ音乐
+# Author: Hawaiine
+# Updated: 2026-09-01 00:00:00
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 2
+# DOMAIN-SUFFIX: 3
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 1
+# ===========================================
+payload:
+  - DOMAIN,y.qq.com
+  - DOMAIN,qqmusic.qq.com
+  - DOMAIN-SUFFIX,qq.com
+  - DOMAIN-SUFFIX,qqmusic.qq.com
+  - DOMAIN-SUFFIX,y.qq.com
+  - PROCESS-NAME,com.tencent.qqmusic

@@ -638,6 +638,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleAI.png"
+  - name: "Google Play"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePlay.png"
   - name: "Hotstar"
     type: select
     proxies:
@@ -1242,6 +1253,28 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NHK.png"
+  - name: "网易邮箱"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/General/NetEaseMail.png"
+  - name: "网易云音乐"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/NetEaseMusic.png"
   - name: "Netflix"
     type: select
     proxies:
@@ -1435,6 +1468,28 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/QQ.png"
+  - name: "QQ邮箱"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/General/QQMail.png"
+  - name: "QQ音乐"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/QQMusic.png"
   - name: "Qobuz"
     type: select
     proxies:
@@ -1915,6 +1970,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
     interval: 86400
     path: ./ruleset/GoogleAI.yaml
+  GooglePlay:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GooglePlay/GooglePlay.yaml"
+    interval: 86400
+    path: ./ruleset/GooglePlay.yaml
   Hotstar:
     type: http
     behavior: classical
@@ -2251,6 +2312,18 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NHK/NHK.yaml"
     interval: 86400
     path: ./ruleset/NHK.yaml
+  NetEaseMail:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NetEaseMail/NetEaseMail.yaml"
+    interval: 86400
+    path: ./ruleset/NetEaseMail.yaml
+  NetEaseMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NetEaseMusic/NetEaseMusic.yaml"
+    interval: 86400
+    path: ./ruleset/NetEaseMusic.yaml
   Netflix:
     type: http
     behavior: classical
@@ -2359,6 +2432,18 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQ/QQ.yaml"
     interval: 86400
     path: ./ruleset/QQ.yaml
+  QQMail:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQMail/QQMail.yaml"
+    interval: 86400
+    path: ./ruleset/QQMail.yaml
+  QQMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQMusic/QQMusic.yaml"
+    interval: 86400
+    path: ./ruleset/QQMusic.yaml
   Qobuz:
     type: http
     behavior: classical

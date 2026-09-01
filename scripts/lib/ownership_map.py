@@ -22,4 +22,5 @@ SUB_PARENT: dict[str, str] = {
     'WhatsApp': 'Facebook',
     'Threads': 'Facebook',
     'iCloudPrivateRelay': 'iCloud',
+    'GooglePlay': 'Google',
 }

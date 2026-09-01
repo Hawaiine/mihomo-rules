@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 116 品牌 · 125 规则集 · 32 万+ 规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 121 品牌 · 130 规则集 · 32.6 万 规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -15,8 +15,8 @@
   <img src="https://img.shields.io/github/last-commit/Hawaiine/mihomo-rules" alt="最后更新">
   <img src="https://img.shields.io/github/actions/workflow/status/Hawaiine/mihomo-rules/daily-sync.yml?label=CI" alt="CI状态">
   <img src="https://img.shields.io/badge/platform-Nikki%20%7C%20Android-lightgrey" alt="支持平台">
-  <img src="https://img.shields.io/badge/rulesets-125-blue" alt="规则集数量">
-  <img src="https://img.shields.io/badge/brands-116-orange" alt="品牌数量">
+  <img src="https://img.shields.io/badge/rulesets-130-blue" alt="规则集数量">
+  <img src="https://img.shields.io/badge/brands-121-orange" alt="品牌数量">
   <img src="https://img.shields.io/github/license/Hawaiine/mihomo-rules" alt="许可证">
 </p>
 
@@ -24,7 +24,7 @@
 
 ## 📖 概述
 
-**mihomo-rules** 是一个为 Mihomo / clash-meta 内核设计的通用 RULE-SET 级规则集仓库。自动从 **v2fly/domain-list-community**、**Loyalsoldier/clash-rules**、**blackmatrix7/ios_rule_script** 三大上游同步数据，提供完整的**基础规则集** + **品牌规则集**（流媒体 / AI / 社交 / 云服务 / 游戏等 116 品牌 · 125 规则集）。
+**mihomo-rules** 是一个为 Mihomo / clash-meta 内核设计的通用 RULE-SET 级规则集仓库。自动从 **v2fly/domain-list-community**、**Loyalsoldier/clash-rules**、**blackmatrix7/ios_rule_script** 三大上游同步数据，提供完整的**基础规则集** + **品牌规则集**（流媒体 / AI / 社交 / 云服务 / 游戏等 121 品牌 · 130 规则集）。
 
 项目包含开箱即用的平台配置文件（**OpenWrt Nikki** + **Clash for Android**），自动品牌图标注入，每日 CI 自动同步，并支持 Discord 通知。
 
@@ -33,7 +33,7 @@
 |------|------|
 | 🔄 **每日自动同步** | 北京时间 06:00 自动从 3 个上游合并最新规则，Discord 通知 |
 | 📦 **即用配置** | 内置 Android + Nikki 完整配置，带注释版 + 无注释精简版，替换订阅链接即可使用 |
-| 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（116 品牌），`generate_config.py` 生成配置时自动注入 |
+| 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（121 品牌），`generate_config.py` 生成配置时自动注入 |
 | ⚡ **Python 管线** | 4 步自动（fetch → write → resolve → config）+ verify 双脚本 |
 | 🛡️ **双 verify 门禁** | `verify_configs`（20 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
 | 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
@@ -54,7 +54,7 @@ mihomo-rules/
 │   ├── Direct/                   # 基础规则集 (9个, 含 DirectDNS/ProxyDNS)
 │   │   ├── Direct.yaml           # 规则集文件（Header + payload）
 │   │   └── README.md             # 品牌说明（统计/behavior/使用方式）
-│   ├── Netflix/                  # 品牌规则集 (116个)
+│   ├── Netflix/                  # 品牌规则集 (121个)
 │   ├── OpenAI/
 │   └── .../
 ├── configs/                      # 平台配置文件
@@ -210,7 +210,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 ```
 1️⃣ 拦截    RULE-SET,Reject + GEOSITE 广告
-2️⃣ 品牌    Netflix/Bilibili 等 116 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
+2️⃣ 品牌    Netflix/Bilibili 等 121 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
 3️⃣ 直连    Applications(DIRECT) + LanCIDR/Private(DIRECT, 硬直连不可改)
 4️⃣ 国内IP  CNCIDR + GEOIP,CN → DIRECT
 5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
@@ -296,8 +296,8 @@ python3 scripts/generate_config.py
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
 | 基础 | 9 | — | 9 | 312,891 |
-| 品牌 | — | 116 | 116 | 13,294 |
-| **合计** | **9** | **116** | **125** | **326,185** |
+| 品牌 | — | 121 | 121 | 13,323 |
+| **合计** | **9** | **121** | **130** | **326,214** |
 
 规则类型分布：DOMAIN-SUFFIX(319K) · IP-CIDR(4.4K) · IP-CIDR6(1.7K) · DOMAIN(578) · DOMAIN-REGEX(148) · PROCESS-NAME(136) · DOMAIN-KEYWORD(32) · IP-ASN(8)
 
@@ -307,11 +307,11 @@ python3 scripts/generate_config.py
 |------|:-----:|:------:|------|
 | 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · Mora · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadsJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · ViuTV · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSuper |
 | 🤖 AI | 11 | 168 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 17 | 926 | Bluesky · Discord · Facebook · Instagram · Messenger · Pinterest · Pixiv · QQ · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 10 | 1,862 | AWS · Azure · Cloudflare · Docker · GitHub · Google · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
+| 📱 社交 | 19 | 938 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| ☁️ 云服务 | 11 | 1,869 | AWS · Azure · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
 | 🎮 游戏 | 2 | 204 | Nintendo · Steam · Xbox · PlayStation |
 | 🛍️ 电商 | 7 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · BiAn · OKX · SWIFT |
-| 🎵 音乐 | 7 | 78 | Deezer · Mora · Musixmatch · Qobuz · Spotify · Tidal · YouTubeMusic |
+| 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseMusic · QQMusic · Qobuz · Spotify · Tidal · YouTubeMusic |
 | 🏢 企业 | 13 | 8,405 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
 | 🏦 金融 | 0 | 0 | — |
 
@@ -352,7 +352,7 @@ python3 scripts/generate_config.py       # 重新生成配置
 
 - **[Mihomo 官方文档](https://wiki.metacubex.one/config/)** — 配置参考
 - **[Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki)** — OpenWrt 透明代理插件
-- **[Oasisic-Icons](https://github.com/Hawaiine/Oasisic-Icons)** — 100 品牌图标库
+- **[Oasisic-Icons](https://github.com/Hawaiine/Oasisic-Icons)** — 121 品牌图标库
 - **[mihomo-rules-skill](https://github.com/Hawaiine/mihomo-rules-skill)** — Hermes Agent Skill
 - **[问题反馈](https://github.com/Hawaiine/mihomo-rules/issues)**
 
