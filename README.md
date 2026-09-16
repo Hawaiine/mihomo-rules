@@ -29,6 +29,7 @@
 项目包含开箱即用的平台配置文件（**OpenWrt Nikki** + **Clash for Android**），自动品牌图标注入，每日 CI 自动同步，并支持 Discord 通知。
 
 ## ✨ 特性
+
 | 特性 | 说明 |
 |------|------|
 | 🔄 **每日自动同步** | 北京时间 06:00 自动从 3 个上游合并最新规则，Discord 通知 |
@@ -45,6 +46,7 @@
 | 🌐 **国内加速** | 内置 DNSPod/阿里 DNS 优先，国内 CDN 加速 geoip/geosite 数据库下载 |
 | 📝 **失败归档** | 失败 Action 保留排障线索 |
 | 🔒 **CI 幂等保护** | `--no-commit` 模式下仅做 dry-run，workflow filter/check 步决定是否提交 |
+| 🌍 **21 地区节点组** | 品牌组与 5 个基础功能组均加入 21 个地区节点（负载均衡后），支持手动选择地区 |
 
 ## 🏗️ 项目架构
 
@@ -54,7 +56,6 @@ mihomo-rules/
 │   ├── Direct/                   # 基础规则集 (9个, 含 DirectDNS/ProxyDNS)
 │   │   ├── Direct.yaml           # 规则集文件（Header + payload）
 │   │   └── README.md             # 品牌说明（统计/behavior/使用方式）
-│   ├── Netflix/                  # 品牌规则集 (121个)
 │   ├── OpenAI/
 │   └── .../
 ├── configs/                      # 平台配置文件
@@ -73,20 +74,20 @@ mihomo-rules/
 │   │   └── filter/               # 地区过滤正则
 │   └── nodes/                    # 单节点配置（按协议分组）
 ├── scripts/                      # Python 核心管线
-|   ├── batch_update.py           # 日更入口：4 步自动 + 校验 + Discord 通知 |
-|   ├── fetch_upstream.py         # 从 3 个上游拉取原始数据 |
-|   ├── parse_v2fly.py            # v2fly 数据解析 |
-|   ├── parse_loyalsoldier.py     # Loyalsoldier 数据解析 |
-|   ├── parse_blackmatrix7.py     # blackmatrix7 数据解析 |
-|   ├── merge_and_dedup.py        # 三源合并 + 去重 |
-|   ├── commit_writer.py          # 写入 ruleset YAML + README（含幂等） |
-|   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌） |
-|   ├── match_icons.py            # Oasisic-Icons 品牌图标映射 |
-|   ├── generate_config.py        # 生成 Android + Nikki 双平台配置 |
-|   ├── verify_configs.py         # 配置校验（20 项检查） |
-|   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README） |
-|   ├── reorder_node_files.py     # 节点文件重排 |
-|   └── lib/                      # 共享库 |
+│   ├── batch_update.py           # 日更入口：4 步自动 + 校验 + Discord 通知
+│   ├── fetch_upstream.py         # 从 3 个上游拉取原始数据
+│   ├── parse_v2fly.py            # v2fly 数据解析
+│   ├── parse_loyalsoldier.py     # Loyalsoldier 数据解析
+│   ├── parse_blackmatrix7.py     # blackmatrix7 数据解析
+│   ├── merge_and_dedup.py        # 三源合并 + 去重
+│   ├── commit_writer.py          # 写入 ruleset YAML + README（含幂等）
+│   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌目录）
+│   ├── match_icons.py            # 从 Oasisic-Icons 生成品牌图标映射
+│   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
+│   ├── verify_configs.py         # 配置校验（20 项检查）
+│   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README/behavior）
+│   ├── reorder_node_files.py     # 节点文件重排
+│   └── lib/                      # 共享库
 │       ├── canonical.py          # 规则解析、标准化、排序
 │       ├── ownership.py          # 品牌归属逻辑
 │       ├── ownership_map.py      # SUB_PARENT 父子品牌映射
@@ -196,14 +197,33 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 | `provider_us` | `(?i)(美国\|United.States\|US\|USA\|🇺🇸)` | 🇺🇸 美国节点 |
 | `provider_sg` | `(?i)(新加坡\|Singapore\|SG\|🇸🇬)` | 🇸🇬 新加坡节点 |
 | `provider_tw` | `(?i)(台湾\|Taiwan\|TW\|🇹🇼)` | 🇹🇼 台湾节点 |
+| `provider_kr` | `(?i)(韩国\|Korea\|KR\|🇰🇷)` | 🇰🇷 韩国节点 |
+| `provider_gb` | `(?i)(英国\|UK\|GB\|🇬🇧)` | 🇬🇧 英国节点 |
+| `provider_de` | `(?i)(德国\|Germany\|DE\|🇩🇪)` | 🇩🇪 德国节点 |
+| `provider_fr` | `(?i)(法国\|France\|FR\|🇫🇷)` | 🇫🇷 法国节点 |
+| `provider_ca` | `(?i)(加拿大\|Canada\|CA\|🇨🇦)` | 🇨🇦 加拿大节点 |
+| `provider_au` | `(?i)(澳大利亚\|Australia\|AU\|🇦🇺)` | 🇦🇺 澳大利亚节点 |
+| `provider_in` | `(?i)(印度\|India\|IN\|🇮🇳)` | 🇮🇳 印度节点 |
+| `provider_tr` | `(?i)(土耳其\|Turkey\|TR\|🇹🇷)` | 🇹🇷 土耳其节点 |
+| `provider_ar` | `(?i)(阿根廷\|Argentina\|AR\|🇦🇷)` | 🇦🇷 阿根廷节点 |
+| `provider_br` | `(?i)(巴西\|Brazil\|BR\|🇧🇷)` | 🇧🇷 巴西节点 |
+| `provider_ru` | `(?i)(俄罗斯\|Russia\|RU\|🇷🇺)` | 🇷🇺 俄罗斯节点 |
+| `provider_my` | `(?i)(马来西亚\|Malaysia\|MY\|🇲🇾)` | 🇲🇾 马来西亚节点 |
+| `provider_th` | `(?i)(泰国\|Thailand\|TH\|🇹🇭)` | 🇹🇭 泰国节点 |
+| `provider_vn` | `(?i)(越南\|Vietnam\|VN\|🇻🇳)` | 🇻🇳 越南节点 |
+| `provider_ph` | `(?i)(菲律宾\|Philippines\|PH\|🇵🇭)` | 🇵🇭 菲律宾节点 |
+| `provider_id` | `(?i)(印尼\|Indonesia\|ID\|🇮🇩)` | 🇮🇩 印尼节点 |
 
 ### 策略组引用结构（无环路）
 
 ```
-♻️ 自动选择 → 🇭🇰 🇯🇵 🇺🇸 🇸🇬 🇹🇼 / DIRECT
+♻️ 自动选择 → 🇭🇰 🇯🇵 🇺🇸 🇸🇬 🇹🇼 🇰🇷 🇬🇧 🇩🇪 🇫🇷 🇨🇦 🇦🇺 🇮🇳 🇹🇷 🇦🇷 🇧🇷 🇷🇺 🇲🇾 🇹🇭 🇻🇳 🇵🇭 🇮🇩 / DIRECT
 🔧 手动切换 → ♻️ 自动选择 / DIRECT / use: provider1
-🇭🇰 香港节点 → DIRECT / use: provider_hk (过滤后只显示香港节点)
-品牌组      → ♻️ 自动选择 / 🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / DIRECT
+🔯 故障转移 → ♻️ 自动选择 / 🔧 手动切换 / 🔀 负载均衡 / 21 地区节点
+🔀 负载均衡 → ♻️ 自动选择 / 🔧 手动切换 / 21 地区节点
+🐟 漏网之鱼 → 🎯 全球直连 / ♻️ 自动选择 / 🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 21 地区节点
+🌍 代理DNS → 🎯 全球直连 / ♻️ 自动选择 / 🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 21 地区节点
+品牌组      → ♻️ 自动选择 / 🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 🎯 全球直连 / 21 地区节点
 ```
 
 ### 规则匹配顺序
@@ -239,7 +259,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 | 区块 | 顺序规则 | 说明 |
 |------|---------|------|
-| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 30 系统组固定在前 |
+| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 31 系统组固定在前 |
 | **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
 | **rule-providers** | 9 兜底固定序 + 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
 
@@ -249,6 +269,10 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 |------|------------|------------|
 | **full**（`config.yaml`） | 空行（与 `rule-providers` 段分隔） | 直接跟注释，无多余空行 |
 | **min**（`config.min.yaml`） | 无空行（紧接 `rule-providers` 段） | 直接跟规则，无多余空行 |
+
+### 地区组位置
+
+品牌组与 5 个基础功能组（🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 🐟 漏网之鱼 / 🌍 代理DNS）的 `proxies:` 列表中，21 个地区节点统一放在 `🔀 负载均衡` 后面。地区组仅出现在 `proxies:`，不泄漏到 `use:` 块。
 
 ### 校验与幂等
 
@@ -269,35 +293,35 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
+| 2026-09-16 | 21 个地区节点加入品牌组（120）+ 5 个基础功能组（手动切换/故障转移/负载均衡/漏网之鱼/代理DNS）；地区组统一放在负载均衡后面；`use:` 块清理 |
 | 2026-09-01 | Icon 全量统一（370 处路径修正）+ 错配修复（Netflix/Twitch/AWS/Tubi/U-NEXT/Video Market）+ CI 安全验证（无覆盖风险） |
-| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DirectDNS/ProxyDNS 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 19 项检查 · 品牌策略组计数修正 105→100 |
-| 2026-07-22 | SUB_PARENT 单源化（ownership_map.py）；resolve_ownership 噪音修复；generate_config 幂等加固；命名两线文档 |
-| 2026-07-17 | 品牌级 6 路并发拉取、sanitize 增量模式、域名/CIDR 格式校验、异常量级 Discord 双通道报警、CI rebase 冲突显式处理 |
-| 2026-07-10 | 地区过滤 provider 启用 + 策略组环路修复 + DOMAIN-REGEX 支持 + DNS DNSPod 优先 + geo 每周更新 + config.min.yaml 无注释版 |
-
+<<<<<<< HEAD
+| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DirectDNS/ProxyDNS 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→31 · verify_configs 20 项检查 · 品牌策略组计数修正 105→120 |
+=======
+| 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DirectDNS/ProxyDNS 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 20 项检查 · 品牌策略组计数修正 105→121 |
 ## 🛠️ 脚本说明
 
 | 脚本 | 说明 | 用法 |
 |------|------|------|
 | `batch_update.py` | 日更入口：4 步自动（fetch → write → resolve → config）+ 循环外 verify 双脚本 | `python3 scripts/batch_update.py` 或 `--no-commit` |
-| `verify_configs.py` | 配置校验（19 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性） | `python3 scripts/verify_configs.py` |
+| `verify_configs.py` | 配置校验（20 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性） | `python3 scripts/verify_configs.py` |
 | `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
 | `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
 | `resolve_ownership.py` | 品牌归属去重（子品牌规则移到父品牌目录） | `python3 scripts/resolve_ownership.py --apply` |
 | `commit_writer.py` | 写入单个品牌 YAML + README（含幂等，跳过 Updated 噪音） | 由 batch_update 调用 |
 | `match_icons.py` | 从 Oasisic-Icons 生成品牌图标映射 | `python3 scripts/match_icons.py` |
 
-> 日更入口：`python3 scripts/batch_update.py`（自动 pull → 同步 → 校验 → commit → push）  
-> CI 入口：`.github/workflows/daily-sync.yml`（`batch_update --no-commit` + 显式 verify + 提交）  
+> 日更入口：`python3 scripts/batch_update.py`（自动 pull → 同步 → 校验 → commit → push）
+> CI 入口：`.github/workflows/daily-sync.yml`（`batch_update --no-commit` + 显式 verify + 提交）
 > 单品牌操作：暂由 batch_update 全量管线处理，不支持单独指定品牌 CLI
 
 ## 📊 规则集统计
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 312,891 |
-| 品牌 | — | 121 | 121 | 13,323 |
-| **合计** | **9** | **121** | **130** | **326,214** |
+| 基础 | 9 | — | 9 | 313,023 |
+| 品牌 | — | 120 | 120 | 13,195 |
+| **合计** | **9** | **120** | **129** | **326,218** |
 
 规则类型分布：DOMAIN-SUFFIX(319K) · IP-CIDR(4.4K) · IP-CIDR6(1.7K) · DOMAIN(578) · DOMAIN-REGEX(148) · PROCESS-NAME(136) · DOMAIN-KEYWORD(32) · IP-ASN(8)
 
@@ -307,12 +331,12 @@ python3 scripts/generate_config.py
 |------|:-----:|:------:|------|
 | 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · Mora · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadsJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · ViuTV · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSuper |
 | 🤖 AI | 11 | 168 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 19 | 938 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 11 | 1,869 | AWS · Azure · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
-| 🎮 游戏 | 2 | 204 | Nintendo · Steam · Xbox · PlayStation |
-| 🛍️ 电商 | 7 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · BiAn · OKX · SWIFT |
+| 📱 社交 | 18 | 938 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| ☁️ 云服务 | 11 | 1,869 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
+| 🎮 游戏 | 2 | 204 | Nintendo · Steam |
+| 🛍️ 电商 | 9 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · BiAn · OKX · SWIFT |
 | 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseMusic · QQMusic · Qobuz · Spotify · Tidal · YouTubeMusic |
-| 🏢 企业 | 13 | 8,405 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
+| 🏢 企业 | 12 | 8,405 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
 | 🏦 金融 | 0 | 0 | — |
 
 ## 🤝 贡献指南
