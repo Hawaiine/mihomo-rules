@@ -65,12 +65,14 @@ class TestIconMap(unittest.TestCase):
         self.assertFalse(match_icons.is_emoji_group(''))
 
     def test_scan_prefers_git_tree(self):
-        match_icons.scan_icons()
+        """有图标仓库时，扫描来源必须是 git tree 而非工作区/缺失"""
+        self.assertTrue(os.path.isdir(match_icons.ICON_REPO / 'icons'),
+                        f'测试环境缺少图标仓库: {match_icons.ICON_REPO}')
+        icons = match_icons.scan_icons()
         source = match_icons.scan_source()
-        self.assertTrue(
-            '@' in source or '工作区扫描' in source or '缺失' in source,
-            f'扫描来源描述异常: {source}',
-        )
+        self.assertTrue(icons, '扫描结果为空')
+        self.assertNotIn('未扫描', source)
+        self.assertNotIn('缺失', source, f'扫描来源异常: {source}')
 
 
 if __name__ == '__main__':

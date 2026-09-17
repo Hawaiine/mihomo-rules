@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-09-18
+
+### Added
+- **verify_configs 第 22–24 项检查** — 地区组结构校验：品牌组 `proxies` 必须为 5 基础组 + 21 地区组（顺序固定）、5 个基础功能组必须含完整 21 地区组、21 个地区组不得出现在任何 `use:` 块；`REGION_GROUPS` 从 `generate_config.py` 读取，避免两处硬编码漂移
+- **`scripts/tests/test_region_injection.py`** — 上述三项检查的单元测试（10 用例），确保检查非空转
+
+### Changed
+- **verify_configs 检查项 21 → 24**（23 项/变体 + 1 项跨变体）
+- **图标映射内置 emoji 前缀组抑制** — `build_icon_map()` 跳过显示名以 emoji 开头的策略组（当前 8 个：Bank / Game Japan / General AI / Oasisic Self / PT / PT China / Porn / Porn China），上游 Oasisic-Icons 补图也不会回流；新增 `emoji_skipped_brands()` 供日志报告
+
+### Fixed
+- **🤖 General AI icon 回流** — 上游 `ca3b7d2` 补了 `AI/GeneralAI/GeneralAI.png` 后生成器自动把 icon 行加回 4 个 config，按项目约定（emoji 前缀组不配 icon）移除并加抑制规则
+- **README 数字口径全面校正** — 统计表品牌 120→121、合计 129→130，基础/品牌规则拆分 313,023/13,195 → 312,891/13,327（合计 326,218 不变）；「系统组固定在前」31→30；分类表计数与列名对齐（流媒体 49 / 社交 19 / 电商 7 / 企业 13），剔除 ViuTV·BiAn·OKX·SWIFT 幽灵条目与 Mora 跨行重复；规则类型分布 DOMAIN 578→597、PROCESS-NAME 136→140
+- **`test_icon_check.py` 扫描来源断言收紧** — 原断言把「缺失」也算通过，图标仓库不可用时会产生假绿
+
+---
+
 ## 2026-09-17
 
 ### Added
@@ -15,12 +32,21 @@
 - **图标映射单一入口** — `match_icons.build_icon_map()` 成为唯一来源；`generate_config.extract_icons` 不再反向从现有 config 提取图标，扫描基准从工作区改为 git tree（避免上游已删除/未推送的文件被写成 404）
 - **`ICON_OVERRIDES` 显式覆盖表** — friDay video / Cloudflare / OneDrive 固定指向，消除扫描顺序漂移
 - **GameJapan 显示名补空格** — 🎮Game Japan → 🎮 Game Japan（STRATEGY_GROUP_MAP + 4 config + ruleset header/README）
+- **TIDAL 技术 ID 与显示名统一** — 目录 `ruleset/TIDAL`、文件 `TIDAL.yaml`、provider key、url/path、RULE-SET 注释与 README 分类行全部统一为 `TIDAL`（此前只有显示名是 TIDAL）；`parse_v2fly.py` 的 v2fly 品牌映射同步指向 TIDAL
 - **emoji 前缀策略组不配 icon** — 38 个 emoji 组零例外
 - **verify_configs 检查项 20 → 21**
 
 ### Fixed
 - **移除 8 条指向不存在文件的 icon 引用** — Bank / PT / PT China / Porn / Porn China / Game Japan / General AI / Oasisic Self
 - **README 残留 merge conflict 标记** — 清理 `<<<<<<< HEAD` / `=======` 及重复的 2026-08-09 行
+
+---
+
+## 2026-09-16
+
+### Added
+- **21 个地区节点组注入** — 品牌组 `proxies` 由 5 个基础组扩展为「5 基础 + 21 地区组」（地区组统一排在 🔀 负载均衡 之后）；5 个基础功能组（🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 🐟 漏网之鱼 / 🌍 代理DNS）同步注入 21 地区组
+- **`REGION_GROUPS` 独立维护** — `generate_config.py` 中 21 个地区组单独成表，`SYSTEM_GROUPS` 由其拼接复用（系统组 30），避免重复硬编码
 
 ---
 

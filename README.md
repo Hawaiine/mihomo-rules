@@ -36,7 +36,7 @@
 | 📦 **即用配置** | 内置 Android + Nikki 完整配置，带注释版 + 无注释精简版，替换订阅链接即可使用 |
 | 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（121 品牌，emoji 前缀组不配图标），`generate_config.py` 生成配置时自动注入 |
 | ⚡ **Python 管线** | 4 步自动（fetch → write → resolve → config）+ verify 双脚本 |
-| 🛡️ **双 verify 门禁** | `verify_configs`（21 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
+| 🛡️ **双 verify 门禁** | `verify_configs`（24 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
 | 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
 | 🔧 **写入幂等** | `has_meaningful_diff` 忽略 `Updated:` 噪音；payload 不变不写 YAML，统计不变不写 README |
 | 📊 **增量清洗** | 只处理本次同步变更过的品牌，非全量文件扫描 |
@@ -84,7 +84,7 @@ mihomo-rules/
 │   ├── resolve_ownership.py      # 品牌归属去重（子品牌规则移到父品牌目录）
 │   ├── match_icons.py            # 从 Oasisic-Icons 生成品牌图标映射
 │   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
-│   ├── verify_configs.py         # 配置校验（21 项检查）
+│   ├── verify_configs.py         # 配置校验（24 项检查）
 │   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README/behavior）
 │   ├── reorder_node_files.py     # 节点文件重排
 │   └── lib/                      # 共享库
@@ -259,7 +259,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 | 区块 | 顺序规则 | 说明 |
 |------|---------|------|
-| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 31 系统组固定在前 |
+| **proxy-groups** | 子品牌优先于父品牌（SUB_PARENT），其余按显示名字母序 | 30 系统组固定在前 |
 | **full 注释 RULE-SET** | 与 proxy-groups 品牌段顺序一致 | 仅 full 版有注释，min 版无 |
 | **rule-providers** | 9 兜底固定序 + 品牌 key 字母序 | 与 proxy-groups **不同序是预期行为** |
 
@@ -277,7 +277,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 ### 校验与幂等
 
 ```bash
-# 全量校验（21 项检查，失败 exit≠0）
+# 全量校验（24 项检查，失败 exit≠0）
 python3 scripts/verify_configs.py
 
 # ruleset 一致性校验（header/payload/README/behavior，失败 exit≠0）
@@ -293,8 +293,10 @@ python3 scripts/generate_config.py
 
 | 日期 | 内容 |
 |------|------|
+| 2026-09-18 | 文档口径全面校正（品牌 121 / 规则集 130 / 系统组 30 / 分类表计数与列名对齐、剔除 ViuTV·BiAn·OKX·SWIFT 幽灵条目、纠正规则类型分布）· verify_configs 新增 3 项地区组结构检查（品牌组 5+21、5 个基础功能组 21、地区组不得进 use，20→23 项/变体）· 图标映射内置 emoji 前缀组抑制（上游补图不回流） |
+| 2026-09-17 | 品牌命名规范统一：GameJapan 显示名 → 🎮 Game Japan · TIDAL 技术 ID 与显示名统一（目录 `ruleset/TIDAL`、文件 `TIDAL.yaml`、provider key、url/path、RULE-SET 注释）· ReadsJapan → ReadJapan 目录与文件改名 |
 | 2026-09-17 | 图标引用治理：移除 8 条指向不存在文件的 icon（Bank/PT/PT China/Porn/Porn China/Game Japan/General AI/Oasisic Self）· emoji 前缀组一律不配 icon · GameJapan 显示名补空格（🎮 Game Japan）· match_icons 与 generate_config 双实现统一为单一图标映射入口 · verify_configs 新增 icon 存在性检查（20→21 项） |
-| 2026-09-16 | 21 个地区节点加入品牌组（120）+ 5 个基础功能组（手动切换/故障转移/负载均衡/漏网之鱼/代理DNS）；地区组统一放在负载均衡后面；`use:` 块清理 |
+| 2026-09-16 | 21 个地区节点加入品牌组（121）+ 5 个基础功能组（手动切换/故障转移/负载均衡/漏网之鱼/代理DNS）；地区组统一放在负载均衡后面；`use:` 块清理 |
 | 2026-09-01 | Icon 全量统一（370 处路径修正）+ 错配修复（Netflix/Twitch/AWS/Tubi/U-NEXT/Video Market）+ CI 安全验证（无覆盖风险） |
 | 2026-08-09 | DNS 全面升级：DoH 化 + 独立策略组 + IPv6 补全 · 拆分 DirectDNS/ProxyDNS 为独立 select 组 · 新增国内 9 条 IPv6 + 国外 8 条 IPv6 · 新增 Control D/CleanBrowsing/DNS.SB · README 简介 + 覆盖服务表 · 系统组 28→30 · verify_configs 20 项检查 · 品牌策略组计数修正 105→121 |
 
@@ -303,7 +305,7 @@ python3 scripts/generate_config.py
 | 脚本 | 说明 | 用法 |
 |------|------|------|
 | `batch_update.py` | 日更入口：4 步自动（fetch → write → resolve → config）+ 循环外 verify 双脚本 | `python3 scripts/batch_update.py` 或 `--no-commit` |
-| `verify_configs.py` | 配置校验（21 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性/icon 文件存在性） | `python3 scripts/verify_configs.py` |
+| `verify_configs.py` | 配置校验（24 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性/地区组结构/icon 文件存在性） | `python3 scripts/verify_configs.py` |
 | `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
 | `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
 | `resolve_ownership.py` | 品牌归属去重（子品牌规则移到父品牌目录） | `python3 scripts/resolve_ownership.py --apply` |
@@ -318,24 +320,24 @@ python3 scripts/generate_config.py
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 313,023 |
-| 品牌 | — | 120 | 120 | 13,195 |
-| **合计** | **9** | **120** | **129** | **326,218** |
+| 基础 | 9 | — | 9 | 312,891 |
+| 品牌 | — | 121 | 121 | 13,327 |
+| **合计** | **9** | **121** | **130** | **326,218** |
 
-规则类型分布：DOMAIN-SUFFIX(319K) · IP-CIDR(4.4K) · IP-CIDR6(1.7K) · DOMAIN(578) · DOMAIN-REGEX(148) · PROCESS-NAME(136) · DOMAIN-KEYWORD(32) · IP-ASN(8)
+规则类型分布：DOMAIN-SUFFIX(319K) · IP-CIDR(4.4K) · IP-CIDR6(1.7K) · DOMAIN(597) · DOMAIN-REGEX(148) · PROCESS-NAME(140) · DOMAIN-KEYWORD(32) · IP-ASN(8)
 
 ### 品牌分类统计
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
-| 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · Mora · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · ViuTV · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSuper |
-| 🤖 AI | 11 | 168 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 18 | 938 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 11 | 1,869 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
+| 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSuper |
+| 🤖 AI | 11 | 176 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
+| 📱 社交 | 19 | 939 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| ☁️ 云服务 | 11 | 1,865 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
 | 🎮 游戏 | 2 | 204 | Nintendo · Steam |
-| 🛍️ 电商 | 9 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · BiAn · OKX · SWIFT |
+| 🛍️ 电商 | 7 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
 | 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseMusic · QQMusic · Qobuz · Spotify · TIDAL · YouTubeMusic |
-| 🏢 企业 | 12 | 8,405 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
+| 🏢 企业 | 13 | 8,404 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
 | 🏦 金融 | 0 | 0 | — |
 
 ## 🤝 贡献指南
