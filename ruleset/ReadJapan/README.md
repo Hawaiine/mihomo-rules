@@ -1,4 +1,4 @@
-# 📦 Reads Japan 规则集
+# 📦 Read Japan 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: Reads Japan
+- **策略组**: Read Japan

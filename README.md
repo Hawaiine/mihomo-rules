@@ -335,7 +335,7 @@ python3 scripts/generate_config.py
 | ☁️ 云服务 | 11 | 1,869 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
 | 🎮 游戏 | 2 | 204 | Nintendo · Steam |
 | 🛍️ 电商 | 9 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · BiAn · OKX · SWIFT |
-| 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseMusic · QQMusic · Qobuz · Spotify · Tidal · YouTubeMusic |
+| 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseMusic · QQMusic · Qobuz · Spotify · TIDAL · YouTubeMusic |
 | 🏢 企业 | 12 | 8,405 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
 | 🏦 金融 | 0 | 0 | — |
 

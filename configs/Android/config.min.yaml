@@ -2016,7 +2016,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-  - name: "Game Japan"
+  - name: "🎮 Game Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -3474,7 +3474,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-  - name: "Reads Japan"
+  - name: "Read Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -3856,7 +3856,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo.png"
-  - name: "Tidal"
+  - name: "TIDAL"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -5108,12 +5108,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RakutenTV/RakutenTV.yaml"
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
-  ReadsJapan:
+  ReadJapan:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadJapan/ReadJapan.yaml"
     interval: 86400
-    path: ./ruleset/ReadsJapan.yaml
+    path: ./ruleset/ReadJapan.yaml
   RedNote:
     type: http
     behavior: classical
@@ -5180,12 +5180,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
     path: ./ruleset/TencentVideo.yaml
-  Tidal:
+  TIDAL:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TIDAL/TIDAL.yaml"
     interval: 86400
-    path: ./ruleset/Tidal.yaml
+    path: ./ruleset/TIDAL.yaml
   TikTok:
     type: http
     behavior: classical
