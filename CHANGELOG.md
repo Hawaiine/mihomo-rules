@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-09-17
+
+### Added
+- **verify_configs 第 21 项检查** — icon 引用存在性校验，基准取 Oasisic-Icons git tree（origin/main → main → HEAD），定位不到图标仓库时自动跳过
+- **`scripts/tests/test_icon_check.py`** — icon 存在性校验与图标映射入口的单元测试（5 用例）
+
+### Changed
+- **图标映射单一入口** — `match_icons.build_icon_map()` 成为唯一来源；`generate_config.extract_icons` 不再反向从现有 config 提取图标，扫描基准从工作区改为 git tree（避免上游已删除/未推送的文件被写成 404）
+- **`ICON_OVERRIDES` 显式覆盖表** — friDay video / Cloudflare / OneDrive 固定指向，消除扫描顺序漂移
+- **GameJapan 显示名补空格** — 🎮Game Japan → 🎮 Game Japan（STRATEGY_GROUP_MAP + 4 config + ruleset header/README）
+- **emoji 前缀策略组不配 icon** — 38 个 emoji 组零例外
+- **verify_configs 检查项 20 → 21**
+
+### Fixed
+- **移除 8 条指向不存在文件的 icon 引用** — Bank / PT / PT China / Porn / Porn China / Game Japan / General AI / Oasisic Self
+- **README 残留 merge conflict 标记** — 清理 `<<<<<<< HEAD` / `=======` 及重复的 2026-08-09 行
+
+---
+
 ## 2026-08-30
 
 ### Added

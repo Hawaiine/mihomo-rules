@@ -49,6 +49,13 @@ SYSTEM_GROUPS = [
 
 from lib.ownership_map import SUB_PARENT
 
+# Oasisic-Icons 仓库位置（用于校验 icon 引用是否真实存在）
+ICON_REPO_CANDIDATES = [
+    os.environ.get('MIHOMO_ICON_REPO'),
+    str(ROOT / 'Oasisic-Icons'),
+    '/opt/data/Oasisic-Icons',
+]
+
 # 从 commit_writer.py 加载
 def load_sg_map():
     import importlib.util
@@ -513,6 +520,63 @@ def check_use_provider_exists(lines, variant):
         return False
     return True
 
+def check_icons_exist(lines, variant, icon_ref):
+    """所有 icon 引用必须指向 Oasisic-Icons 上真实存在的文件
+
+    基准优先取图标仓库的 git tree（origin/main → main → HEAD），
+    避免工作区残留已被上游删除的文件造成误判。
+    """
+    if icon_ref is None:
+        return True
+    paths, _ = icon_ref
+    broken = []
+    for line in lines:
+        m = re.match(r'\s+icon:\s*"([^"]+)"', line)
+        if not m:
+            continue
+        url = m.group(1)
+        if '/icons/' not in url:
+            broken.append(url)
+            continue
+        rel = url.split('/icons/', 1)[1]
+        if rel not in paths:
+            broken.append(rel)
+    if broken:
+        for rel in sorted(set(broken)):
+            print(f'  FAIL: {variant} — icon 文件不存在于 Oasisic-Icons: {rel}')
+        return False
+    return True
+
+
+def load_icon_reference():
+    """返回 ((icon 相对路径集合), 来源描述) 或 (None, 原因)"""
+    import subprocess
+    for cand in ICON_REPO_CANDIDATES:
+        if not cand or not os.path.isdir(os.path.join(cand, 'icons')):
+            continue
+        for ref in ('origin/main', 'main', 'HEAD'):
+            try:
+                r = subprocess.run(
+                    ['git', '-C', cand, 'ls-tree', '-r', '--name-only', ref, '--', 'icons/'],
+                    capture_output=True, text=True, timeout=30,
+                )
+            except (OSError, subprocess.SubprocessError):
+                break
+            if r.returncode == 0 and r.stdout.strip():
+                paths = {p[len('icons/'):] for p in r.stdout.splitlines() if p.endswith('.png')}
+                if paths:
+                    return paths, f'{cand}@{ref}'
+        root = os.path.join(cand, 'icons')
+        paths = set()
+        for dirpath, _, files in os.walk(root):
+            for f in files:
+                if f.endswith('.png'):
+                    paths.add(os.path.relpath(os.path.join(dirpath, f), root))
+        if paths:
+            return paths, f'{cand} (工作区扫描)'
+    return None, '未找到 Oasisic-Icons'
+
+
 def check_cross_variant_rules(configs, all_lines):
     """同平台 full vs min 激活规则列表必须全等"""
     platforms = {
@@ -562,6 +626,12 @@ def main():
     print('  verify_configs.py — 4 个 config 全量校验')
     print('=' * 60)
     print(f'  品牌总数: {len(ALL_BRANDS)}')
+    icon_paths, icon_src = load_icon_reference()
+    if icon_paths:
+        print(f'  icon 基准: {icon_src}（{len(icon_paths)} 个 png）')
+    else:
+        print(f'  icon 基准: 无（{icon_src}），跳过 icon 存在性检查')
+    icon_ref = (icon_paths, icon_src) if icon_paths else None
     # 按平台分组
     configs = {}
     for platform, dir_path in CONFIG_DIRS.items():
@@ -606,6 +676,7 @@ def main():
             ('min proxy-providers no blank lines', check_min_proxy_providers_no_blank_lines(lines, variant)),
             ('rules no quoted strategy', check_rules_no_quoted_strategy(lines, variant)),
             ('use provider exists', check_use_provider_exists(lines, variant)),
+            ('icon files exist', check_icons_exist(lines, variant, icon_ref)),
         ]
 
         variant_pass = all(r for _, r in checks)
