@@ -36,36 +36,29 @@ BASE_PROVIDERS = {
     'CNCIDR':       'classical',
 }
 
-# 系统组名称列表
-SYSTEM_GROUPS = [
-    '♻️ 自动选择',
-    '🇭🇰 香港节点',
-    '🇯🇵 日本节点',
-    '🇺🇸 美国节点',
-    '🇸🇬 新加坡节点',
-    '🇹🇼 台湾节点',
-    '🇰🇷 韩国节点',
-    '🇬🇧 英国节点',
-    '🇩🇪 德国节点',
-    '🇫🇷 法国节点',
-    '🇨🇦 加拿大节点',
-    '🇦🇺 澳大利亚节点',
-    '🇮🇳 印度节点',
-    '🇹🇷 土耳其节点',
-    '🇦🇷 阿根廷节点',
-    '🇧🇷 巴西节点',
-    '🇷🇺 俄罗斯节点',
-    '🇲🇾 马来西亚节点',
-    '🇹🇭 泰国节点',
-    '🇻🇳 越南节点',
-    '🇵🇭 菲律宾节点',
+# 21 个地区节点（固定顺序）
+REGION_GROUPS = [
+    '🇭🇰 香港节点', '🇯🇵 日本节点', '🇺🇸 美国节点', '🇸🇬 新加坡节点',
+    '🇹🇼 台湾节点', '🇰🇷 韩国节点', '🇬🇧 英国节点', '🇩🇪 德国节点',
+    '🇫🇷 法国节点', '🇨🇦 加拿大节点', '🇦🇺 澳大利亚节点', '🇮🇳 印度节点',
+    '🇹🇷 土耳其节点', '🇦🇷 阿根廷节点', '🇧🇷 巴西节点', '🇷🇺 俄罗斯节点',
+    '🇲🇾 马来西亚节点', '🇹🇭 泰国节点', '🇻🇳 越南节点', '🇵🇭 菲律宾节点',
     '🇮🇩 印尼节点',
-    '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
-    '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
-    '🇨🇳 直连DNS', '🌍 代理DNS',
 ]
 
+# 系统组名称列表（地区组由 REGION_GROUPS 单独维护，此处引用）
+SYSTEM_GROUPS = (
+    ['♻️ 自动选择'] +
+    REGION_GROUPS +
+    ['🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
+     '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
+     '🇨🇳 直连DNS', '🌍 代理DNS']
+)
+
 GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main'
+
+# 需要注入 21 个地区节点的基础功能组（顺序固定）
+BASIC_REGION_GROUPS = ['🔧 手动切换', '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼', '🌍 代理DNS']
 
 
 def load_strategy_group_map():
@@ -210,9 +203,44 @@ def extract_system_groups(config_path, compact=False):
                             continue
                 compact_lines.append(line)
             result_str = '\n'.join(compact_lines)
+        # 地区节点注入：5 个基础功能组的 proxies 尾部追加 21 个地区组
+        # （仅追加缺失项，保持幂等；原有条目顺序不变）
+        result_str = _inject_basic_region_groups(result_str)
         return result_str.rstrip('\n') + '\n'
     except Exception:
         return ''
+
+
+def _inject_basic_region_groups(text):
+    """给 5 个基础功能组的 proxies 追加 21 个地区节点（幂等，缺失才补）"""
+    if not text:
+        return text
+    lines = text.split('\n')
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        out.append(line)
+        m = re.match(r'\s*-\s*name:\s*"([^"]+)"', line)
+        if m and m.group(1) in BASIC_REGION_GROUPS:
+            j = i + 1
+            block = []
+            while j < n and not re.match(r'\s*-\s*name:\s*"', lines[j]):
+                block.append(lines[j])
+                j += 1
+            existing = [l for l in block if l.strip().startswith('- "')]
+            existing_set = set(l.strip()[3:-1] for l in existing)
+            missing = [rg for rg in REGION_GROUPS if rg not in existing_set]
+            if missing:
+                p_idx = next(k for k, l in enumerate(block) if l.strip() == 'proxies:')
+                insert_at = p_idx + 1 + len(existing)
+                block[insert_at:insert_at] = [f'      - "{rg}"' for rg in missing]
+            out.extend(block)
+            i = j
+            continue
+        i += 1
+    return '\n'.join(out)
 
 
 def extract_system_config(config_path, compact=False):
@@ -281,6 +309,9 @@ def gen_proxy_groups(brand_info, icons, blank_between=False):
         lines.append('      - "🔧 手动切换"')
         lines.append('      - "🔯 故障转移"')
         lines.append('      - "🔀 负载均衡"')
+        # 21 个地区节点注入品牌组 proxies（固定顺序，供手动切换选择）
+        for rg in REGION_GROUPS:
+            lines.append(f'      - "{rg}"')
         lines.append('    use:')
         lines.append('      - provider1')
         if bi['sg'] in icons:
