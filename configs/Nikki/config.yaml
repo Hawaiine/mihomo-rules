@@ -2196,7 +2196,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/FujiTV/FujiTV.png"
 
-  - name: "Game Japan"
+  - name: "🎮 Game Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -3707,7 +3707,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RakutenTV/RakutenTV.png"
 
-  - name: "Reads Japan"
+  - name: "Read Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -3738,6 +3738,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ReadJapan/ReadJapan.png"
 
   - name: "小红书"
     type: select
@@ -3903,6 +3904,39 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Synology/Synology.png"
+
+  - name: "TIDAL"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
 
   - name: "TMDB"
     type: select
@@ -4101,39 +4135,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo/TencentVideo.png"
-
-  - name: "Tidal"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
 
   - name: "TikTok"
     type: select
@@ -5475,12 +5476,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
 
-  ReadsJapan:
+  ReadJapan:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadJapan/ReadJapan.yaml"
     interval: 86400
-    path: ./ruleset/ReadsJapan.yaml
+    path: ./ruleset/ReadJapan.yaml
 
   RedNote:
     type: http
@@ -5516,6 +5517,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Synology/Synology.yaml"
     interval: 86400
     path: ./ruleset/Synology.yaml
+
+  TIDAL:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TIDAL/TIDAL.yaml"
+    interval: 86400
+    path: ./ruleset/TIDAL.yaml
 
   TMDB:
     type: http
@@ -5558,13 +5566,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
     path: ./ruleset/TencentVideo.yaml
-
-  Tidal:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
-    interval: 86400
-    path: ./ruleset/Tidal.yaml
 
   TikTok:
     type: http
@@ -5759,7 +5760,7 @@ rules:
                                                     # - RULE-SET,F1TV,F1 TV
                                                     # - RULE-SET,Facebook,Facebook
                                                     # - RULE-SET,FujiTV,Fuji TV
-                                                    # - RULE-SET,GameJapan,Game Japan
+                                                    # - RULE-SET,GameJapan,🎮 Game Japan
                                                     # - RULE-SET,GeneralAI,🤖 General AI
                                                     # - RULE-SET,Google,Google
                                                     # - RULE-SET,HBO,HBO
@@ -5805,19 +5806,19 @@ rules:
                                                     # - RULE-SET,Qobuz,Qobuz
                                                     # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
-                                                    # - RULE-SET,ReadsJapan,Reads Japan
+                                                    # - RULE-SET,ReadJapan,Read Japan
                                                     # - RULE-SET,RedNote,小红书
                                                     # - RULE-SET,Reddit,Reddit
                                                     # - RULE-SET,Spotify,Spotify
                                                     # - RULE-SET,Steam,Steam
                                                     # - RULE-SET,Synology,Synology
+                                                    # - RULE-SET,TIDAL,TIDAL
                                                     # - RULE-SET,TMDB,TMDB
                                                     # - RULE-SET,TVer,TVer
                                                     # - RULE-SET,Taobao,淘宝
                                                     # - RULE-SET,Telasa,Telasa
                                                     # - RULE-SET,Telegram,Telegram
                                                     # - RULE-SET,TencentVideo,腾讯视频
-                                                    # - RULE-SET,Tidal,Tidal
                                                     # - RULE-SET,TikTok,TikTok
                                                     # - RULE-SET,Tubi,Tubi
                                                     # - RULE-SET,Twitch,Twitch

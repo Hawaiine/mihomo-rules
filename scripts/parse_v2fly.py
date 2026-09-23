@@ -173,7 +173,7 @@ V2FLY_BRAND_MAP: dict[str, str] = {
     "rakuten": "RakutenTV",
     "radiko": "Radiko",
     "tmdb": "TMDB",
-    "tidal": "Tidal",
+    "tidal": "TIDAL",
     "tubi": "Tubi",
     "unext": "UNext",
     "viu": "Viu",
