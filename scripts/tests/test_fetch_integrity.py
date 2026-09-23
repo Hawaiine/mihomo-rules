@@ -7,6 +7,7 @@ release），当时「成功」判据只有 git 操作成功 + 文件数 > 0 —
 
 import os
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -146,7 +147,8 @@ class TestStatsAndHistory(unittest.TestCase):
         import json
         fu.save_stats(self.stats, {'loyalsoldier': {
             'commit': 'abc123', 'file_count': 122, 'line_counts': {'reject.txt': 191081}}})
-        data = json.load(open(self.stats))
+        with open(self.stats) as f:
+            data = json.load(f)
         self.assertEqual(data['upstreams']['loyalsoldier']['commit'], 'abc123')
         self.assertIn('generated_at', data)
 
@@ -181,32 +183,26 @@ class TestCheckTruncation(unittest.TestCase):
         self.assertGreater(src.count('check_truncation('), 1)
 
 
-class TestStaleLockCleanup(unittest.TestCase):
-    """陈旧 git 锁清理（fetch 被超时 kill 后会留下 shallow.lock）。"""
+class TestGitLockSafety(unittest.TestCase):
+    """锁是否可删除不能靠年龄判断；只检查并安全失败。"""
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.repo = os.path.join(self._tmp.name, 'r')
-        os.makedirs(os.path.join(self.repo, '.git'))
+        subprocess.run(['git', 'init', '-q', self.repo], check=True)
 
     def tearDown(self):
         self._tmp.cleanup()
 
-    def test_old_lock_is_removed(self):
-        lock = os.path.join(self.repo, '.git', 'shallow.lock')
-        open(lock, 'w').close()
-        os.utime(lock, (0, 0))  # 设为极旧
-        removed = fu._clear_stale_locks(self.repo, min_age=60)
-        self.assertIn('shallow.lock', removed)
-        self.assertFalse(os.path.exists(lock))
+    def test_repository_without_locks_is_allowed(self):
+        self.assertIsNone(fu._check_git_locks(self.repo))
 
     def test_fresh_lock_is_kept(self):
-        """新鲜锁可能真被别的进程持有，不能删。"""
-        lock = os.path.join(self.repo, '.git', 'index.lock')
-        open(lock, 'w').close()
-        removed = fu._clear_stale_locks(self.repo, min_age=60)
-        self.assertNotIn('index.lock', removed)
-        self.assertTrue(os.path.exists(lock))
+        lock = Path(self.repo) / '.git' / 'index.lock'
+        lock.write_bytes(b'')
+        with self.assertRaisesRegex(RuntimeError, '未删除'):
+            fu._check_git_locks(self.repo)
+        self.assertTrue(lock.exists())
 
 
 if __name__ == '__main__':

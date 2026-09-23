@@ -37,19 +37,14 @@ class TestH1Hardening(unittest.TestCase):
             count, _size = fu._count_files(str(d))
             self.assertEqual(count, 2, '.git 不得计入文件数')
 
-    def test_lock_min_age_exceeds_fetch_timeout(self):
+    def test_total_fetch_budget_leaves_outer_cleanup_margin(self):
+        import batch_update
         fu = _load_fetch_upstream()
-        self.assertGreaterEqual(
-            fu.LOCK_MIN_AGE, fu.FETCH_TIMEOUT,
-            "锁清理阈值必须 >= fetch 超时，否则会删掉正在运行的 fetch 的锁")
-
-    def test_fetch_timeout_less_than_batch_step_timeout(self):
-        fu = _load_fetch_upstream()
-        batch_src = (ROOT / 'scripts' / 'batch_update.py').read_text()
-        self.assertIn('("fetch_upstream", "拉取上游数据", 300)', batch_src)
-        self.assertLess(
-            fu.FETCH_TIMEOUT, 300,
-            "fetch 子超时若 >= 外层 300s，内部重试与清理逻辑无法执行")
+        outer_timeout = next(seconds for name, _, seconds in batch_update.STEPS
+                             if name == 'fetch_upstream')
+        self.assertLessEqual(fu.FETCH_TIMEOUT, fu.FETCH_TOTAL_TIMEOUT)
+        self.assertLessEqual(fu.CLONE_TIMEOUT, fu.FETCH_TOTAL_TIMEOUT)
+        self.assertGreaterEqual(outer_timeout - fu.FETCH_TOTAL_TIMEOUT, 10)
 
     def test_timeout_kills_descendants(self):
         """超时必须能杀到孙进程（git 孙进程会持有 .git 锁）。"""
