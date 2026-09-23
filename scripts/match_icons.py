@@ -32,6 +32,7 @@ ICON_OVERRIDES = {
     'friDay video': 'Media/friDayVideo/friDayVideo.png',
     'Disney': 'Media/DisneyPlus/DisneyPlus.png',
     'HBO': 'Media/HBOMAX/HBOMAX.png',
+    '网易云音乐': 'Music/NetEaseCloudMusic/NetEaseCloudMusic.png',
     # 下列品牌在图标仓库中存在多个分类目录，固定指向避免扫描顺序变化导致路径漂移
     'Cloudflare': 'DevOps/Cloudflare/Cloudflare.png',
     'OneDrive': 'Microsoft/OneDrive/OneDrive.png',

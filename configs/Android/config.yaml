@@ -767,6 +767,18 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleAI/GoogleAI.png"
 
+  - name: "Google Play"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePlay/GooglePlay.png"
+
   - name: "Hotstar"
     type: select
     proxies:
@@ -1436,6 +1448,30 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NHK/NHK.png"
 
+  - name: "网易云音乐"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/NetEaseCloudMusic/NetEaseCloudMusic.png"
+
+  - name: "网易邮箱"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/General/NetEaseMail/NetEaseMail.png"
+
   - name: "Netflix"
     type: select
     proxies:
@@ -1646,6 +1682,30 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/QQ/QQ.png"
+
+  - name: "QQ邮箱"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/General/QQMail/QQMail.png"
+
+  - name: "QQ音乐"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/QQMusic/QQMusic.png"
 
   - name: "Qobuz"
     type: select
@@ -2054,7 +2114,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KaraokeDAM/KaraokeDAM.png"
 
-  - name: "myTV Super"
+  - name: "myTV SUPER"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -2183,6 +2243,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
     interval: 86400
     path: ./ruleset/GoogleAI.yaml
+
+  GooglePlay:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GooglePlay/GooglePlay.yaml"
+    interval: 86400
+    path: ./ruleset/GooglePlay.yaml
 
   Hotstar:
     type: http
@@ -2576,6 +2643,20 @@ rule-providers:
     interval: 86400
     path: ./ruleset/NHK.yaml
 
+  NetEaseCloudMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NetEaseCloudMusic/NetEaseCloudMusic.yaml"
+    interval: 86400
+    path: ./ruleset/NetEaseCloudMusic.yaml
+
+  NetEaseMail:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NetEaseMail/NetEaseMail.yaml"
+    interval: 86400
+    path: ./ruleset/NetEaseMail.yaml
+
   Netflix:
     type: http
     behavior: classical
@@ -2701,6 +2782,20 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQ/QQ.yaml"
     interval: 86400
     path: ./ruleset/QQ.yaml
+
+  QQMail:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQMail/QQMail.yaml"
+    interval: 86400
+    path: ./ruleset/QQMail.yaml
+
+  QQMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/QQMusic/QQMusic.yaml"
+    interval: 86400
+    path: ./ruleset/QQMusic.yaml
 
   Qobuz:
     type: http
@@ -2940,12 +3035,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/karaokeDAM.yaml
 
-  myTVSuper:
+  myTVSUPER:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSUPER/myTVSUPER.yaml"
     interval: 86400
-    path: ./ruleset/myTVSuper.yaml
+    path: ./ruleset/myTVSUPER.yaml
 
   Cloudflare:
     type: http
@@ -2971,6 +3066,7 @@ rules:
                                                     # - RULE-SET,AppleTV,Apple TV
                                                     # - RULE-SET,GitHub,GitHub
                                                     # - RULE-SET,GoogleAI,Google AI
+                                                    # - RULE-SET,GooglePlay,Google Play
                                                     # - RULE-SET,Hotstar,Hotstar
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
@@ -3027,6 +3123,8 @@ rules:
                                                     # - RULE-SET,Musixmatch,Musixmatch
                                                     # - RULE-SET,MyVideo,MyVideo
                                                     # - RULE-SET,NHK,NHK
+                                                    # - RULE-SET,NetEaseCloudMusic,网易云音乐
+                                                    # - RULE-SET,NetEaseMail,网易邮箱
                                                     # - RULE-SET,Netflix,Netflix
                                                     # - RULE-SET,Niconico,Niconico
                                                     # - RULE-SET,Nintendo,Nintendo
@@ -3045,6 +3143,8 @@ rules:
                                                     # - RULE-SET,Porn,🔞 Porn
                                                     # - RULE-SET,PornChina,🔞 Porn China
                                                     # - RULE-SET,QQ,腾讯QQ
+                                                    # - RULE-SET,QQMail,QQ邮箱
+                                                    # - RULE-SET,QQMusic,QQ音乐
                                                     # - RULE-SET,Qobuz,Qobuz
                                                     # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
@@ -3079,7 +3179,7 @@ rules:
                                                     # - RULE-SET,friDayvideo,friDay video
                                                     # - RULE-SET,iQIYI,爱奇艺
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
-                                                    # - RULE-SET,myTVSuper,myTV Super
+                                                    # - RULE-SET,myTVSUPER,myTV SUPER
                                                     # - RULE-SET,Cloudflare,Cloudflare
 
                                                     # ----- 3. 应用程序直连 (进程匹配, 如迅雷/QQ/微信等不走代理) -----

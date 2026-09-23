@@ -1,0 +1,19 @@
+# ===========================================
+# Rule Name: Google Play
+# Author: Hawaiine
+# Updated: 2026-09-01 00:00:00
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 3
+# DOMAIN-SUFFIX: 2
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,play.google.com
+  - DOMAIN,play.googleapis.com
+  - DOMAIN,android.clients.google.com
+  - DOMAIN-SUFFIX,play.google.com
+  - DOMAIN-SUFFIX,play.googleapis.com

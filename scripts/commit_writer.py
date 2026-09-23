@@ -54,7 +54,7 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "LiTV": "LiTV",
     "LINETV": "LINE TV",
     "MusicJapan": "Music Japan",
-    "myTVSuper": "myTV Super",
+    "myTVSUPER": "myTV SUPER",
     "MyVideo": "MyVideo",
     "NowE": "Now E",
     "PrimeVideo": "Prime Video",
@@ -79,6 +79,11 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "Zhihu": "知乎",
     "iQIYI": "爱奇艺",
     "DeepSeek": "DeepSeek",
+    "QQMail": "QQ邮箱",
+    "NetEaseMail": "网易邮箱",
+    "QQMusic": "QQ音乐",
+    "NetEaseCloudMusic": "网易云音乐",
+    "GooglePlay": "Google Play",
 }
 
 
