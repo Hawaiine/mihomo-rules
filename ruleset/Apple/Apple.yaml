@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Apple
 # Author: Hawaiine
-# Updated: 2026-08-09 12:27:07
+# Updated: 2026-09-15 12:00:00
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
 # DOMAIN: 11
-# DOMAIN-SUFFIX: 1449
+# DOMAIN-SUFFIX: 1448
 # IP-CIDR: 10
 # IP-CIDR6: 3
 # IP-ASN: 0
@@ -1390,7 +1390,6 @@ payload:
   - DOMAIN-SUFFIX,shopping-days.net
   - DOMAIN-SUFFIX,shoppinguheadphones.com
   - DOMAIN-SUFFIX,simplyipod.com
-  - DOMAIN-SUFFIX,siri.com
   - DOMAIN-SUFFIX,skl.apple.com
   - DOMAIN-SUFFIX,sneaker666.com
   - DOMAIN-SUFFIX,sneakerpage.net

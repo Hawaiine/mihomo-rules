@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-09-24 00:09:16
+# Updated: 2026-09-21 07:42:55
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
-# DOMAIN: 107
-# DOMAIN-SUFFIX: 709
+# DOMAIN: 109
+# DOMAIN-SUFFIX: 711
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -30,6 +30,8 @@ payload:
   - DOMAIN,firebase.google.com
   - DOMAIN,firebase.googleapis.com
   - DOMAIN,firebaseappcheck.googleapis.com
+  - DOMAIN,firebaseappdistribution.googleapis.com
+  - DOMAIN,firebaseapptesters.googleapis.com
   - DOMAIN,firebasedynamiclinks-ipv4.googleapis.com
   - DOMAIN,firebasedynamiclinks-ipv6.googleapis.com
   - DOMAIN,firebasedynamiclinks.googleapis.com
@@ -330,6 +332,8 @@ payload:
   - DOMAIN-SUFFIX,fflick.com
   - DOMAIN-SUFFIX,financeleadsonline.com
   - DOMAIN-SUFFIX,firebase.com
+  - DOMAIN-SUFFIX,firebase.dev
+  - DOMAIN-SUFFIX,firebase.google.com
   - DOMAIN-SUFFIX,firebase.io
   - DOMAIN-SUFFIX,firebaseapp.com
   - DOMAIN-SUFFIX,firebaseio.com
