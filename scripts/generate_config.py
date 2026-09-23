@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 from lib.ownership_map import SUB_PARENT
+from match_icons import build_icon_map, scan_source, emoji_skipped_brands
 
 # 🎯 全球直连别名（无引号，供 rules 直接拼接；groups 中自行加引号）
 GLOBAL_DIRECT_PROXY = '🎯 全球直连'
@@ -152,52 +153,14 @@ def build_brand_info(brands, sg_map):
     return info
 
 
-def extract_icons(config_path, sg_map):
-    """从现有 config 提取品牌图标映射，缺失的从 Oasisic-Icons 匹配"""
-    icons = {}
-    if os.path.exists(config_path):
-        try:
-            with open(config_path) as f:
-                content = f.read()
-            current_name = None
-            for line in content.split('\n'):
-                m = re.match(r'\s+-\s+name:\s*"([^"]+)"', line)
-                if m:
-                    current_name = m.group(1)
-                    if current_name in SYSTEM_GROUPS:
-                        current_name = None
-                    continue
-                if current_name:
-                    m2 = re.match(r'\s+icon:\s*"([^"]+)"', line)
-                    if m2:
-                        icons[current_name] = m2.group(1)
-                        current_name = None
-        except:
-            pass
-    
-    # 从 Oasisic-Icons 匹配缺失的图标（可移植路径）
-    GITHUB_ICON = 'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons'
-    icon_repo_env = Path(os.environ.get('MIHOMO_ICON_REPO', str(ROOT / 'Oasisic-Icons')))
-    icon_repo = icon_repo_env if icon_repo_env.exists() else Path('/opt/data/Oasisic-Icons')
-    if icon_repo.exists():
-        for root, dirs, files in os.walk(icon_repo / 'icons'):
-            for f in files:
-                if not f.endswith('.png'):
-                    continue
-                cat = os.path.relpath(root, icon_repo / 'icons')
-                name = f.rsplit('.', 1)[0]
-                # 要匹配的策略组名集合
-                all_sgs = list(sg_map.values()) + list(sg_map.keys())
-                for sg in all_sgs:
-                    if sg in icons:
-                        continue
-                    s = sg.replace(' ', '').replace('@', '-').lower()
-                    n = name.replace(' ', '').replace('@', '-').lower()
-                    base_n = re.sub(r'-\d+$', '', n)
-                    if s == base_n or s == n:
-                        icons[sg] = f'{GITHUB_ICON}/{cat}/{f}'
-    
-    return icons
+def extract_icons():
+    """品牌图标映射 —— 唯一来源是 match_icons.build_icon_map()
+
+    不再从现有 config 反向提取，避免配置与匹配逻辑分叉、以及
+    历史遗留错误路径被自举锁定。
+    返回 ({策略组名: icon URL}, 未匹配到图标的品牌列表)。
+    """
+    return build_icon_map()
 
 
 def extract_system_groups(config_path, compact=False):
@@ -493,8 +456,13 @@ def main():
     print(f'[+] behavior: domain={domain_count}, classical={classical_count}')
     
     # 提取图标
-    icons = extract_icons(ROOT / 'configs' / 'Android' / 'config.yaml', sg_map)
-    print(f'[+] 图标映射: {len(icons)} 个')
+    icons, missing_icons = extract_icons()
+    print(f'[+] 图标映射: {len(icons)} 个（来源: {scan_source()}）')
+    skipped_emoji = emoji_skipped_brands()
+    if skipped_emoji:
+        print(f'[🚫] emoji 前缀组跳过 ({len(skipped_emoji)}): {", ".join(skipped_emoji)}')
+    if missing_icons:
+        print(f'[!] 未匹配到图标的品牌 ({len(missing_icons)}): {", ".join(missing_icons)}')
     
     # 生成区块（full 版品牌组间空行，min 版紧凑）
     proxy_groups_full = gen_proxy_groups(brand_info, icons, blank_between=True)
