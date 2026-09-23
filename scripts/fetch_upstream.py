@@ -17,6 +17,7 @@ fetch_upstream.py — 只管抓取 + 完整性校验
 
 import os
 import shutil
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -86,9 +87,14 @@ INTEGRITY_RULES: dict[str, dict] = {
 TRUNCATION_RATIO = 0.5
 
 # git fetch 超时：blackmatrix7 等大仓库浅拉在慢网络下可能耗时数分钟，
-# 超时过短会被 kill 并留下 shallow.lock，导致后续重试全部失败
-FETCH_TIMEOUT = 900
-CLONE_TIMEOUT = 900
+# 超时过短会被 kill 并留下 shallow.lock，导致后续重试全部失败。
+# ⚠️ 必须小于 batch_update.py 中 fetch_upstream 步骤的外层超时（300s），
+# 否则外层先被杀，重试/清理逻辑一次都跑不到。
+FETCH_TIMEOUT = 240
+CLONE_TIMEOUT = 240
+# 陈旧锁判定阈值：必须大于 FETCH_TIMEOUT —— 正在执行的 fetch 自身会持有锁
+# 超过 FETCH_TIMEOUT 才可能是残留。设成 5s 会删掉正在跑的 fetch 的锁。
+LOCK_MIN_AGE = 300.0
 
 
 # ── 抓取结果类型 ──────────────────────────────────────────────
@@ -138,22 +144,60 @@ def _retry_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None,
 
 
 def _run_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None) -> tuple[int, str]:
-    """运行命令并返回 (exit_code, stdout)"""
+    """运行命令并返回 (exit_code, stdout)
+
+    超时时必须杀掉整个进程组：git fetch 会派生子进程（remote-helper、
+    ssh/git-remote-https），subprocess.run 的 timeout 只杀直接子进程，
+    孙进程会变孤儿继续持有 .git 锁，导致后续 fetch 全部失败。
+
+    实现用 `start_new_session=True` 让子进程自成进程组（pgid == 子进程 pid），
+    超时后 `os.killpg(pgid)` 精确杀该组全部成员。**不要**用「扫 ps 找子孙再逐个
+    kill」——孙进程被孤立后会重新挂到最近的 subreaper，扫不到；更不能扫 pgid
+    盲杀，那会连带父 shell 一起杀掉（表现为整个进程被 SIGKILL 且无输出）。
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        cwd=cwd,
+        start_new_session=True,
+    )
     try:
-        r = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=cwd,
-        )
-        return r.returncode, r.stdout + r.stderr
+        out, _ = proc.communicate(timeout=timeout)
+        return proc.returncode, out
     except subprocess.TimeoutExpired:
+        _kill_process_tree(proc)
+        # 再取一次输出，避免管道残留导致 fd 泄漏
+        try:
+            proc.communicate(timeout=5)
+        except Exception:
+            pass
         return -1, f"命令超时 ({timeout}s)"
     except FileNotFoundError as e:
         return -2, f"命令未找到: {e}"
     except Exception as e:
         return -3, str(e)
+
+
+def _kill_process_tree(proc: subprocess.Popen) -> None:
+    """杀掉指定 Popen 的整个进程组（子进程 + 孙进程），不碰调用方自身。"""
+    pgid = getattr(proc, "pid", 0)
+    if not pgid:
+        return
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError):
+            return
+        except Exception:
+            return
+        # 给第一级信号一点退出时间，仍存活再升级
+        try:
+            proc.wait(timeout=5)
+            return
+        except subprocess.TimeoutExpired:
+            continue
 
 
 def _count_lines(path: str) -> int:
@@ -170,10 +214,17 @@ def _count_lines(path: str) -> int:
 
 
 def _count_files(data_dir: str) -> tuple[int, int]:
-    """递归统计目录下文件数与总字节数。"""
+    """递归统计目录下文件数与总字节数。
+
+    必须排除 .git：浅克隆的 .git 对象文件数远超数据文件本身
+    （实测 loyalsoldier: .git 108 个 vs 数据 14 个），把 .git 算进去
+    会让「文件数下限」守卫永远通过，形同虚设。
+    """
     file_count = 0
     total_bytes = 0
-    for root, _dirs, files in os.walk(data_dir):
+    for root, dirs, files in os.walk(data_dir):
+        if ".git" in dirs:
+            dirs.remove(".git")
         for f in files:
             fp = os.path.join(root, f)
             try:
@@ -194,7 +245,7 @@ def upstream_commit(local_dir: str) -> str:
 GIT_LOCK_FILES = ("shallow.lock", "index.lock", "config.lock", "HEAD.lock")
 
 
-def _clear_stale_locks(local_dir: str, min_age: float = 60.0) -> list[str]:
+def _clear_stale_locks(local_dir: str, min_age: float = LOCK_MIN_AGE) -> list[str]:
     """清理陈旧 git 锁文件（仅当超过 min_age 秒未被触碰）。
 
     上游仓库是长期复用的浅克隆，一旦有残留锁，之后每次 fetch 都会失败，
@@ -222,7 +273,7 @@ def _fetch_branch(name: str, local_dir: str, branch: str) -> tuple[int, str]:
     last_code, last_out = -1, ""
     for attempt in range(1, 4):
         # 上一轮被超时 kill 时会留下 shallow.lock / index.lock，必须先清
-        _clear_stale_locks(local_dir, min_age=5.0)
+        _clear_stale_locks(local_dir, min_age=LOCK_MIN_AGE)
         last_code, last_out = _run_cmd(
             ["git", "fetch", "--depth", "1", "origin", spec],
             timeout=FETCH_TIMEOUT, cwd=local_dir,
