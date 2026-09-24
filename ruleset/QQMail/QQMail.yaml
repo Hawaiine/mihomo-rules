@@ -1,7 +1,7 @@
 # ===========================================
 # Rule Name: QQ邮箱
 # Author: Hawaiine
-# Updated: 2026-09-01 00:00:00
+# Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 2
@@ -14,6 +14,6 @@
 payload:
   - DOMAIN,mail.qq.com
   - DOMAIN,qq.com
-  - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,mail.qq.com
+  - DOMAIN-SUFFIX,qq.com
   - PROCESS-NAME,com.tencent.mobileqq

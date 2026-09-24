@@ -169,7 +169,12 @@ def check_brand(brand):
     # 检查 payload 段内是否有空行或行尾空白
     lines = open(yaml_path).read().split('\n')
     in_payload = False
+    payload_rules = []
+    seen_exact = set()
+    updated_ok = False
     for i, ln in enumerate(lines, 1):
+        if re.fullmatch(r'# Updated: \d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?', ln.strip()):
+            updated_ok = True
         s = ln.strip()
         if s.startswith('payload'):
             in_payload = True
@@ -180,6 +185,19 @@ def check_brand(brand):
             errors.append(f'  {brand}: payload 段内空行 (第 {i} 行)')
         if ln != ln.rstrip():
             errors.append(f'  {brand}: 行尾空白 (第 {i} 行)')
+        if not s or s.startswith('#'):
+            continue
+        if s in seen_exact:
+            errors.append(f'  {brand}: payload 完全重复 (第 {i} 行)')
+        seen_exact.add(s)
+        rule = parse_rule_line(ln)
+        if rule is not None:
+            payload_rules.append(rule)
+    if not updated_ok:
+        errors.append(f'  {brand}: # Updated 格式应为 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS')
+    from lib.canonical import sort_rules
+    if payload_rules != sort_rules(payload_rules):
+        errors.append(f'  {brand}: payload 排序不符合 canonical.sort_rules')
 
     return len(errors) == 0, errors
 

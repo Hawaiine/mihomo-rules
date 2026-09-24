@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Proxy
 # Author: Hawaiine
-# Updated: 2026-09-24 11:02:19
+# Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 27100
+# DOMAIN-SUFFIX: 27099
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -18252,7 +18252,6 @@ payload:
   - DOMAIN-SUFFIX,pcgamestorrents.com
   - DOMAIN-SUFFIX,pchome.com.tw
   - DOMAIN-SUFFIX,pchomeec.tw
-  - DOMAIN-SUFFIX,pchomeonline.com.tw
   - DOMAIN-SUFFIX,pchomeonline.com.tw
   - DOMAIN-SUFFIX,pchomepay.com.tw
   - DOMAIN-SUFFIX,pcij.org
