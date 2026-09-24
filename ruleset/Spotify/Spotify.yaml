@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Spotify
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 8
+# DOMAIN: 6
 # DOMAIN-SUFFIX: 23
 # IP-CIDR: 2
 # IP-CIDR6: 0
@@ -13,11 +13,9 @@
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,spotify
-  - DOMAIN,audio-ak-spotify-com.akamaized.net
   - DOMAIN,audio4-ak-spotify-com.akamaized.net
   - DOMAIN,cdn-spotify-experiments.conductrics.com
   - DOMAIN,heads-ak-spotify-com.akamaized.net
-  - DOMAIN,heads4-ak-spotify-com.akamaized.net
   - DOMAIN,spotify.com.edgesuite.net
   - DOMAIN,spotify.map.fastly.net
   - DOMAIN,spotify.map.fastlylb.net

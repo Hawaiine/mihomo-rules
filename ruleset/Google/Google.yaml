@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:22
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
-# DOMAIN: 109
+# DOMAIN: 108
 # DOMAIN-SUFFIX: 706
 # IP-CIDR: 2
 # IP-CIDR6: 0
@@ -27,7 +27,6 @@ payload:
   - DOMAIN,alt8-mtalk.google.com
   - DOMAIN,android.googlesource.com
   - DOMAIN,clients1.google.com
-  - DOMAIN,firebase.google.com
   - DOMAIN,firebase.googleapis.com
   - DOMAIN,firebaseappcheck.googleapis.com
   - DOMAIN,firebaseappdistribution.googleapis.com

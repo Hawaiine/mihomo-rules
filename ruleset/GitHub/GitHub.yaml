@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: GitHub
 # Author: Hawaiine
-# Updated: 2026-07-28 06:52:33
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 30
+# DOMAIN: 29
 # DOMAIN-SUFFIX: 36
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -17,7 +17,6 @@ payload:
   - DOMAIN,copilot-workspace.githubnext.com
   - DOMAIN,copilotprodattachments.blob.core.windows.net
   - DOMAIN,github-api.arkoselabs.com
-  - DOMAIN,github-cloud.s3.amazonaws.com
   - DOMAIN,github-production-release-asset-2e65be.s3.amazonaws.com
   - DOMAIN,github-production-repository-file-5c1aeb.s3.amazonaws.com
   - DOMAIN,github-production-repository-image-32fea6.s3.amazonaws.com

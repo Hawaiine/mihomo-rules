@@ -24,6 +24,7 @@ from lib.canonical import (
     CanonicalRule,
     count_by_type,
     dedup_key,
+    drop_domain_covered_by_suffix,
     sort_rules,
     TYPES_ORDER,
 )
@@ -309,6 +310,29 @@ def dedup_exact(rules: list[CanonicalRule], case_sensitive: bool = False) -> lis
     return sort_rules(deduped)
 
 
+def prepare_rules_for_write(
+    brand_name: str,
+    rules: list[CanonicalRule],
+) -> tuple[list[CanonicalRule], int]:
+    """写入前统一去重：完全重复（TYPE+VALUE）+ 同值跨类型（DOMAIN ⊂ DOMAIN-SUFFIX）。
+
+    所有写入路径（品牌 / 基础集 / resolve_ownership / manual 保留合并）共用，
+    确保落盘内容既无完全重复行，也无同值双类型。
+
+    Args:
+        brand_name: 规则集名（Applications 走大小写敏感去重）
+        rules: 待写入规则
+
+    Returns:
+        (可写入的规则列表, 同值跨类型删除数)
+    """
+    rules = dedup_exact(rules, case_sensitive=(brand_name == "Applications"))
+    rules, cross_dropped = drop_domain_covered_by_suffix(rules)
+    if cross_dropped:
+        print(f"  🧹 {brand_name}: 同值跨类型去重（保留 DOMAIN-SUFFIX）{len(cross_dropped)} 条")
+    return rules, len(cross_dropped)
+
+
 # ── 写入规则集 ────────────────────────────────────────────────
 
 def _normalize_for_compare(text: str) -> list[str]:
@@ -368,8 +392,8 @@ def write_ruleset(
         strategy_group = get_strategy_group(brand_name)
 
     # Applications 与上游 applications.txt 对齐：同名不同大小写各留一条。
-    # 其余规则集按 TYPE+VALUE 小写合并。
-    rules = dedup_exact(rules, case_sensitive=(brand_name == "Applications"))
+    # 其余规则集按 TYPE+VALUE 小写合并；同值跨类型（DOMAIN ⊂ DOMAIN-SUFFIX）一并去重。
+    rules, cross_type_dropped = prepare_rules_for_write(brand_name, rules)
 
     behavior = determine_behavior(rules)
     type_counts = count_by_type(rules)
@@ -395,6 +419,7 @@ def write_ruleset(
         "behavior": behavior,
         "total": sum(type_counts.values()),
         "type_counts": type_counts,
+        "cross_type_dropped": cross_type_dropped,
         "yaml_path": yaml_path,
         "readme_path": readme_path,
         "has_changes": yaml_changed or readme_changed,

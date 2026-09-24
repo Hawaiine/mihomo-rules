@@ -1,23 +1,18 @@
 # ===========================================
 # Rule Name: Disney
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:22
+# Updated: 2026-09-24 23:47:33
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 5
-# DOMAIN-SUFFIX: 232
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 185
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 2
 # ===========================================
 payload:
-  - DOMAIN,disneyplus.com.ssl.sc.omtrdc.net
   - DOMAIN,espn.api.edge.bamgrid.com
-  - DOMAIN,espn.hb.omtrdc.net
-  - DOMAIN,espndotcom.tt.omtrdc.net
-  - DOMAIN,hulu.playback.edge.bamgrid.com
-  - DOMAIN-SUFFIX,112263.com
   - DOMAIN-SUFFIX,20thcenturystudios.com
   - DOMAIN-SUFFIX,20thcenturystudios.com.au
   - DOMAIN-SUFFIX,20thcenturystudios.com.br
@@ -35,7 +30,6 @@ payload:
   - DOMAIN-SUFFIX,bamtech.net
   - DOMAIN-SUFFIX,beautyandthebeastmusical.co.uk
   - DOMAIN-SUFFIX,braze.com
-  - DOMAIN-SUFFIX,callhulu.com
   - DOMAIN-SUFFIX,cdn.optimizely.com
   - DOMAIN-SUFFIX,conviva.com
   - DOMAIN-SUFFIX,d9.flashtalking.com
@@ -153,50 +147,12 @@ payload:
   - DOMAIN-SUFFIX,espndotcom.tt.omtrdc.net
   - DOMAIN-SUFFIX,espnqa.com
   - DOMAIN-SUFFIX,execute-api.us-east-1.amazonaws.com
-  - DOMAIN-SUFFIX,findyourlimits.com
   - DOMAIN-SUFFIX,freeform.com
-  - DOMAIN-SUFFIX,freehulu.com
   - DOMAIN-SUFFIX,fxnetwork.com
   - DOMAIN-SUFFIX,fxnetworks.com
   - DOMAIN-SUFFIX,go-disneyworldgo.com
   - DOMAIN-SUFFIX,go.com
   - DOMAIN-SUFFIX,hongkongdisneyland.com
-  - DOMAIN-SUFFIX,hooloo.tv
-  - DOMAIN-SUFFIX,hoolu.com
-  - DOMAIN-SUFFIX,hoolu.tv
-  - DOMAIN-SUFFIX,hu1u.com
-  - DOMAIN-SUFFIX,huloo.cc
-  - DOMAIN-SUFFIX,huloo.tv
-  - DOMAIN-SUFFIX,hulu.com
-  - DOMAIN-SUFFIX,hulu.jp
-  - DOMAIN-SUFFIX,hulu.tv
-  - DOMAIN-SUFFIX,hulu.us
-  - DOMAIN-SUFFIX,huluaction.com
-  - DOMAIN-SUFFIX,huluad.com
-  - DOMAIN-SUFFIX,huluapp.com
-  - DOMAIN-SUFFIX,huluasks.com
-  - DOMAIN-SUFFIX,hulucall.com
-  - DOMAIN-SUFFIX,hulufree.com
-  - DOMAIN-SUFFIX,hulugans.com
-  - DOMAIN-SUFFIX,hulugermany.com
-  - DOMAIN-SUFFIX,hulugo.com
-  - DOMAIN-SUFFIX,huluim.com
-  - DOMAIN-SUFFIX,huluinstantmessenger.com
-  - DOMAIN-SUFFIX,huluitaly.com
-  - DOMAIN-SUFFIX,hulunet.com
-  - DOMAIN-SUFFIX,hulunetwork.com
-  - DOMAIN-SUFFIX,huluplus.com
-  - DOMAIN-SUFFIX,hulupremium.com
-  - DOMAIN-SUFFIX,hulupurchase.com
-  - DOMAIN-SUFFIX,huluqa.com
-  - DOMAIN-SUFFIX,hulurussia.com
-  - DOMAIN-SUFFIX,huluspain.com
-  - DOMAIN-SUFFIX,hulusports.com
-  - DOMAIN-SUFFIX,hulustream.com
-  - DOMAIN-SUFFIX,huluteam.com
-  - DOMAIN-SUFFIX,hulutv.com
-  - DOMAIN-SUFFIX,huluusa.com
-  - DOMAIN-SUFFIX,joinmaidez.com
   - DOMAIN-SUFFIX,js-agent.newrelic.com
   - DOMAIN-SUFFIX,lucasfilm.com
   - DOMAIN-SUFFIX,marvel.com
@@ -210,18 +166,13 @@ payload:
   - DOMAIN-SUFFIX,marvelsuperwar.com
   - DOMAIN-SUFFIX,mickey.tv
   - DOMAIN-SUFFIX,moviesanywhere.com
-  - DOMAIN-SUFFIX,mushymush.tv
-  - DOMAIN-SUFFIX,myhulu.com
   - DOMAIN-SUFFIX,natgeomaps.com
   - DOMAIN-SUFFIX,nationalgeographic.com
   - DOMAIN-SUFFIX,nationalgeographicpartners.com
   - DOMAIN-SUFFIX,ngeo.com
   - DOMAIN-SUFFIX,nomadlandmovie.ch
-  - DOMAIN-SUFFIX,originalhulu.com
-  - DOMAIN-SUFFIX,payhulu.com
   - DOMAIN-SUFFIX,pixar.com
   - DOMAIN-SUFFIX,playmation.com
-  - DOMAIN-SUFFIX,registerhulu.com
   - DOMAIN-SUFFIX,searchlightpictures.com
   - DOMAIN-SUFFIX,shopdisney.com
   - DOMAIN-SUFFIX,shops-disney.com
@@ -239,7 +190,6 @@ payload:
   - DOMAIN-SUFFIX,starwarsgalacticstarcruiser.com
   - DOMAIN-SUFFIX,starwarskids.com
   - DOMAIN-SUFFIX,streamingdisney.net
-  - DOMAIN-SUFFIX,thehulubraintrust.com
   - DOMAIN-SUFFIX,themarvelexperiencetour.com
   - DOMAIN-SUFFIX,thestationbymaker.com
   - DOMAIN-SUFFIX,thewaltdisneycompany.com
@@ -248,6 +198,5 @@ payload:
   - DOMAIN-SUFFIX,waltdisneystudios.com
   - DOMAIN-SUFFIX,watchdisneyfe.com
   - DOMAIN-SUFFIX,watchespn.com
-  - DOMAIN-SUFFIX,wwwhuluplus.com
   - PROCESS-NAME,com.disney.datg.videoplatforms.android.abc
   - PROCESS-NAME,com.disney.disneyplus

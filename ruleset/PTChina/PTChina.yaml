@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: 💊 PT China
 # Author: Hawaiine
-# Updated: 2026-07-26 00:00:00
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 53
+# DOMAIN: 52
 # DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -20,7 +20,6 @@ payload:
   - DOMAIN,az2.halomt.com
   - DOMAIN,btschool.club
   - DOMAIN,carpt.net
-  - DOMAIN,crabpt.vip
   - DOMAIN,cspt.cc
   - DOMAIN,cspt.top
   - DOMAIN,cx1.manfuz.co

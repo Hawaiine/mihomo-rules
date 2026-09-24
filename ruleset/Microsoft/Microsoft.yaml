@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Microsoft
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:22
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 32
+# DOMAIN: 25
 # DOMAIN-SUFFIX: 668
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -22,13 +22,9 @@ payload:
   - DOMAIN,developer.microsoft.com
   - DOMAIN,dtlgalleryint.cloudapp.net
   - DOMAIN,flightsimulator.azureedge.net
-  - DOMAIN,img-prod-cms-rt-microsoft-com.akamaized.net
-  - DOMAIN,img-s-msn-com.akamaized.net
   - DOMAIN,location.microsoft.com
   - DOMAIN,mscrl.microsoft.com
-  - DOMAIN,mwf-service.akamaized.net
   - DOMAIN,ocsp.microsoft.com
-  - DOMAIN,officecdn-microsoft-com.akamaized.net
   - DOMAIN,oneocsp.microsoft.com
   - DOMAIN,packages.microsoft.com
   - DOMAIN,poshtestgallery.cloudapp.net
@@ -36,9 +32,6 @@ payload:
   - DOMAIN,psg-int-centralus.cloudapp.net
   - DOMAIN,psg-int-eastus.cloudapp.net
   - DOMAIN,rink.hockeyapp.net
-  - DOMAIN,statics-marketingsites-eas-ms-com.akamaized.net
-  - DOMAIN,statics-marketingsites-eus-ms-com.akamaized.net
-  - DOMAIN,statics-marketingsites-wcus-ms-com.akamaized.net
   - DOMAIN,vscode-sync-insiders.trafficmanager.net
   - DOMAIN,vscode-sync.trafficmanager.net
   - DOMAIN,vscode.blob.core.windows.net

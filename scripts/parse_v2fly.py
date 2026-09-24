@@ -34,6 +34,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from lib.canonical import (
     CanonicalRule,
     KNOWN_PREFIXES,
+    drop_domain_covered_by_suffix,
     normalize_value,
     sort_rules,
     count_by_type,
@@ -639,6 +640,13 @@ def parse_v2fly_brand(
     # 属性过滤
     main_rules, ads_rules, cn_rules = filter_attributes(rules, attrs_list)
     # ads/cn 仅保留分类结果供诊断；当前品牌同步只消费 main，不单独落盘。
+
+    # 同值跨类型去重：full: 与裸域名/domain: 同时命中同一值时，只留 DOMAIN-SUFFIX
+    main_rules, cross_dropped = drop_domain_covered_by_suffix(main_rules)
+    if cross_dropped:
+        samples = ", ".join(r.value for r in cross_dropped[:8])
+        more = " …" if len(cross_dropped) > 8 else ""
+        print(f"  🧹 {brand_name}: 同值跨类型去重 {len(cross_dropped)} 条: {samples}{more}")
 
     # 排序
     main_rules = sort_rules(main_rules)
