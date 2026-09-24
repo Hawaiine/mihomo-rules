@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: mihomo-daily-sync-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TZ: Asia/Shanghai
 
@@ -39,6 +43,7 @@ jobs:
         run: pip install pyyaml
 
       - name: 🔄 执行同步（8 步串联）
+        id: sync
         run: python3 scripts/batch_update.py --no-commit
         env:
           MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
@@ -126,7 +131,7 @@ jobs:
             2>&1 || echo "⚠️ 通知发送失败（非致命）"
 
       - name: ⚠️ 工作流异常通知
-        if: failure() && env.MIHOMO_DISCORD_WEBHOOK != ''
+        if: failure() && steps.sync.outcome != 'failure' && env.MIHOMO_DISCORD_WEBHOOK != ''
         env:
           MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -569,7 +569,17 @@ def main():
         # 2. git pull（仅非 CI 模式）
         if not no_commit:
             log('=== 📥 拉取远程代码 ===')
-            subprocess.run(['git', 'stash'], cwd=ROOT, capture_output=True)
+            dirty = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                cwd=ROOT, capture_output=True, text=True, timeout=10,
+            )
+            if dirty.returncode != 0 or dirty.stdout.strip():
+                log('❌ 工作区不干净，拒绝 stash 后继续同步')
+                send_discord("⚠️ 工作区不干净，终止同步", 15844367, [
+                    {"name": "📝 错误", "value": "本地存在未提交改动，已拒绝自动 stash"},
+                    {"name": "📅 时间", "value": datetime.now().isoformat()},
+                ])
+                sys.exit(1)
             result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=ROOT,
                                     capture_output=True, text=True, timeout=60)
             if result.returncode != 0:

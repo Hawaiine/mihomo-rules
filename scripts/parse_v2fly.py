@@ -638,6 +638,7 @@ def parse_v2fly_brand(
 
     # 属性过滤
     main_rules, ads_rules, cn_rules = filter_attributes(rules, attrs_list)
+    # ads/cn 仅保留分类结果供诊断；当前品牌同步只消费 main，不单独落盘。
 
     # 排序
     main_rules = sort_rules(main_rules)
