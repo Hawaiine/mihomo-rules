@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: KKTV
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-09-24 14:50:19
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 2
-# DOMAIN-SUFFIX: 2
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -16,3 +16,4 @@ payload:
   - DOMAIN,theater-kktv.cdn.hinet.net
   - DOMAIN-SUFFIX,kktv.com.tw
   - DOMAIN-SUFFIX,kktv.me
+  - DOMAIN-SUFFIX,theater-kktv.cdn.hinet.net

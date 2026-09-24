@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: iCloud
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 60
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -12,6 +12,7 @@
 # PROCESS-NAME: 0
 # ===========================================
 payload:
+  - DOMAIN,www-cdn.icloud.com.akadns.net
   - DOMAIN-SUFFIX,apple-cloudkit.com
   - DOMAIN-SUFFIX,apple-icloud.cn
   - DOMAIN-SUFFIX,apple-livephotoskit.com

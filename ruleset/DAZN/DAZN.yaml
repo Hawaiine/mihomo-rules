@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: DAZN
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-09-24 14:50:19
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 17
+# DOMAIN-SUFFIX: 20
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -19,6 +19,9 @@ payload:
   - DOMAIN-SUFFIX,dazn-api.com
   - DOMAIN-SUFFIX,dazn.com
   - DOMAIN-SUFFIX,dazndn.com
+  - DOMAIN-SUFFIX,daznfeeds.com
+  - DOMAIN-SUFFIX,daznplayer.com
+  - DOMAIN-SUFFIX,daznservices.com
   - DOMAIN-SUFFIX,dc2-vodhls-perform.secure.footprint.net
   - DOMAIN-SUFFIX,dca-ll-livedazn-dznlivejp.s.llnwi.net
   - DOMAIN-SUFFIX,dca-ll-voddazn-dznvodjp.s.llnwi.net

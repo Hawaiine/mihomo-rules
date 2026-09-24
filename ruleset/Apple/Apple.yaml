@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Apple
 # Author: Hawaiine
-# Updated: 2026-09-15 12:00:00
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
-# DOMAIN: 11
-# DOMAIN-SUFFIX: 1448
+# DOMAIN: 10
+# DOMAIN-SUFFIX: 1447
 # IP-CIDR: 10
 # IP-CIDR6: 3
 # IP-ASN: 0
@@ -24,7 +24,6 @@ payload:
   - DOMAIN,notary-submissions-prod.s3.us-west-2.amazonaws.com
   - DOMAIN,p-events-delivery.akamaized.net
   - DOMAIN,push-apple.com.akadns.net
-  - DOMAIN,www-cdn.icloud.com.akadns.net
   - DOMAIN-SUFFIX,100beatscheap.com
   - DOMAIN-SUFFIX,12diasdepresentesdeitunes.com
   - DOMAIN-SUFFIX,12diasderegalosdeitunes.cl
@@ -1223,7 +1222,6 @@ payload:
   - DOMAIN-SUFFIX,mairbeats.com
   - DOMAIN-SUFFIX,makeeu.com
   - DOMAIN-SUFFIX,mallheadphone.com
-  - DOMAIN-SUFFIX,mask-api.icloud.com
   - DOMAIN-SUFFIX,mbeats-tech.com
   - DOMAIN-SUFFIX,mbheadphone.com
   - DOMAIN-SUFFIX,mesu.apple.com

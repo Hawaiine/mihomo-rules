@@ -1,22 +1,17 @@
 # ===========================================
 # Rule Name: Amazon
 # Author: Hawaiine
-# Updated: 2026-07-24 11:05:18
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 5
-# DOMAIN-SUFFIX: 157
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 149
 # IP-CIDR: 15
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 1
 # ===========================================
 payload:
-  - DOMAIN,images-eu.ssl-images-amazon.com
-  - DOMAIN,images-fe.ssl-images-amazon.com
-  - DOMAIN,images-na.ssl-images-amazon.com
-  - DOMAIN,msh.amazon.co.uk
-  - DOMAIN,static.siege-amazon.com
   - DOMAIN-SUFFIX,a2z.com
   - DOMAIN-SUFFIX,aboutamazon.cn
   - DOMAIN-SUFFIX,aboutamazon.co.uk
@@ -101,14 +96,12 @@ payload:
   - DOMAIN-SUFFIX,amazonpay.in
   - DOMAIN-SUFFIX,amazonprimevideo.cn
   - DOMAIN-SUFFIX,amazonprimevideo.com.cn
-  - DOMAIN-SUFFIX,amazonprimevideos.com
   - DOMAIN-SUFFIX,amazonsdi.com
   - DOMAIN-SUFFIX,amazonstudiosguilds.com
   - DOMAIN-SUFFIX,amazontools.com
   - DOMAIN-SUFFIX,amazontours.com
   - DOMAIN-SUFFIX,amazontrust.com
   - DOMAIN-SUFFIX,amazonuniversity.jobs
-  - DOMAIN-SUFFIX,amazonvideo.cc
   - DOMAIN-SUFFIX,amazonvideodirect.com
   - DOMAIN-SUFFIX,amazonworkdocs.cn
   - DOMAIN-SUFFIX,amazonworkdocs.com.cn
@@ -150,15 +143,9 @@ payload:
   - DOMAIN-SUFFIX,kindleproject.com
   - DOMAIN-SUFFIX,llnwd.net
   - DOMAIN-SUFFIX,media-imdb.com
-  - DOMAIN-SUFFIX,prime-video.com
   - DOMAIN-SUFFIX,primeday.cn
   - DOMAIN-SUFFIX,primeday.com.cn
   - DOMAIN-SUFFIX,primeday.info
-  - DOMAIN-SUFFIX,primevideo.cc
-  - DOMAIN-SUFFIX,primevideo.info
-  - DOMAIN-SUFFIX,primevideo.org
-  - DOMAIN-SUFFIX,primevideo.tv
-  - DOMAIN-SUFFIX,prod.service.minerva.devices.a2z.com
   - DOMAIN-SUFFIX,seattlespheres.com
   - DOMAIN-SUFFIX,siege-amazon.com
   - DOMAIN-SUFFIX,ss2.us

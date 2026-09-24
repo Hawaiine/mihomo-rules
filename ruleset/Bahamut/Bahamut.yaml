@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Bahamut
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:01
+# Updated: 2026-09-24 14:50:19
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
-# DOMAIN-SUFFIX: 6
+# DOMAIN: 3
+# DOMAIN-SUFFIX: 7
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -13,6 +13,9 @@
 # ===========================================
 payload:
   - DOMAIN,bahamut.akamaized.net
+  - DOMAIN,gamer-cds.cdn.hinet.net
+  - DOMAIN,gamer2-cds.cdn.hinet.net
+  - DOMAIN-SUFFIX,bahamut.akamaized.net
   - DOMAIN-SUFFIX,bahamut.com.tw
   - DOMAIN-SUFFIX,digicert.com
   - DOMAIN-SUFFIX,gamer.com.tw

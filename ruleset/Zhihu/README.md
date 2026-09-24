@@ -7,8 +7,8 @@
 | DOMAIN-REGEX | 0 |
 | DOMAIN | 0 |
 | DOMAIN-SUFFIX | 4 |
-| IP-CIDR | 0 |
-| IP-CIDR6 | 0 |
+| IP-CIDR | 4 |
+| IP-CIDR6 | 1 |
 | IP-ASN | 0 |
 | PROCESS-NAME | 0 |
 

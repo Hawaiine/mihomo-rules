@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Microsoft
 # Author: Hawaiine
-# Updated: 2026-07-24 11:05:18
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 32
-# DOMAIN-SUFFIX: 674
+# DOMAIN-SUFFIX: 668
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -45,7 +45,6 @@ payload:
   - DOMAIN,vscode.search.windows.net
   - DOMAIN,vsmarketplacebadge.apphb.com
   - DOMAIN,www.microsoft.com
-  - DOMAIN-SUFFIX,1drv.ms
   - DOMAIN-SUFFIX,21vbc.com
   - DOMAIN-SUFFIX,21vbluecloud.com
   - DOMAIN-SUFFIX,21vbluecloud.net
@@ -550,11 +549,6 @@ payload:
   - DOMAIN-SUFFIX,officewebapps.cn
   - DOMAIN-SUFFIX,omniroot.com
   - DOMAIN-SUFFIX,onecollector.cloudapp.aria
-  - DOMAIN-SUFFIX,onedrive.co
-  - DOMAIN-SUFFIX,onedrive.co.uk
-  - DOMAIN-SUFFIX,onedrive.eu
-  - DOMAIN-SUFFIX,onedrive.net
-  - DOMAIN-SUFFIX,onedrive.org
   - DOMAIN-SUFFIX,onenote.com
   - DOMAIN-SUFFIX,onenote.net
   - DOMAIN-SUFFIX,onestore.ms

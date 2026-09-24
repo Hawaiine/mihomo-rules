@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: PayPal
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:02
+# Updated: 2026-09-24 14:50:20
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 246
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -13,6 +13,7 @@
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,paypal
+  - DOMAIN,venmo.s3.amazonaws.com
   - DOMAIN-SUFFIX,account-paypal.info
   - DOMAIN-SUFFIX,account-paypal.net
   - DOMAIN-SUFFIX,account-paypal.org

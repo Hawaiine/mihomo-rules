@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: LiTV
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:02
+# Updated: 2026-09-24 14:50:19
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
-# DOMAIN-SUFFIX: 1
+# DOMAIN: 9
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -13,4 +13,14 @@
 # ===========================================
 payload:
   - DOMAIN,litvfreemobile-hichannel.cdn.hinet.net
+  - DOMAIN,ntdfreemobile-tgc.cdn.hinet.net
+  - DOMAIN,ntdfreepc-tgc.cdn.hinet.net
+  - DOMAIN,ntdfreetv-tgc.cdn.hinet.net
+  - DOMAIN,ntdfreevcpc-tgc.cdn.hinet.net
+  - DOMAIN,ntdofifreemobile-tgc.cdn.hinet.net
+  - DOMAIN,ntdofifreepc-tgc.cdn.hinet.net
+  - DOMAIN,ntdofifreetv-tgc.cdn.hinet.net
+  - DOMAIN,ntdofifreevcpc-tgc.cdn.hinet.net
   - DOMAIN-SUFFIX,litv.tv
+  - DOMAIN-SUFFIX,litvfreepc.akamaized.net
+  - DOMAIN-SUFFIX,ofiii.com
