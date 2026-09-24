@@ -55,10 +55,15 @@ class TestProcessCleanup(unittest.TestCase):
                 self.assertTrue(ready.is_file(), '必须证明孙进程已安装 SIGTERM 忽略处理器')
                 details = json.loads(ready.read_text())
                 self.assertNotEqual(details['pgid'], os.getpgrp())
+                # 进程已退出并被回收时 /proc/<pid> 会消失，同样满足断言目标。
+                # ProcessLookupError 之前只在 exists() 后 read_text() 的竞态里
+                # 被误抛出来，因此这里显式吞掉并把状态视为 'X'。
                 stat = Path('/proc') / str(details['pid']) / 'stat'
-                if stat.exists():
+                try:
                     state = stat.read_text().rsplit(') ', 1)[1].split()[0]
-                    self.assertIn(state, {'Z', 'X'}, '父进程退出不代表整组退出，孙进程仍在运行')
+                except (FileNotFoundError, ProcessLookupError):
+                    state = 'X'
+                self.assertIn(state, {'Z', 'X'}, '父进程退出不代表整组退出，孙进程仍在运行')
             finally:
                 if details is None and ready.is_file():
                     details = json.loads(ready.read_text())
