@@ -69,7 +69,8 @@ provider_encrypted:
   url: "https://example.com/encrypted-subscribe"
   interval: 86400
   path: ./providers/provider_encrypted.yaml
-  age-secret-key: "AGE-SECRET-KEY-1ZTQLLN0A4U3ZTT3DCZKYN0CGZEZQLWX2DFTXUWMT4ZHR0N2UG6LSW9NT0N"  # age 私钥
+  # 来源：mihomo 官方 proxy-providers 文档中的示例私钥，不是可用凭据。
+  age-secret-key: "AGE-SECRET-KEY-1...（示例，请替换）"
 
 # 本地文件订阅 (可直接导出订阅文件)
 provider_local:
@@ -83,7 +84,7 @@ provider_local:
 
 # 嵌入节点 (直接配置节点，无需外部订阅)
 provider_inline:
-  type: http
+  type: inline
   payload:
     - name: "inline-1"
       type: vless
