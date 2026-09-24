@@ -111,7 +111,7 @@ mihomo-rules/
 - `+.google.com` → `DOMAIN-SUFFIX,google.com`
 - `itunes.apple.com` → `DOMAIN,itunes.apple.com`，只匹配这一个域名（仅 `Direct` / `Proxy`；其余基础集如 `Private` 的裸写域名保持后缀语义 → `DOMAIN-SUFFIX`）
 - 同一个值既有精确域名又有后缀时，只留后缀（所有规则集写入路径统一，品牌集同样适用）
-- `DOMAIN` 的某个多标签父域已在同集 `DOMAIN-SUFFIX` 中时删除该 `DOMAIN`（`Direct` / `Proxy`；单标签 TLD 如 `cn` 不算覆盖父域）
+- `DOMAIN` 的某个多标签父域已在同集 `DOMAIN-SUFFIX` 中时删除该 `DOMAIN`（基础集与品牌集写入路径统一拦截；单标签 TLD 如 `cn` 不算覆盖父域）
 - `+.microsoft` 这类无点品牌词：`Direct` 只留 `cn` 和 `xn--` 开头，`Proxy` 只留 `xn--` 开头，单字符一律删除
 - `Private` 的无点词跟上游 `private.txt`，不按白名单删除
 - `Applications` 与上游 `applications.txt` 一致，同名不同大小写各留一条；品牌集合同名不分大小写，只留一条
