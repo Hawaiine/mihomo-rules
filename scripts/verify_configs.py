@@ -161,7 +161,7 @@ def check_rules_blank_line_before(lines, variant):
     return False
 
 def check_proxy_groups_count(lines, variant):
-    """proxy-groups 总数 = 130 (30 系统 + 100 品牌)"""
+    """proxy-groups 总数 = 30 个系统组 + 当前品牌数"""
     names = extract_proxy_group_names(lines)
     expected = 30 + len(ALL_BRANDS)
     if len(names) != expected:
@@ -170,7 +170,7 @@ def check_proxy_groups_count(lines, variant):
     return True
 
 def check_rule_providers_count(lines, variant):
-    """rule-providers = 9 基础 + 100 品牌 = 109"""
+    """rule-providers = 9 个基础集 + 当前品牌数"""
     keys = extract_rule_provider_keys(lines)
     expected = len(BASE_PROVIDERS) + len(ALL_BRANDS)
     if len(keys) != expected:

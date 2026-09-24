@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 121 品牌 · 130 规则集 · 32.6 万 规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 121 品牌 · 130 规则集 · 35.3 万规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -39,12 +39,10 @@
 | 🛡️ **双 verify 门禁** | `verify_configs`（24 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
 | 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
 | 🔧 **写入幂等** | `has_meaningful_diff` 忽略 `Updated:` 噪音；payload 不变不写 YAML，统计不变不写 README |
-| 📊 **增量清洗** | 只处理本次同步变更过的品牌，非全量文件扫描 |
+| 🔁 **全量解析** | 每次同步全量解析全部上游；写入阶段按差异决定是否落盘，不是增量清洗 |
 | 🛡️ **格式校验** | 对 DOMAIN/DOMAIN-SUFFIX 域名格式做校验，异常报警不丢弃 |
-| 🔍 **异常量级检测** | 品牌规则量突增超过历史倍数时，CI 日志 + Discord 双通道报警 |
 | 🎯 **全球直连** | 新增策略组「🎯 全球直连」，rules/组内直连统一走别名，providers 拉取仍 DIRECT |
 | 🌐 **国内加速** | 内置 DNSPod/阿里 DNS 优先，国内 CDN 加速 geoip/geosite 数据库下载 |
-| 📝 **失败归档** | 失败 Action 保留排障线索 |
 | 🔒 **CI 幂等保护** | `--no-commit` 模式下仅做 dry-run，workflow filter/check 步决定是否提交 |
 | 🌍 **21 地区节点组** | 品牌组与 5 个基础功能组均加入 21 个地区节点（负载均衡后），支持手动选择地区 |
 
@@ -103,10 +101,12 @@ mihomo-rules/
 | # | 上游 | 内容 | 合并策略 |
 |---|------|------|---------|
 | ① | [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community) | 域名 | `data/<brand>` 文件，递归解析 `include:` 引用（≤5 层） |
-| ② | [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | 域名 + IP-CIDR | `release/` 目录，Python 解析 YAML payload |
+| ② | [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | 域名 + IP-CIDR | `release` 分支；基础 7 集全量同步，另补充 iCloud / Telegram |
 | ③ | [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script) | 域名 + IP-CIDR + IP-CIDR6 + PROCESS-NAME | 域名仅补漏，IP-CIDR/PROCESS-NAME 无条件全加 |
 
-**合并逻辑：** 已有规则集 → ① v2fly 补充域名 → ② Loyalsoldier 补充域名+IP-CIDR → ③ blackmatrix7 域名仅补漏、IP-CIDR/PROC-NAME 无条件全加 → 合并去重（`CanonicalRule` 精确匹配）→ 按类型分组 → 字母序排序 → 重写 Header
+**合并逻辑：** 品牌集按 ① v2fly → ② Loyalsoldier 品牌补充 → ③ blackmatrix7 合并去重。基础集中 `Reject`、`Direct`、`Proxy`、`CNCIDR`、`Private`、`LanCIDR`、`Applications` 由 Loyalsoldier `release` 每日重建；`DirectDNS`、`ProxyDNS` 继续手工维护。
+
+**技术 ID 与显示名：** 目录和 provider key 使用无空格技术 ID，策略组使用显示名。例如 `NetEaseCloudMusic` → `网易云音乐`，`myTVSUPER` → `myTV SUPER`，`iQIYI` → `爱奇艺`。
 
 ## 🚀 快速使用
 
@@ -247,8 +247,8 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 | 线 | 用途 | 规则 | 示例 |
 |----|------|------|------|
-| **技术 ID**（无空格） | 目录名、文件名、rule-providers key、url/path 中的 Brand 段、RULE-SET 第一段 | `ruleset/<ID>/<ID>.yaml` | `AppleTV`、`PrimeVideo`、`myTVSUPER` |
-| **显示名**（可有空格/符号） | 策略组名、`# Rule Name`、README 标题、RULE-SET 第二段 | `STRATEGY_GROUP_MAP` 中定义，无则 = ID | `Apple TV`、`Prime Video`、`myTV SUPER` |
+| **技术 ID**（无空格） | 目录名、文件名、rule-providers key、url/path 中的 Brand 段、RULE-SET 第一段 | `ruleset/<ID>/<ID>.yaml` | `NetEaseCloudMusic`、`myTVSUPER`、`iQIYI` |
+| **显示名**（可有空格/符号） | 策略组名、`# Rule Name`、README 标题、RULE-SET 第二段 | `STRATEGY_GROUP_MAP` 中定义，无则 = ID | `网易云音乐`、`myTV SUPER`、`爱奇艺` |
 
 **RULE-SET 拼法：** `RULE-SET,<技术ID>,<显示名>`
 
@@ -321,29 +321,28 @@ python3 scripts/generate_config.py
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 312,891 |
-| 品牌 | — | 121 | 121 | 13,327 |
-| **合计** | **9** | **121** | **130** | **326,218** |
+| 基础 | 9 | — | 9 | 339,351 |
+| 品牌 | — | 121 | 121 | 13,346 |
+| **合计** | **9** | **121** | **130** | **352,697** |
 
-规则类型分布：DOMAIN-SUFFIX(319K) · IP-CIDR(4.4K) · IP-CIDR6(1.7K) · DOMAIN(597) · DOMAIN-REGEX(148) · PROCESS-NAME(140) · DOMAIN-KEYWORD(32) · IP-ASN(8)
+规则类型分布：DOMAIN-SUFFIX(341,808) · IP-CIDR(6,427) · IP-CIDR6(3,535) · DOMAIN(599) · DOMAIN-REGEX(148) · PROCESS-NAME(140) · DOMAIN-KEYWORD(32) · IP-ASN(8)
 
 ### 品牌分类统计
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
 | 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSUPER |
-| 🤖 AI | 11 | 176 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 19 | 939 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 11 | 1,865 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
+| 🤖 AI | 11 | 178 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
+| 📱 社交 | 19 | 940 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| ☁️ 云服务 | 11 | 1,869 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
 | 🎮 游戏 | 2 | 204 | Nintendo · Steam |
-| 🛍️ 电商 | 7 | 727 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
+| 🛍️ 电商 | 7 | 739 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
 | 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseCloudMusic · QQMusic · Qobuz · Spotify · TIDAL · YouTubeMusic |
 | 🏢 企业 | 13 | 8,404 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
-| 🏦 金融 | 0 | 0 | — |
 
 ## 🤝 贡献指南
 
-1. **新增品牌**：在 `ruleset/` 下创建 `<Brand>/<Brand>.yaml`，按 8 种规则类型规范编写，运行 `python3 scripts/verify_rulesets.py` 校验
+1. **新增品牌**：创建 `ruleset/<Brand>/<Brand>.yaml`；有上游时同步补 `parse_v2fly.py`、`parse_blackmatrix7.py` 或 `parse_loyalsoldier.py` 的映射；显示名不同于技术 ID 时补 `commit_writer.py` 的 `STRATEGY_GROUP_MAP`；父子关系补 `ownership_map.py` 后运行 `resolve_ownership.py --apply`，最后运行 `generate_config.py`。
 2. **修复规则**：修改 YAML 文件后运行 `python3 scripts/verify_rulesets.py` 校验格式一致性
 3. **提交前检查**：
    ```bash
@@ -352,7 +351,7 @@ python3 scripts/generate_config.py
    python3 scripts/generate_config.py       # 配置生成测试
    ```
 
-> 日更由 `scripts/batch_update.py` 或 CI `daily-sync.yml` 全量管线处理，不单独同步单一品牌。如需新增品牌，编辑 `scripts/lib/ownership_map.py` 添加品牌映射后运行全量管线。
+> 日更由 `scripts/batch_update.py` 或 CI `daily-sync.yml` 全量管线处理。新增品牌不能只改 `ownership_map.py`，还要补目录、上游映射、显示名映射，并重新生成配置。
 
 ## ❓ 常见问题
 
@@ -382,6 +381,14 @@ python3 scripts/generate_config.py       # 重新生成配置
 - **[mihomo-rules-skill](https://github.com/Hawaiine/mihomo-rules-skill)** — Hermes Agent Skill
 - **[问题反馈](https://github.com/Hawaiine/mihomo-rules/issues)**
 
-## 📄 License
+## 📄 License 与上游数据
 
-MIT License — 自由使用、修改、分发。
+本仓库代码使用 MIT License。
+
+规则数据来自三个上游，衍生规则集同时受其许可约束：
+
+- [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)：MIT
+- [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)：仓库许可为 GPL-3.0；当前 `release` 数据快照不含 LICENSE 文件
+- [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)：当前快照 LICENSE 为 GPL-2.0
+
+包含 GPL 上游内容的衍生规则集按 GPL 分发；仅使用本仓库脚本和不含 GPL 数据的部分时，适用 MIT。完整声明见 [NOTICE](NOTICE)。
