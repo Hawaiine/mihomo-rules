@@ -176,7 +176,7 @@ class TestLoyalsoldierBasicPolicy(unittest.TestCase):
 
 
 class TestWritePathDedup(unittest.TestCase):
-    """写入兜底：prepare_rules_for_write 同时做完全重复 + 跨类型去重。"""
+    """写入兜底：prepare_rules_for_write 同时做完全重复 + 跨类型去重 + 阴影 DOMAIN 去重。"""
 
     def test_cross_type_dropped_on_write(self):
         rules = [
@@ -195,6 +195,27 @@ class TestWritePathDedup(unittest.TestCase):
         out, dropped = prepare_rules_for_write("Netflix", rules)
         self.assertEqual(len(out), 1)
         self.assertEqual(dropped, 0)
+
+    def test_shadow_domain_dropped_on_write(self):
+        rules = [
+            _r("DOMAIN", "alt1-mtalk.google.com"),
+            _r("DOMAIN", "clients1.google.com"),
+            _r("DOMAIN-SUFFIX", "google.com"),
+        ]
+        out, _ = prepare_rules_for_write("Google", rules)
+        types = {(r.rule_type, r.value) for r in out}
+        self.assertEqual(types, {("DOMAIN-SUFFIX", "google.com")})
+
+    def test_single_label_tld_not_stripped_on_write(self):
+        rules = [
+            _r("DOMAIN", "ai.zhaomi.cn"),
+            _r("DOMAIN-SUFFIX", "cn"),
+            _r("DOMAIN-SUFFIX", "cn"),
+        ]
+        out, _ = prepare_rules_for_write("Direct", rules)
+        types = {(r.rule_type, r.value) for r in out}
+        self.assertIn(("DOMAIN", "ai.zhaomi.cn"), types)
+        self.assertIn(("DOMAIN-SUFFIX", "cn"), types)
 
 
 def _ruleset(root, brand, payload_lines, header_counts):
@@ -248,30 +269,14 @@ class TestVerifyRulesetsDomainChecks(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(any("更宽后缀覆盖" in e for e in errors), errors)
 
-    def test_brand_shadow_default_non_fatal_and_strict_fails(self):
-        original = verify_rulesets.STRICT_DOMAIN
-        verify_rulesets.SHADOW_REPORT.clear()
-        try:
-            verify_rulesets.STRICT_DOMAIN = False
-            ok, errors = self._check(
-                "Netflix",
-                ["DOMAIN,alt.netflix.com", "DOMAIN-SUFFIX,netflix.com"],
-                {"DOMAIN": 1, "DOMAIN-SUFFIX": 1},
-            )
-            self.assertTrue(ok, errors)
-            self.assertEqual(len(verify_rulesets.SHADOW_REPORT), 1)
-
-            verify_rulesets.STRICT_DOMAIN = True
-            ok, errors = self._check(
-                "Netflix",
-                ["DOMAIN,alt.netflix.com", "DOMAIN-SUFFIX,netflix.com"],
-                {"DOMAIN": 1, "DOMAIN-SUFFIX": 1},
-            )
-            self.assertFalse(ok)
-            self.assertTrue(any("更宽后缀覆盖" in e for e in errors), errors)
-        finally:
-            verify_rulesets.STRICT_DOMAIN = original
-            verify_rulesets.SHADOW_REPORT.clear()
+    def test_brand_shadow_fails_by_default(self):
+        ok, errors = self._check(
+            "Netflix",
+            ["DOMAIN,alt.netflix.com", "DOMAIN-SUFFIX,netflix.com"],
+            {"DOMAIN": 1, "DOMAIN-SUFFIX": 1},
+        )
+        self.assertFalse(ok)
+        self.assertTrue(any("更宽后缀覆盖" in e for e in errors), errors)
 
     def test_private_exempt_from_shadow_check(self):
         ok, errors = self._check(

@@ -24,6 +24,7 @@ from lib.canonical import (
     CanonicalRule,
     count_by_type,
     dedup_key,
+    drop_domain_covered_by_broader_suffix,
     drop_domain_covered_by_suffix,
     sort_rules,
     TYPES_ORDER,
@@ -314,10 +315,11 @@ def prepare_rules_for_write(
     brand_name: str,
     rules: list[CanonicalRule],
 ) -> tuple[list[CanonicalRule], int]:
-    """写入前统一去重：完全重复（TYPE+VALUE）+ 同值跨类型（DOMAIN ⊂ DOMAIN-SUFFIX）。
+    """写入前统一去重：完全重复（TYPE+VALUE）+ 同值跨类型（DOMAIN ⊂ DOMAIN-SUFFIX）
+    + 阴影 DOMAIN（多标签父域已在同集 DOMAIN-SUFFIX 中）。
 
     所有写入路径（品牌 / 基础集 / resolve_ownership / manual 保留合并）共用，
-    确保落盘内容既无完全重复行，也无同值双类型。
+    确保落盘内容既无完全重复行、无同值双类型，也无被同集更宽后缀覆盖的 DOMAIN。
 
     Args:
         brand_name: 规则集名（Applications 走大小写敏感去重）
@@ -330,6 +332,9 @@ def prepare_rules_for_write(
     rules, cross_dropped = drop_domain_covered_by_suffix(rules)
     if cross_dropped:
         print(f"  🧹 {brand_name}: 同值跨类型去重（保留 DOMAIN-SUFFIX）{len(cross_dropped)} 条")
+    rules, shadow_dropped = drop_domain_covered_by_broader_suffix(rules)
+    if shadow_dropped:
+        print(f"  🧹 {brand_name}: 阴影 DOMAIN 去重（被同集更宽后缀覆盖）{len(shadow_dropped)} 条")
     return rules, len(cross_dropped)
 
 

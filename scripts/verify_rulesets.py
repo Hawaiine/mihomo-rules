@@ -20,12 +20,10 @@ SG_MAP = STRATEGY_GROUP_MAP
 
 BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
-# 冗余 DOMAIN 检查口径：
-# - 基础集（Direct / Proxy 等）：恒为 FAIL（清理后应保持 0，防回退）。
-# - 品牌集：历史存量（上游 full: 与 bm7 混用）默认仅汇总提示；
-#   --strict-domain / MIHOMO_VERIFY_STRICT_DOMAIN=1 升级为 FAIL。
-STRICT_DOMAIN = '--strict-domain' in sys.argv or os.environ.get('MIHOMO_VERIFY_STRICT_DOMAIN') == '1'
-SHADOW_REPORT: list[tuple[str, int]] = []
+# 冗余 DOMAIN 检查口径（恒为 FAIL，清理后应保持 0，防回退）：
+# - 同值跨类型：同一 value 同时出现 DOMAIN 与 DOMAIN-SUFFIX；
+# - 阴影覆盖：DOMAIN 的多标签父域已在同集 DOMAIN-SUFFIX 中（单标签 TLD 不参与）；
+# - 品牌集与基础集统一 FAIL（历史存量已随 fix/domain-shadow-cleanup 清零）。
 
 # 规则类型正则（用于 payload 计数）
 TYPE_RE = re.compile(r'^\s*[-–]\s*([A-Z][A-Z0-9_-]+)\s*,')
@@ -225,15 +223,12 @@ def check_brand(brand):
         sample = ', '.join(cross[:3]) + (' …' if len(cross) > 3 else '')
         errors.append(f'  {brand}: 同值跨类型重复 {len(cross)} 条（DOMAIN 与 DOMAIN-SUFFIX 同名）: {sample}')
 
-    # DOMAIN 被同集更宽后缀覆盖：仅多标签父域判定，单标签 TLD 不参与
+    # DOMAIN 被同集更宽后缀覆盖：仅多标签父域判定，单标签 TLD 不参与（恒为 FAIL）
     if brand != 'Private':
         _, shadowed = drop_domain_covered_by_broader_suffix(payload_rules)
         if shadowed:
-            if STRICT_DOMAIN or brand in BASE:
-                sample = ', '.join(r.value for r in shadowed[:3]) + (' …' if len(shadowed) > 3 else '')
-                errors.append(f'  {brand}: DOMAIN 被同集更宽后缀覆盖 {len(shadowed)} 条: {sample}')
-            else:
-                SHADOW_REPORT.append((brand, len(shadowed)))
+            sample = ', '.join(r.value for r in shadowed[:3]) + (' …' if len(shadowed) > 3 else '')
+            errors.append(f'  {brand}: DOMAIN 被同集更宽后缀覆盖 {len(shadowed)} 条: {sample}')
 
     return len(errors) == 0, errors
 
@@ -246,8 +241,6 @@ def main():
     brands = get_brands()
     print(f'  品牌总数: {len(brands)}')
     print()
-
-    SHADOW_REPORT.clear()
 
     total_pass = 0
     total_fail = 0
@@ -264,13 +257,6 @@ def main():
     print(f'--- 结果 ---')
     print(f'  PASS: {total_pass}')
     print(f'  FAIL: {total_fail}')
-
-    if SHADOW_REPORT and not STRICT_DOMAIN:
-        shadow_sets = len(SHADOW_REPORT)
-        shadow_vals = sum(c for _, c in SHADOW_REPORT)
-        print()
-        print(f'  ℹ️  品牌集 DOMAIN 被同集更宽后缀覆盖（历史存量，未判 FAIL）: '
-              f'{shadow_sets} 个规则集 / {shadow_vals} 条；--strict-domain 可升级为 FAIL')
 
     # 额外: 校验 STRATEGY_GROUP_MAP 无漂移
     sg_orphans = [k for k in SG_MAP if k not in brands]
