@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 121 品牌 · 130 规则集 · 35.3 万规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 121 品牌 · 130 规则集 · 35.2 万规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -109,8 +109,9 @@ mihomo-rules/
 **基础集域名策略（只作用于 Loyalsoldier）：**
 
 - `+.google.com` → `DOMAIN-SUFFIX,google.com`
-- `itunes.apple.com` → `DOMAIN,itunes.apple.com`，只匹配这一个域名
-- 同一个值既有精确域名又有后缀时，只留后缀
+- `itunes.apple.com` → `DOMAIN,itunes.apple.com`，只匹配这一个域名（仅 `Direct` / `Proxy`；其余基础集如 `Private` 的裸写域名保持后缀语义 → `DOMAIN-SUFFIX`）
+- 同一个值既有精确域名又有后缀时，只留后缀（所有规则集写入路径统一，品牌集同样适用）
+- `DOMAIN` 的某个多标签父域已在同集 `DOMAIN-SUFFIX` 中时删除该 `DOMAIN`（`Direct` / `Proxy`；单标签 TLD 如 `cn` 不算覆盖父域）
 - `+.microsoft` 这类无点品牌词：`Direct` 只留 `cn` 和 `xn--` 开头，`Proxy` 只留 `xn--` 开头，单字符一律删除
 - `Private` 的无点词跟上游 `private.txt`，不按白名单删除
 - `Applications` 与上游 `applications.txt` 一致，同名不同大小写各留一条；品牌集合同名不分大小写，只留一条
@@ -319,7 +320,7 @@ python3 scripts/generate_config.py
 | `verify_configs.py` | 配置校验（24 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性/地区组结构/icon 文件存在性） | `python3 scripts/verify_configs.py` |
 | `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
 | `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
-| `resolve_ownership.py` | 品牌归属去重（子品牌规则移到父品牌目录） | `python3 scripts/resolve_ownership.py --apply` |
+| `resolve_ownership.py` | 品牌归属去重（子品牌规则从父品牌剥离，含父品牌精确域名被同值后缀覆盖的情形） | `python3 scripts/resolve_ownership.py --apply` |
 | `commit_writer.py` | 写入单个品牌 YAML + README（含幂等，跳过 Updated 噪音） | 由 batch_update 调用 |
 | `match_icons.py` | 品牌图标映射唯一入口（`build_icon_map()`），基准取 Oasisic-Icons git tree，含显式覆盖表 | `python3 scripts/match_icons.py` |
 
@@ -331,24 +332,24 @@ python3 scripts/generate_config.py
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 339,351 |
-| 品牌 | — | 121 | 121 | 13,346 |
-| **合计** | **9** | **121** | **130** | **352,697** |
+| 基础 | 9 | — | 9 | 338,707 |
+| 品牌 | — | 121 | 121 | 13,645 |
+| **合计** | **9** | **121** | **130** | **352,352** |
 
-规则类型分布：DOMAIN-SUFFIX(341,808) · IP-CIDR(6,427) · IP-CIDR6(3,535) · DOMAIN(599) · DOMAIN-REGEX(148) · PROCESS-NAME(140) · DOMAIN-KEYWORD(32) · IP-ASN(8)
+规则类型分布：DOMAIN-SUFFIX(341,010) · IP-CIDR(6,404) · IP-CIDR6(3,475) · DOMAIN(1,124) · DOMAIN-REGEX(148) · PROCESS-NAME(147) · DOMAIN-KEYWORD(36) · IP-ASN(8)
 
 ### 品牌分类统计
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
-| 🎬 流媒体 | 49 | 924 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSUPER |
-| 🤖 AI | 11 | 178 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 19 | 940 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 11 | 1,869 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
-| 🎮 游戏 | 2 | 204 | Nintendo · Steam |
-| 🛍️ 电商 | 7 | 739 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
-| 🎵 音乐 | 9 | 88 | Deezer · Mora · Musixmatch · NetEaseCloudMusic · QQMusic · Qobuz · Spotify · TIDAL · YouTubeMusic |
-| 🏢 企业 | 13 | 8,404 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
+| 🎬 流媒体 | 49 | 1,231 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · friDayvideo · iQIYI · karaokeDAM · myTVSUPER |
+| 🤖 AI | 11 | 177 | Anthropic · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Manus · OpenAI · Perplexity · Poe · SiriAI |
+| 📱 社交 | 19 | 957 | Bluesky · Discord · Facebook · Instagram · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| ☁️ 云服务 | 11 | 1,865 | AWS · Cloudflare · Docker · GitHub · Google · GooglePlay · Microsoft · OneDrive · Synology · iCloud · iCloud Private Relay |
+| 🎮 游戏 | 2 | 192 | Nintendo · Steam |
+| 🛍️ 电商 | 7 | 726 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
+| 🎵 音乐 | 9 | 84 | Deezer · Mora · Musixmatch · NetEaseCloudMusic · QQMusic · Qobuz · Spotify · TIDAL · YouTubeMusic |
+| 🏢 企业 | 13 | 8,413 | Apple · AppleTV · Bank · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
 
 ## 🤝 贡献指南
 
