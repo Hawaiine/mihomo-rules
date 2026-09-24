@@ -106,6 +106,16 @@ mihomo-rules/
 
 **合并逻辑：** 品牌集按 ① v2fly → ② Loyalsoldier 品牌补充 → ③ blackmatrix7 合并去重。基础集中 `Reject`、`Direct`、`Proxy`、`CNCIDR`、`Private`、`LanCIDR`、`Applications` 由 Loyalsoldier `release` 每日重建；`DirectDNS`、`ProxyDNS` 继续手工维护。
 
+**基础集域名策略（只作用于 Loyalsoldier）：**
+
+- `+.google.com` → `DOMAIN-SUFFIX,google.com`
+- `itunes.apple.com` → `DOMAIN,itunes.apple.com`，只匹配这一个域名
+- 同一个值既有精确域名又有后缀时，只留后缀
+- `+.microsoft` 这类无点品牌词：`Direct` 只留 `cn` 和 `xn--` 开头，`Proxy` 只留 `xn--` 开头，单字符一律删除
+- `Private` 的无点词跟上游 `private.txt`，不按白名单删除
+- `Applications` 与上游 `applications.txt` 一致，同名不同大小写各留一条；品牌集合同名不分大小写，只留一条
+- v2fly 不走这套规则：没写 `full:` 的有点域名仍是 `DOMAIN-SUFFIX`，`full:` 才是 `DOMAIN`
+
 **技术 ID 与显示名：** 目录和 provider key 使用无空格技术 ID，策略组使用显示名。例如 `NetEaseCloudMusic` → `网易云音乐`，`myTVSUPER` → `myTV SUPER`，`iQIYI` → `爱奇艺`。
 
 ## 🚀 快速使用

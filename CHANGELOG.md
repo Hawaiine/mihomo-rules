@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-09-24
+
+### Changed
+- **基础集域名策略** — Loyalsoldier 无 `+.` 但有点的行改为 `DOMAIN`，只匹配这一个域名；`+.google.com` 仍是后缀。同一个值同时有精确域名和后缀时只留后缀
+- **无点品牌词** — `Direct` 只留 `cn` 和 `xn--` 开头，`Proxy` 只留 `xn--` 开头，单字符删除。`+.microsoft` 不再进入 Proxy。`Private` 的无点词继续跟上游 `private.txt`，不按白名单删除
+- **进程名大小写** — `Applications` 与上游一致，`tailscale` 与 `Tailscale` 各留一条。品牌集合同名不分大小写，只留一条
+- **`verify_rulesets`** — `Direct` / `Proxy` 的无点品牌词不在白名单、以及任何规则集的单字符，直接失败。`Private` 不查无点白名单。整行完全相同仍然失败
+
+---
+
 ## 2026-09-23
 
 ### Fixed
