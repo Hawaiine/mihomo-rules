@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Disney
 # Author: Hawaiine
-# Updated: 2026-09-24 23:47:33
+# Updated: 2026-09-25 01:20:04
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
+# DOMAIN: 0
 # DOMAIN-SUFFIX: 185
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -12,7 +12,6 @@
 # PROCESS-NAME: 2
 # ===========================================
 payload:
-  - DOMAIN,espn.api.edge.bamgrid.com
   - DOMAIN-SUFFIX,20thcenturystudios.com
   - DOMAIN-SUFFIX,20thcenturystudios.com.au
   - DOMAIN-SUFFIX,20thcenturystudios.com.br

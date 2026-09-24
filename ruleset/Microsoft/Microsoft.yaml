@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Microsoft
 # Author: Hawaiine
-# Updated: 2026-09-24 23:49:36
+# Updated: 2026-09-25 01:20:04
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 25
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 668
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -13,31 +13,7 @@
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,microsoft
-  - DOMAIN,az764295.vo.msecnd.net
-  - DOMAIN,azure.microsoft.com
-  - DOMAIN,azuremarketplace.microsoft.com
-  - DOMAIN,bingsettingssearch.trafficmanager.net
-  - DOMAIN,crl.microsoft.com
-  - DOMAIN,default.exp-tas.com
-  - DOMAIN,developer.microsoft.com
-  - DOMAIN,dtlgalleryint.cloudapp.net
-  - DOMAIN,flightsimulator.azureedge.net
-  - DOMAIN,location.microsoft.com
-  - DOMAIN,mscrl.microsoft.com
-  - DOMAIN,ocsp.microsoft.com
-  - DOMAIN,oneocsp.microsoft.com
-  - DOMAIN,packages.microsoft.com
-  - DOMAIN,poshtestgallery.cloudapp.net
-  - DOMAIN,prodforza.blob.core.windows.net
-  - DOMAIN,psg-int-centralus.cloudapp.net
-  - DOMAIN,psg-int-eastus.cloudapp.net
-  - DOMAIN,rink.hockeyapp.net
-  - DOMAIN,vscode-sync-insiders.trafficmanager.net
-  - DOMAIN,vscode-sync.trafficmanager.net
-  - DOMAIN,vscode.blob.core.windows.net
-  - DOMAIN,vscode.search.windows.net
   - DOMAIN,vsmarketplacebadge.apphb.com
-  - DOMAIN,www.microsoft.com
   - DOMAIN-SUFFIX,21vbc.com
   - DOMAIN-SUFFIX,21vbluecloud.com
   - DOMAIN-SUFFIX,21vbluecloud.net

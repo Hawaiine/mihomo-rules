@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Hami Video
 # Author: Hawaiine
-# Updated: 2026-09-24 23:49:36
+# Updated: 2026-09-25 01:20:04
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 19
+# DOMAIN: 18
 # DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -22,7 +22,6 @@ payload:
   - DOMAIN,mobilelive-hamivideo.cdn.hinet.net
   - DOMAIN,pvr-hamivideo.cdn.hinet.net
   - DOMAIN,scc-hamivideo.cdn.hinet.net
-  - DOMAIN,scc.ott.hinet.net
   - DOMAIN,static-hamivideo.cdn.hinet.net
   - DOMAIN,t.ssp.hinet.net
   - DOMAIN,thumbnail-hamivideo.cdn.hinet.net
