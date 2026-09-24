@@ -35,6 +35,10 @@ GITHUB_SHA = os.environ.get('GITHUB_SHA', '')
 
 # 9 个基础品牌（排除不计数）
 BASE_BRANDS = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
+# H2-A：只有 Loyalsoldier 有对应数据的 7 个基础集进入日更。
+# DirectDNS / ProxyDNS 是 DNS 服务器地址，继续手工维护，禁止自动覆盖。
+BASIC_SYNC_RULESETS = ('Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'LanCIDR', 'Applications')
+MANUAL_BASE_RULESETS = ('DirectDNS', 'ProxyDNS')
 
 # 4 步流程
 STEPS = [
@@ -515,6 +519,33 @@ def validate():
     log('✅ 全部校验通过')
 
 
+def write_basic_rulesets(loyalsoldier_dir, ruleset_dir, dry_run=False):
+    """重建 Loyalsoldier 基础 7 集；DNS 手工集和品牌集一律不打开。"""
+    from commit_writer import write_ruleset
+    from parse_loyalsoldier import LOYALSOLDIER_BASE_MAP, parse_loyalsoldier_basic
+
+    mapped = {config['ruleset'] for config in LOYALSOLDIER_BASE_MAP.values()}
+    if mapped != set(BASIC_SYNC_RULESETS):
+        raise RuntimeError(f'基础映射与同步范围不一致: {sorted(mapped)}')
+    protected = set(MANUAL_BASE_RULESETS)
+    if mapped & protected:
+        raise RuntimeError(f'手工 DNS 集被纳入基础映射: {sorted(mapped & protected)}')
+
+    written = []
+    for name, data in parse_loyalsoldier_basic(str(loyalsoldier_dir)).items():
+        if name in protected or name not in BASIC_SYNC_RULESETS:
+            raise RuntimeError(f'拒绝写入越界规则集: {name}')
+        rules = data['rules']
+        if not rules:
+            raise RuntimeError(f'{name}: 上游基础数据为空，拒绝覆盖现有规则集')
+        result = write_ruleset(name, rules, dry_run=dry_run)
+        if not result.success:
+            raise RuntimeError(f'{name}: {result.error}')
+        if (not dry_run and result.stats.get('has_changes')) or dry_run:
+            written.append(name)
+    return written
+
+
 # ── 主流程 ──────────────────────────────────────────────
 
 
@@ -574,6 +605,10 @@ def main():
 
                     v2fly_dir = str(ROOT / 'upstream' / 'v2fly' / 'data')
                     ls_dir = str(ROOT / 'upstream' / 'loyalsoldier')
+                    basic_written = write_basic_rulesets(
+                        Path(ls_dir), ROOT / 'ruleset', dry_run=False)
+                    log(f'✅ 基础规则集重建: {", ".join(basic_written) or "无实质变化"}')
+
                     bm7_dir = str(ROOT / 'upstream' / 'blackmatrix7' / 'rule' / 'Clash')
 
                     brands = sorted([d.name for d in (ROOT / 'ruleset').iterdir()
