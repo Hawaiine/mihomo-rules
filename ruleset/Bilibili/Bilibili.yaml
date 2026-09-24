@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Bilibili
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:19
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 54
+# DOMAIN: 53
 # DOMAIN-SUFFIX: 67
 # IP-CIDR: 8
 # IP-CIDR6: 0
@@ -65,7 +65,6 @@ payload:
   - DOMAIN,p.bstarstatic.com
   - DOMAIN,upos-bstar-mirrorakam.akamaized.net
   - DOMAIN,upos-bstar1-mirrorakam.akamaized.net
-  - DOMAIN,upos-hz-mirrorakam.akamaized.net
   - DOMAIN-SUFFIX,acg.tv
   - DOMAIN-SUFFIX,acgvideo.com
   - DOMAIN-SUFFIX,animetamashi.cn

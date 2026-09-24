@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Steam
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 3
 # DOMAIN-REGEX: 0
-# DOMAIN: 16
+# DOMAIN: 4
 # DOMAIN-SUFFIX: 57
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -16,21 +16,9 @@ payload:
   - DOMAIN-KEYWORD,steamstore
   - DOMAIN-KEYWORD,steamuserimages
   - DOMAIN,a4e8s8k3.map2.ssl.hwcdn.net
-  - DOMAIN,f3b7q2p3.ssl.hwcdn.net
-  - DOMAIN,steambroadcast.akamaized.net
-  - DOMAIN,steamcdn-a.akamaihd.net
   - DOMAIN,steamcloudsweden.blob.core.windows.net
-  - DOMAIN,steamcommunity-a.akamaihd.net
   - DOMAIN,steamcommunity-a.akamaihd.net.edgesuite.net
-  - DOMAIN,steammobile.akamaized.net
-  - DOMAIN,steampipe-kr.akamaized.net
-  - DOMAIN,steampipe-partner.akamaized.net
-  - DOMAIN,steampipe.akamaized.net
-  - DOMAIN,steamstore-a.akamaihd.net
   - DOMAIN,steamugcquincy.blob.core.windows.net
-  - DOMAIN,steamusercontent-a.akamaihd.net
-  - DOMAIN,steamuserimages-a.akamaihd.net
-  - DOMAIN,steamvideo-a.akamaihd.net
   - DOMAIN-SUFFIX,cdn-ali.content.steamchina.com
   - DOMAIN-SUFFIX,cdn-qc.content.steamchina.com
   - DOMAIN-SUFFIX,cdn-ws.content.steamchina.com

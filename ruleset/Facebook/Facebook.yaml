@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Facebook
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:22
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
+# DOMAIN: 0
 # DOMAIN-SUFFIX: 459
 # IP-CIDR: 23
 # IP-CIDR6: 0
@@ -14,7 +14,6 @@
 payload:
   - DOMAIN-KEYWORD,facebook
   - DOMAIN-KEYWORD,fbcdn
-  - DOMAIN,fbcdn-a.akamaihd.net
   - DOMAIN-SUFFIX,aboutfacebook.com
   - DOMAIN-SUFFIX,accessfacebookfromschool.com
   - DOMAIN-SUFFIX,accountkit.com

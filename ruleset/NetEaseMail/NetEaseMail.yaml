@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: 网易邮箱
 # Author: Hawaiine
-# Updated: 2026-09-24 11:08:55
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 3
+# DOMAIN: 2
 # DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -14,7 +14,6 @@
 payload:
   - DOMAIN,mail.126.com
   - DOMAIN,mail.163.com
-  - DOMAIN,yeah.net
   - DOMAIN-SUFFIX,126.com
   - DOMAIN-SUFFIX,163.com
   - DOMAIN-SUFFIX,yeah.net

@@ -5,7 +5,7 @@
 |------|------|
 | DOMAIN-KEYWORD | 1 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 10 |
+| DOMAIN | 0 |
 | DOMAIN-SUFFIX | 34 |
 | IP-CIDR | 21 |
 | IP-CIDR6 | 0 |
