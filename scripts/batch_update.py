@@ -73,7 +73,7 @@ def send_discord(title, color, fields, add_run_link=True):
                 "icon_url": "https://github.com/Hawaiine.png"
             },
             "thumbnail": {
-                "url": "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Mihomo/Mihomo.png"
+                "url": "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub/GitHub.png"
             }
         }]
     }

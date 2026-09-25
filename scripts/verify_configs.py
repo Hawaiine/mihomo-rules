@@ -49,6 +49,13 @@ SYSTEM_GROUPS = [
 
 from lib.ownership_map import SUB_PARENT
 
+# Oasisic-Icons 仓库位置（用于校验 icon 引用是否真实存在）
+ICON_REPO_CANDIDATES = [
+    os.environ.get('MIHOMO_ICON_REPO'),
+    str(ROOT / 'Oasisic-Icons'),
+    '/opt/data/Oasisic-Icons',
+]
+
 # 从 commit_writer.py 加载
 def load_sg_map():
     import importlib.util
@@ -513,6 +520,150 @@ def check_use_provider_exists(lines, variant):
         return False
     return True
 
+def parse_proxy_groups(path):
+    """解析 config 的 proxy-groups（地区组结构检查用）"""
+    import yaml
+    with open(path, encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+    return data.get('proxy-groups', [])
+
+
+def load_region_groups():
+    """从 generate_config.py 读取 REGION_GROUPS（单一来源，避免两处硬编码漂移）
+
+    若 generate_config.py 尚未定义 REGION_GROUPS（地区注入尚未引入的阶段），
+    返回空列表，让地区相关检查降级为 no-op，保证 verify_configs 在每个历史
+    阶段都可独立运行。
+    """
+    import importlib.util
+    if str(ROOT / 'scripts') not in sys.path:
+        sys.path.insert(0, str(ROOT / 'scripts'))
+    spec = importlib.util.spec_from_file_location('generate_config', ROOT / 'scripts' / 'generate_config.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return list(getattr(mod, 'REGION_GROUPS', []))
+
+
+# 21 个地区组：单一来源取自 generate_config.py
+REGION_GROUPS = load_region_groups()
+
+# 品牌组 proxies 固定头（generate_config.gen_proxy_groups 约定）
+BRAND_GROUP_HEAD = ['🎯 全球直连', '♻️ 自动选择', '🔧 手动切换', '🔯 故障转移', '🔀 负载均衡']
+
+# 需注入 21 个地区组的基础功能组
+BASIC_REGION_GROUPS = ['🔧 手动切换', '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼', '🌍 代理DNS']
+
+
+def check_brand_region_injection(groups, variant):
+    """品牌组 proxies = 5 基础 + 21 地区组，顺序固定"""
+    bad = []
+    for g in groups:
+        if g.get('name') in SYSTEM_GROUPS:
+            continue
+        proxies = g.get('proxies', [])
+        expected = BRAND_GROUP_HEAD + REGION_GROUPS
+        if proxies != expected:
+            bad.append((g.get('name'), len(proxies), proxies[:5]))
+    if bad:
+        for name, n, head in bad[:8]:
+            print(f'  FAIL: {variant} — 品牌组「{name}」proxies {n} 项/内容不符（前5: {head}）')
+        if len(bad) > 8:
+            print(f'  FAIL: {variant} — 另有 {len(bad) - 8} 个品牌组同样不符')
+        return False
+    return True
+
+
+def check_basic_group_region_injection(groups, variant):
+    """5 个基础功能组必须含 21 个地区组，顺序固定"""
+    index = {g.get('name'): g for g in groups}
+    bad = []
+    for name in BASIC_REGION_GROUPS:
+        g = index.get(name)
+        if g is None:
+            bad.append((name, '组不存在'))
+            continue
+        regions = [x for x in g.get('proxies', []) if x in REGION_GROUPS]
+        if regions != REGION_GROUPS:
+            bad.append((name, f'地区组 {len(regions)}/{len(REGION_GROUPS)} 项或顺序不符'))
+    if bad:
+        for name, why in bad:
+            print(f'  FAIL: {variant} — 基础功能组「{name}」{why}')
+        return False
+    return True
+
+
+def check_regions_not_in_use(groups, variant):
+    """21 个地区组只能出现在 proxies，不得泄漏到 use 块"""
+    bad = []
+    region_set = set(REGION_GROUPS)
+    for g in groups:
+        leaked = [x for x in (g.get('use') or []) if x in region_set]
+        if leaked:
+            bad.append((g.get('name'), leaked))
+    if bad:
+        for name, leaked in bad[:8]:
+            print(f'  FAIL: {variant} — 「{name}」use 块含地区组: {leaked}')
+        return False
+    return True
+
+
+def check_icons_exist(lines, variant, icon_ref):
+    """所有 icon 引用必须指向 Oasisic-Icons 上真实存在的文件
+
+    基准优先取图标仓库的 git tree（origin/main → main → HEAD），
+    避免工作区残留已被上游删除的文件造成误判。
+    """
+    if icon_ref is None:
+        return True
+    paths, _ = icon_ref
+    broken = []
+    for line in lines:
+        m = re.match(r'\s+icon:\s*"([^"]+)"', line)
+        if not m:
+            continue
+        url = m.group(1)
+        if '/icons/' not in url:
+            broken.append(url)
+            continue
+        rel = url.split('/icons/', 1)[1]
+        if rel not in paths:
+            broken.append(rel)
+    if broken:
+        for rel in sorted(set(broken)):
+            print(f'  FAIL: {variant} — icon 文件不存在于 Oasisic-Icons: {rel}')
+        return False
+    return True
+
+
+def load_icon_reference():
+    """返回 ((icon 相对路径集合), 来源描述) 或 (None, 原因)"""
+    import subprocess
+    for cand in ICON_REPO_CANDIDATES:
+        if not cand or not os.path.isdir(os.path.join(cand, 'icons')):
+            continue
+        for ref in ('origin/main', 'main', 'HEAD'):
+            try:
+                r = subprocess.run(
+                    ['git', '-C', cand, 'ls-tree', '-r', '--name-only', ref, '--', 'icons/'],
+                    capture_output=True, text=True, timeout=30,
+                )
+            except (OSError, subprocess.SubprocessError):
+                break
+            if r.returncode == 0 and r.stdout.strip():
+                paths = {p[len('icons/'):] for p in r.stdout.splitlines() if p.endswith('.png')}
+                if paths:
+                    return paths, f'{cand}@{ref}'
+        root = os.path.join(cand, 'icons')
+        paths = set()
+        for dirpath, _, files in os.walk(root):
+            for f in files:
+                if f.endswith('.png'):
+                    paths.add(os.path.relpath(os.path.join(dirpath, f), root))
+        if paths:
+            return paths, f'{cand} (工作区扫描)'
+    return None, '未找到 Oasisic-Icons'
+
+
 def check_cross_variant_rules(configs, all_lines):
     """同平台 full vs min 激活规则列表必须全等"""
     platforms = {
@@ -562,6 +713,12 @@ def main():
     print('  verify_configs.py — 4 个 config 全量校验')
     print('=' * 60)
     print(f'  品牌总数: {len(ALL_BRANDS)}')
+    icon_paths, icon_src = load_icon_reference()
+    if icon_paths:
+        print(f'  icon 基准: {icon_src}（{len(icon_paths)} 个 png）')
+    else:
+        print(f'  icon 基准: 无（{icon_src}），跳过 icon 存在性检查')
+    icon_ref = (icon_paths, icon_src) if icon_paths else None
     # 按平台分组
     configs = {}
     for platform, dir_path in CONFIG_DIRS.items():
@@ -582,6 +739,11 @@ def main():
 
         lines = read_file_lines(path)
         all_lines[variant] = lines
+        try:
+            groups_cfg = parse_proxy_groups(path)
+        except Exception as exc:  # YAML 结构损坏时给出明确失败而不是抛栈
+            print(f'  FAIL: {variant} — proxy-groups 解析失败: {exc}')
+            groups_cfg = []
         checks = [
             ('rules: key', check_has_rules_key(lines, variant)),
             ('rules: blank line before', check_rules_blank_line_before(lines, variant)),
@@ -606,6 +768,10 @@ def main():
             ('min proxy-providers no blank lines', check_min_proxy_providers_no_blank_lines(lines, variant)),
             ('rules no quoted strategy', check_rules_no_quoted_strategy(lines, variant)),
             ('use provider exists', check_use_provider_exists(lines, variant)),
+            ('brand group region injection', check_brand_region_injection(groups_cfg, variant)),
+            ('basic group region injection', check_basic_group_region_injection(groups_cfg, variant)),
+            ('regions not in use blocks', check_regions_not_in_use(groups_cfg, variant)),
+            ('icon files exist', check_icons_exist(lines, variant, icon_ref)),
         ]
 
         variant_pass = all(r for _, r in checks)
