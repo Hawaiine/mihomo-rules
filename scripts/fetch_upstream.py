@@ -2,10 +2,22 @@
 fetch_upstream.py — 只管抓取 + 完整性校验
 
 三个上游各自独立拉取，任一失败只跳过该上游，不中断整体流程。
+
+完整性守卫（2026-09-24 新增）：
+- 抓取成功后按上游逐一校验**必备数据文件存在性 + 行数下限**；
+- 与上次同步的**历史行数**对比，识别「行数骤降 / 文件清空」式静默截断；
+- 记录上游 commit SHA 到 stats.json，便于追溯；
+- 任一校验不通过 → 该上游 success=False（整体退出码 1，CI 会拦截并通知）。
+
+历史教训：loyalsoldier 的 branch 曾被改成 master（数据文件全在 release），
+由于当时「成功」判据只有 git 操作成功 + 文件数 > 0（master 也有 4 个文件），
+故障静默持续约 2 个月无人发现。故本文件的存在性/行数守卫是**必需**的，
+不要为了「跑通」而放宽阈值。
 """
 
 import os
 import shutil
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -23,7 +35,9 @@ UPSTREAM_REPOS = {
     },
     "loyalsoldier": {
         "url": "https://github.com/Loyalsoldier/clash-rules.git",
-        "branch": "master",
+        # ⚠️ 数据文件全部在 release 分支；master 只有 LICENSE/README/.github
+        # 改成 master 会导致「抓取成功但 0 数据」的静默故障（2026-07-23 事故）
+        "branch": "release",
         "local_dir": "loyalsoldier",
         "data_dir": "",  # 文件在仓库根目录
     },
@@ -38,6 +52,46 @@ UPSTREAM_REPOS = {
 # 默认存储路径（相对于项目根目录）
 DEFAULT_CACHE_DIR = "upstream"
 
+# 历史行数 / SHA 留痕文件（位于 cache_dir 下，upstream/ 已在 .gitignore 中）
+STATS_FILENAME = "stats.json"
+
+
+# ── 完整性校验规则 ────────────────────────────────────────────
+#
+# loyalsoldier: 7 个基础数据文件的**最小行数**（实测 2026-09-22 release@be3f25f：
+#   reject 190,748 / direct 111,169 / proxy 27,100 / cncidr 9,741 /
+#   private 130 / lancidr 18 / applications 98）
+#   阈值取实测值的 ~50%，既能拦住「分支错 / 文件缺失 / 被截断」，
+#   又不会因上游正常增删而误报。
+#
+# v2fly / blackmatrix7: 数据目录文件数下限（实测 data/ 约 900+、
+#   rule/Clash 约 300+，取保守下限）。
+
+INTEGRITY_RULES: dict[str, dict] = {
+    "loyalsoldier": {
+        "files": {
+            "reject.txt": 100_000,
+            "direct.txt": 50_000,
+            "proxy.txt": 10_000,
+            "cncidr.txt": 1_000,
+            "private.txt": 1,
+            "lancidr.txt": 1,
+            "applications.txt": 1,
+        },
+    },
+    "v2fly": {"min_files": 500},
+    "blackmatrix7": {"min_files": 100},
+}
+
+# 历史行数骤降判据（当前 < 历史 × 该比例 即判定异常）
+TRUNCATION_RATIO = 0.5
+
+# 三上游 + 重试共享总预算，不能只比较单个子命令与外层超时。
+# batch_update 的 300s 外层限制为进程清理/统计留出 30s 余量。
+FETCH_TOTAL_TIMEOUT = 270
+FETCH_TIMEOUT = 240
+CLONE_TIMEOUT = 240
+
 
 # ── 抓取结果类型 ──────────────────────────────────────────────
 
@@ -49,14 +103,27 @@ class FetchResult(NamedTuple):
     total_bytes: int
     error: str = ""
     elapsed: float = 0.0
+    checks: tuple[str, ...] = ()  # 完整性校验问题列表（成功时为空）
+    commit: str = ""  # 上游 commit SHA（留痕用）
 
 
 # ── 工具函数 ──────────────────────────────────────────────────
 
 
+def _remaining_timeout(timeout: float, deadline: float | None) -> float:
+    """把单次时长限制在共享 monotonic deadline 内，耗尽后不再启动命令。"""
+    if deadline is None:
+        return timeout
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("抓取总预算耗尽")
+    return min(timeout, remaining)
+
+
 def _retry_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None,
-               max_retries: int = 3, base_delay: float = 2.0) -> tuple[int, str]:
-    """运行命令，失败时指数退避重试，失败自动清理 git 操作残留。
+               max_retries: int = 3, base_delay: float = 2.0,
+               deadline: float | None = None) -> tuple[int, str]:
+    """运行命令，失败时在共享预算内指数退避重试；不删除 Git 锁。
 
     Args:
         cmd:         命令列表
@@ -71,7 +138,7 @@ def _retry_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None,
     last_code = -1
     last_out = ""
     for attempt in range(1, max_retries + 1):
-        code, out = _run_cmd(cmd, timeout=timeout, cwd=cwd)
+        code, out = _run_cmd(cmd, timeout=timeout, cwd=cwd, deadline=deadline)
         if code == 0:
             return code, out
         last_code = code
@@ -79,27 +146,162 @@ def _retry_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None,
         if attempt < max_retries:
             delay = base_delay * (2 ** (attempt - 1))
             print(f"  ⚠️ 重试 {attempt}/{max_retries} ({delay:.0f}s) — {cmd[0]} {' '.join(cmd[1:3])}...")
-            time.sleep(delay)
+            time.sleep(_remaining_timeout(delay, deadline))
     return last_code, last_out
 
 
-def _run_cmd(cmd: list[str], timeout: int = 60, cwd: str | None = None) -> tuple[int, str]:
-    """运行命令并返回 (exit_code, stdout)"""
+def _run_cmd(cmd: list[str], timeout: float = 60, cwd: str | None = None,
+             deadline: float | None = None) -> tuple[int, str]:
+    """运行命令并返回 (exit_code, stdout)
+
+    超时时必须杀掉整个进程组：git fetch 会派生子进程（remote-helper、
+    ssh/git-remote-https），subprocess.run 的 timeout 只杀直接子进程，
+    孙进程会变孤儿继续持有 .git 锁，导致后续 fetch 全部失败。
+
+    实现用 `start_new_session=True` 让子进程自成进程组（pgid == 子进程 pid），
+    超时后 `os.killpg(pgid)` 精确杀该组全部成员。**不要**用「扫 ps 找子孙再逐个
+    kill」——孙进程被孤立后会重新挂到最近的 subreaper，扫不到；更不能扫 pgid
+    盲杀，那会连带父 shell 一起杀掉（表现为整个进程被 SIGKILL 且无输出）。
+    """
+    timeout = _remaining_timeout(timeout, deadline)
+    proc = None
     try:
-        r = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=cwd,
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, errors="replace", cwd=cwd, start_new_session=True,
         )
-        return r.returncode, r.stdout + r.stderr
+        out, _ = proc.communicate(timeout=timeout)
+        return proc.returncode, out
     except subprocess.TimeoutExpired:
-        return -1, f"命令超时 ({timeout}s)"
+        out = _kill_process_tree(proc)
+        return -1, f"命令超时 ({timeout}s)\n{out}"
     except FileNotFoundError as e:
         return -2, f"命令未找到: {e}"
     except Exception as e:
+        if proc is not None:
+            _kill_process_tree(proc)
         return -3, str(e)
+    except BaseException:
+        # KeyboardInterrupt/SystemExit 也先清理本次命令，绝不扫描或误杀兄弟进程。
+        if proc is not None:
+            _kill_process_tree(proc)
+        raise
+    finally:
+        if proc is not None and proc.stdout is not None:
+            proc.stdout.close()
+
+
+def _kill_process_tree(proc: subprocess.Popen) -> str:
+    """清理本次命令的独立进程组并回收输出；组长退出不等于整组退出。"""
+    if proc.pid == os.getpgrp():
+        raise RuntimeError("拒绝向调用方所在进程组发送终止信号")
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        proc.communicate(timeout=1)
+    except subprocess.TimeoutExpired:
+        pass
+    finally:
+        # 即使父进程已退出，也要清理忽略 SIGTERM 的同组孙进程。
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    out, _ = proc.communicate(timeout=3)
+    return out or ""
+
+
+def _count_lines(path: str) -> int:
+    """统计文件非空行数（截断检测口径，稳定且与内容编码无关）。"""
+    n = 0
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.strip():
+                    n += 1
+    except OSError:
+        return -1
+    return n
+
+
+def _count_files(data_dir: str) -> tuple[int, int]:
+    """递归统计目录下文件数与总字节数。
+
+    排除 .git 元数据，避免仓库根目录作为 data_dir 时污染统计。
+    Loyalsoldier 的完整性判定另用 7 个必备文件行数，不依赖这里的总文件数。
+    """
+    file_count = 0
+    total_bytes = 0
+    for root, dirs, files in os.walk(data_dir):
+        if ".git" in dirs:
+            dirs.remove(".git")
+        for f in files:
+            if f == ".git":  # linked worktree 的 .git 是指针文件。
+                continue
+            fp = os.path.join(root, f)
+            try:
+                total_bytes += os.path.getsize(fp)
+                file_count += 1
+            except OSError:
+                pass
+    return file_count, total_bytes
+
+
+def upstream_commit(local_dir: str, deadline: float | None = None) -> str:
+    """取上游本地仓库当前 commit SHA（追溯用，失败返回空串）。"""
+    code, out = _run_cmd(["git", "rev-parse", "HEAD"], timeout=15, cwd=local_dir,
+                         deadline=deadline)
+    return out.strip() if code == 0 else ""
+
+
+# git 操作锁文件：进程被 kill / 磁盘满时可能残留，导致后续所有 fetch 失败
+GIT_LOCK_FILES = ("shallow.lock", "index.lock", "config.lock", "HEAD.lock")
+
+
+def _check_git_locks(local_dir: str, deadline: float | None = None) -> None:
+    """只检查锁，绝不按年龄删除未知所属的 Git 锁。
+
+    Git 通过独占创建锁文件协调写入，并不要求持有 flock；年龄或可获取
+    flock 都不能证明锁已废弃。遇到锁时安全停止，由操作者确认持有者。
+    路径交给 Git 解析，兼容普通仓库、独立 git-dir 和 linked worktree。
+    """
+    cmd = ["git", "rev-parse", "--path-format=absolute"]
+    for lock in GIT_LOCK_FILES:
+        cmd.extend(["--git-path", lock])
+    code, out = _run_cmd(cmd, timeout=15, cwd=local_dir, deadline=deadline)
+    if code != 0:
+        raise RuntimeError(f"无法解析 Git 锁路径: {out.strip()}")
+    locks = [path for path in out.splitlines() if os.path.lexists(path)]
+    if locks:
+        raise RuntimeError("发现 Git 锁，未删除；请确认持有者后处理: " + ", ".join(locks))
+    return None
+
+
+def _fetch_branch(name: str, local_dir: str, branch: str,
+                  deadline: float | None = None) -> tuple[int, str]:
+    """浅拉指定分支并建立 origin/<branch> 引用（带重试 + 每次尝试前检查 Git 锁）。
+
+    单分支浅克隆的 remote.origin.fetch 只覆盖原分支，直接
+    `git fetch origin <branch>` 不会创建 origin/<branch> 引用，故显式指定 refspec。
+    """
+    spec = f"+refs/heads/{branch}:refs/remotes/origin/{branch}"
+    last_code, last_out = -1, ""
+    for attempt in range(1, 4):
+        # 上一轮超时可能留锁；未知所属的锁只报错，绝不自动删除。
+        _check_git_locks(local_dir, deadline=deadline)
+        last_code, last_out = _run_cmd(
+            ["git", "fetch", "--depth", "1", "origin", spec],
+            timeout=FETCH_TIMEOUT, cwd=local_dir, deadline=deadline,
+        )
+        if last_code == 0:
+            return last_code, last_out
+        if attempt < 3:
+            delay = 2 * (2 ** (attempt - 1))
+            print(f"  ⚠️ {name}: fetch 重试 {attempt}/3 ({delay}s)")
+            time.sleep(_remaining_timeout(delay, deadline))
+    return last_code, last_out
 
 
 # ── 单个上游抓取 ──────────────────────────────────────────────
@@ -108,6 +310,7 @@ def _ensure_upstream_repo(
     name: str,
     config: dict,
     cache_dir: str,
+    deadline: float | None = None,
 ) -> tuple[str, str]:
     """
     确保上游仓库已克隆到本地缓存目录，并拉取最新代码。
@@ -123,26 +326,25 @@ def _ensure_upstream_repo(
     local_dir = os.path.join(cache_dir, config["local_dir"])
     data_dir = os.path.join(local_dir, config["data_dir"]) if config.get("data_dir") else local_dir
     url = config["url"]
+    branch = config.get("branch", "main")
 
     if os.path.isdir(local_dir):
-        # 已存在，拉取最新
-        branch = config.get("branch", "main")
-        # 先确保本地分支跟踪远程分支（失败可容忍，不阻塞）
-        _run_cmd(["git", "branch", f"--set-upstream-to=origin/{branch}", branch], timeout=10, cwd=local_dir)
-        code, out = _retry_cmd(["git", "pull", "--ff-only"], timeout=60, cwd=local_dir)
+        # 已存在：**强制对齐到目标分支**。
+        # 只用 pull 是不够的——若本地仓库当初被 clone 成了错分支
+        # （loyalsoldier 曾被 clone 成 master），pull 永远拿不到 release 的数据。
+        code, out = _fetch_branch(name, local_dir, branch, deadline=deadline)
         if code != 0:
-            print(f"  ⚠️ {name}: git pull 失败 ({code})，尝试 fetch + reset")
-            code2, out2 = _retry_cmd(["git", "fetch", "origin"], timeout=60, cwd=local_dir)
-            if code2 != 0:
-                raise RuntimeError(f"{name}: git fetch 失败（重试后仍失败）: {out2[:500]}")
-            _retry_cmd(["git", "reset", "--hard", f"origin/{branch}"], timeout=60, cwd=local_dir)
+            raise RuntimeError(f"{name}: git fetch origin {branch} 失败（重试后仍失败）: {out[:500]}")
+        code2, out2 = _retry_cmd(["git", "checkout", "-B", branch, f"origin/{branch}"],
+                                 timeout=120, cwd=local_dir, deadline=deadline)
+        if code2 != 0:
+            raise RuntimeError(f"{name}: 切换到 origin/{branch} 失败: {out2[:500]}")
     else:
         # 克隆（带重试 + 失败清理半成品目录）
-        branch = config.get("branch", "main")
         os.makedirs(os.path.dirname(local_dir), exist_ok=True)
         code, out = _retry_cmd(
             ["git", "clone", "--depth", "1", "--branch", branch, url, local_dir],
-            timeout=120,
+            timeout=CLONE_TIMEOUT, deadline=deadline,
         )
         if code != 0:
             # 清理半成品目录，避免下次误判为已存在
@@ -153,25 +355,101 @@ def _ensure_upstream_repo(
     return local_dir, data_dir
 
 
+def _collect_counts(name: str, data_dir: str) -> dict[str, int]:
+    """收集该上游用于截断对比的行数口径。
+
+    - loyalsoldier：逐个必备文件的行数（key = 文件名）
+    - v2fly / blackmatrix7：目录文件数（key = "__file_count__"）
+    """
+    rules = INTEGRITY_RULES.get(name, {})
+    counts: dict[str, int] = {}
+    if "files" in rules:
+        for fn in rules["files"]:
+            counts[fn] = _count_lines(os.path.join(data_dir, fn))
+    else:
+        file_count, _ = _count_files(data_dir)
+        counts["__file_count__"] = file_count
+    return counts
+
+
+def verify_integrity(
+    name: str,
+    data_dir: str,
+    historical: dict[str, int] | None = None,
+) -> tuple[list[str], dict[str, int]]:
+    """按上游校验必备文件存在性 / 行数下限 / 是否相对历史骤降。
+
+    Args:
+        name:       上游名称
+        data_dir:   数据目录
+        historical: 历史行数（key = "{upstream}/{file}"），可为 None
+
+    Returns:
+        (problems, counts) —— problems 为空表示校验通过
+    """
+    problems: list[str] = []
+    rules = INTEGRITY_RULES.get(name)
+    if not rules:
+        return problems, {}
+
+    historical = historical or {}
+    counts = _collect_counts(name, data_dir)
+
+    if "files" in rules:
+        for fn, min_lines in rules["files"].items():
+            fp = os.path.join(data_dir, fn)
+            if not os.path.isfile(fp):
+                problems.append(f"必备文件缺失: {fn}")
+                continue
+            cur = counts.get(fn, -1)
+            if cur < 0:
+                problems.append(f"必备文件不可读: {fn}")
+                continue
+            if cur < min_lines:
+                problems.append(f"{fn} 行数低于下限: {cur} < {min_lines}")
+                continue
+            ok, msg = check_truncation(fn, cur, historical,
+                                       threshold=TRUNCATION_RATIO, key=f"{name}/{fn}")
+            if not ok:
+                problems.append(msg)
+    else:
+        min_files = rules.get("min_files", 0)
+        cur = counts.get("__file_count__", 0)
+        if cur < min_files:
+            problems.append(f"数据目录文件数低于下限: {cur} < {min_files}")
+        ok, msg = check_truncation("__file_count__", cur, historical,
+                                   threshold=TRUNCATION_RATIO,
+                                   key=f"{name}/__file_count__")
+        if not ok:
+            problems.append(msg)
+
+    return problems, counts
+
+
 def fetch_upstream(
     name: str,
     config: dict,
     cache_dir: str = DEFAULT_CACHE_DIR,
+    historical: dict[str, int] | None = None,
+    deadline: float | None = None,
 ) -> FetchResult:
     """
-    抓取单个上游，返回结果。
+    抓取单个上游，返回结果（含完整性校验结论）。
 
     Args:
         name:      上游名称
         config:    上游配置
         cache_dir: 缓存根目录
+        historical: 历史行数（key = "{upstream}/{file}"）
 
     Returns:
-        FetchResult
+        FetchResult —— 完整性校验不通过时 success=False
     """
     start = time.time()
+    if deadline is None:
+        deadline = time.monotonic() + FETCH_TOTAL_TIMEOUT
     try:
-        local_dir, data_dir = _ensure_upstream_repo(name, config, cache_dir)
+        local_dir, data_dir = _ensure_upstream_repo(name, config, cache_dir, deadline=deadline)
 
         # 扫描数据目录，获取文件列表和大小
         if not os.path.isdir(data_dir):
@@ -184,16 +462,21 @@ def fetch_upstream(
                 elapsed=time.time() - start,
             )
 
-        file_count = 0
-        total_bytes = 0
-        for root, dirs, files in os.walk(data_dir):
-            for f in files:
-                fp = os.path.join(root, f)
-                try:
-                    total_bytes += os.path.getsize(fp)
-                    file_count += 1
-                except OSError:
-                    pass
+        file_count, total_bytes = _count_files(data_dir)
+
+        # 完整性守卫：必备文件 + 行数下限 + 相对历史骤降
+        problems, _counts = verify_integrity(name, data_dir, historical)
+        if problems:
+            return FetchResult(
+                upstream=name,
+                success=False,
+                file_count=file_count,
+                total_bytes=total_bytes,
+                error="完整性校验失败: " + "; ".join(problems),
+                elapsed=time.time() - start,
+                checks=tuple(problems),
+                commit=upstream_commit(local_dir, deadline=deadline),
+            )
 
         return FetchResult(
             upstream=name,
@@ -201,6 +484,7 @@ def fetch_upstream(
             file_count=file_count,
             total_bytes=total_bytes,
             elapsed=time.time() - start,
+            commit=upstream_commit(local_dir, deadline=deadline),
         )
 
     except Exception as e:
@@ -214,48 +498,117 @@ def fetch_upstream(
         )
 
 
-def fetch_all(cache_dir: str = DEFAULT_CACHE_DIR) -> dict[str, FetchResult]:
+def fetch_all(
+    cache_dir: str = DEFAULT_CACHE_DIR,
+    stats_file: str | None = None,
+    write_stats: bool = True,
+) -> dict[str, FetchResult]:
     """
     抓取所有三个上游，各自的失败不中断整体流程。
 
+    校验通过的上游会把行数快照 + commit SHA 写入 stats.json；
+    校验失败的上游**不更新**历史快照（避免把坏数据当成新基线）。
+
     Args:
-        cache_dir: 缓存根目录
+        cache_dir:  缓存根目录
+        stats_file: stats.json 路径（默认 <cache_dir>/stats.json）
+        write_stats: 是否写回 stats.json
 
     Returns:
         dict: 上游名称 → FetchResult
     """
+    stats_file = stats_file or os.path.join(cache_dir, STATS_FILENAME)
+    store = load_stats(stats_file)
+    historical_flat = _flatten_history(store)
+
+    deadline = time.monotonic() + FETCH_TOTAL_TIMEOUT
     results: dict[str, FetchResult] = {}
+    new_counts: dict[str, dict[str, int]] = dict(store.get("upstreams", {}))
 
     for name, config in UPSTREAM_REPOS.items():
         print(f"📥 正在拉取 {name}...")
-        result = fetch_upstream(name, config, cache_dir)
+        if time.monotonic() >= deadline:
+            result = FetchResult(name, False, 0, 0, error="抓取总预算耗尽，未启动该上游")
+        else:
+            result = fetch_upstream(name, config, cache_dir,
+                                    historical=historical_flat, deadline=deadline)
         results[name] = result
         if result.success:
             print(f"  ✅ {name}: {result.file_count} 文件, {result.total_bytes} 字节 ({result.elapsed:.1f}s)")
+            if result.commit:
+                print(f"     commit: {result.commit[:12]}")
+            data_dir = os.path.join(cache_dir, config["local_dir"])
+            if config.get("data_dir"):
+                data_dir = os.path.join(data_dir, config["data_dir"])
+            new_counts[name] = {
+                "commit": result.commit,
+                "file_count": result.file_count,
+                "line_counts": _collect_counts(name, data_dir),
+            }
         else:
             print(f"  ❌ {name}: {result.error}")
+            for p in result.checks:
+                print(f"     ⚠️ {p}")
+
+    if write_stats:
+        save_stats(stats_file, new_counts)
 
     return results
 
 
-# ── 历史行数对比（反截断） ────────────────────────────────────
+# ── 历史行数 / SHA 留痕（stats.json） ─────────────────────────
+
+def load_stats(stats_file: str) -> dict:
+    """加载 stats.json（不存在或损坏时返回空结构）。"""
+    import json
+    try:
+        with open(stats_file) as f:
+            data = json.load(f)
+        if isinstance(data, dict) and "upstreams" in data:
+            return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    return {"upstreams": {}}
+
+
+def save_stats(stats_file: str, upstreams: dict[str, dict]):
+    """写回 stats.json（行数快照 + commit SHA + 时间戳）。"""
+    import json
+    from datetime import datetime, timezone
+    os.makedirs(os.path.dirname(os.path.abspath(stats_file)), exist_ok=True)
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "upstreams": upstreams,
+    }
+    with open(stats_file, "w") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+
+def _flatten_history(store: dict) -> dict[str, int]:
+    """把 stats.json 的嵌套结构摊平成 {“{upstream}/{file}”: 行数}。
+
+    兼容早期只存「文件名 → 行数」的平铺格式。
+    """
+    flat: dict[str, int] = {}
+    for name, info in (store.get("upstreams") or {}).items():
+        if not isinstance(info, dict):
+            continue
+        for fn, n in (info.get("line_counts") or {}).items():
+            flat[f"{name}/{fn}"] = n
+    return flat
+
 
 def load_historical_line_counts(stats_file: str) -> dict[str, int]:
     """
-    加载上次同步成功的历史行数。
+    加载上次同步成功的历史行数（摊平后的 {"upstream/file": 行数}）。
 
     Args:
         stats_file: stats.json 路径
 
     Returns:
-        dict: 文件名 → 历史行数
+        dict: "{upstream}/{file}" → 历史行数
     """
-    import json
-    try:
-        with open(stats_file) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    return _flatten_history(load_stats(stats_file))
 
 
 def save_historical_line_counts(
@@ -263,16 +616,19 @@ def save_historical_line_counts(
     counts: dict[str, int],
 ):
     """
-    保存本次同步成功的历史行数。
+    保存历史行数（保持扁平键 {"upstream/file": 行数}）。
 
     Args:
         stats_file: stats.json 路径
-        counts:     文件名 → 行数
+        counts:     {"upstream/file" → 行数}
     """
-    import json
-    os.makedirs(os.path.dirname(stats_file), exist_ok=True)
-    with open(stats_file, "w") as f:
-        json.dump(counts, f, indent=2)
+    grouped: dict[str, dict[str, int]] = {}
+    for key, n in counts.items():
+        name, _, fn = key.partition("/")
+        grouped.setdefault(name, {})[fn] = n
+    upstreams = {name: {"commit": "", "file_count": 0, "line_counts": lc}
+                 for name, lc in grouped.items()}
+    save_stats(stats_file, upstreams)
 
 
 def check_truncation(
@@ -280,6 +636,7 @@ def check_truncation(
     current_lines: int,
     historical_counts: dict[str, int],
     threshold: float = 0.5,
+    key: str | None = None,
 ) -> tuple[bool, str]:
     """
     检查文件是否被截断。
@@ -289,10 +646,11 @@ def check_truncation(
     - 新行数 == 0 → 判定异常
 
     Args:
-        filepath:          文件路径
+        filepath:          文件路径（也用作历史键）
         current_lines:     当前行数
         historical_counts: 历史行数字典
         threshold:         阈值比例（默认 0.5）
+        key:               历史键（默认用 filepath；调用方可传 "upstream/file"）
 
     Returns:
         (is_ok, message) 是否正常
@@ -300,11 +658,11 @@ def check_truncation(
     if current_lines == 0:
         return False, f"文件为空: {filepath}"
 
-    prev_lines = historical_counts.get(filepath)
+    prev_lines = historical_counts.get(key if key is not None else filepath)
     if prev_lines is not None:
         if current_lines < prev_lines * threshold:
             return False, (
-                f"文件行数骤降: 当前 {current_lines} < 历史 {prev_lines} × {threshold}"
+                f"文件行数骤降: {filepath} 当前 {current_lines} < 历史 {prev_lines} × {threshold}"
             )
 
     return True, ""
@@ -319,7 +677,10 @@ if __name__ == "__main__":
     all_ok = all(r.success for r in results.values())
     print(f"\n{'='*40}")
     if all_ok:
-        print("✅ 全部上游拉取成功")
+        print("✅ 全部上游拉取成功（完整性校验通过）")
+        for name, r in results.items():
+            if r.commit:
+                print(f"  {name}: {r.commit[:12]}")
     else:
         print("⚠️ 部分上游拉取失败")
         for name, r in results.items():

@@ -1,7 +1,8 @@
 """
-lib/validators.py — 唯一公共校验模块
+lib/validators.py — 公共校验模块
 
-三个上游解析器统一调用此模块，不允许各自实现一套判断标准。
+生产写入路径当前直接使用解析器产出的 CanonicalRule，不调用本模块；
+本模块供 scripts/tests 和人工校验使用，接入写入前不要把它描述成已启用的生产校验。
 """
 
 import ipaddress
