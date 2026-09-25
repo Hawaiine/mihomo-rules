@@ -1,6 +1,6 @@
 # ===========================================
 # Shadowsocks + v2ray-plugin
-# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# 来源: mihomo v1.19.31 adapter/outbound/shadowsocks.go
 # ===========================================
 
 - name: "ss-v2ray-plugin"
@@ -8,14 +8,11 @@
   server: server.example.com
   port: 443
   udp: true
-  cipher: chacha20-ietf-poly1305               # 加密方式
-  password: "your-password"                    # 密码
+  cipher: chacha20-ietf-poly1305
+  password: "your-password"
   plugin: v2ray-plugin
   plugin-opts:
-    mode: websocket                            # 伪装模式: websocket / http
+    mode: websocket                            # websocket / http
     host: example.com                          # 混淆域名
     path: /                                    # 路径
-    # tls: true                               # 启用 TLS (可选)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
+    # tls: true                                # 是否启用 TLS

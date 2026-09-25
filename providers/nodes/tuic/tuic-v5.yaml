@@ -1,6 +1,7 @@
 # ===========================================
 # TUIC v5
-# 参考: https://wiki.metacubex.one/en/config/proxies/tuic
+# 来源: mihomo v1.19.31 adapter/outbound/tuic.go
+# v5 只有 token 一个凭据。
 # ===========================================
 
 - name: "tuic-v5"
@@ -8,17 +9,14 @@
   server: server.example.com
   port: 443
   udp: true
-  token: "your-token"                          # TUIC v5 认证 token
+  token: "your-token"                          # v5 认证字符串
   sni: server.example.com                      # TLS SNI
   alpn:
     - h3
-  # congestion-controller: bbr                 # 拥塞控制: cubic / bbr (默认 bbr)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # udp-relay-mode: native                      # UDP 中继模式: native / quic
-  # heartbeat-interval: 10000                   # 心跳间隔 (毫秒)
-  # request-timeout: 8000                       # 请求超时 (毫秒)
-  # max-udp-relay-packet-size: 1500             # UDP 最大包大小
-  # disable-sni: false                          # 禁用 SNI
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
+  # congestion-controller: bbr                  # cubic / bbr，默认 bbr
+  # udp-relay-mode: native                      # native / quic，默认 native
+  # heartbeat-interval: 10000                   # 毫秒
+  # request-timeout: 8000                       # 毫秒
+  # max-udp-relay-packet-size: 1500             # 字节
+  # disable-sni: false
+  # skip-cert-verify: false                     # 仅在证书确实无法验证时打开

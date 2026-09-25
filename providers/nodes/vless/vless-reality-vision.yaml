@@ -1,6 +1,6 @@
 # ===========================================
 # VLESS + REALITY + Vision (XTLS)
-# 参考: https://wiki.metacubex.one/en/config/proxies/vless
+# 来源: mihomo v1.19.31 adapter/outbound/vless.go
 # ===========================================
 
 - name: "vless-reality-vision"
@@ -8,28 +8,17 @@
   server: server.example.com
   port: 443
   udp: true
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  flow: xtls-rprx-vision                       # XTLS Vision 子协议标志 (必须写)
-  packet-encoding: xudp                        # 数据包编码 (xudp/packetaddr)
+  uuid: "11111111-1111-4111-8111-111111111111"
   tls: true
-  network: tcp                                 # 传输方式: tcp / ws / grpc
-  servername: yahoo.com                        # 必须与服务端 REALITY dest 一致
-  client-fingerprint: chrome                    # 推荐 chrome; firefox/safari/random 也可用
-                                                # 注意: chrome 指纹在部分服务端可能因 PQC(X25519MLKEM768)
-                                                # 握手不兼容导致 "REALITY authentication failed"
-                                                # 遇到此报错可临时换成 firefox 规避
+  network: tcp                                 # Vision 只在 TCP 上有效
+  flow: xtls-rprx-vision                       # 必须与服务端一致
+  servername: your-reality-target.example.com  # 必须等于服务端 REALITY dest 的证书名
+  client-fingerprint: chrome
   reality-opts:
     public-key: "your-reality-public-key"
-    short-id: "your-short-id"                   # 允许为空字符串, 留空则使用全 0
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # xudp: true                                  # 启用 XUDP (QUIC)
-  # smux:                                       # 多路复用 (可选)
-  #   enabled: true
-  #   protocol: smux
-  #   max-connections: 4
-  #   min-streams: 4
-  #   statistic: false
-  #   only-tcp: false
-  #   padding: true
+    short-id: "your-short-id"
+    # support-x25519mlkem768: false            # 默认 false。true 时保留 Client Hello 中的
+                                               # X25519MLKEM768，服务端尚未启用该混合密钥
+                                               # 交换时不要打开。旧 REALITY 服务端会握手失败。
+                                               # 当前 uTLS 仅 chrome 指纹真正携带该密钥交换。
+                                               # 与 Xray v26.7.11+ 的兼容性无关。

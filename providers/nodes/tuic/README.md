@@ -1,27 +1,49 @@
 # TUIC 协议
 
-> 基于 QUIC 协议的代理协议，低延迟、高吞吐。
+TUIC 基于 QUIC，客户端版本决定认证方式。mihomo v1.19.31 源码判断规则很直接：有 `uuid` 字段走 v4，只有 `token` 走 v5。
 
-## 关键参数
+## 前提
 
-| 参数 | 类型 | 说明 |
+目标版本：mihomo v1.19.31。
+
+模板都是 `proxies:` 下的节点列表片段。
+
+## 关键字段
+
+| 字段 | 类型 | 说明 |
 |------|------|------|
-| `type` | string | `tuic` |
-| `token` | string/list | TUIC v5 认证 token (支持多 token) |
-| `uuid` / `password` | string | TUIC v4 认证凭据 |
-| `alpn` | list | TLS ALPN，通常包含 `h3` |
-| `congestion-controller` | string | 拥塞控制: `cubic`, `bbr` |
+| `type` | string | 固定 `tuic` |
+| `token` | string | v5 认证。v5 只有这一个凭据 |
+| `uuid` | string | v4 认证凭据之一，与 `password` 成对使用 |
+| `password` | string | v4 认证凭据，与 `uuid` 成对 |
+| `congestion-controller` | string | `cubic` / `bbr`，默认 `bbr` |
+| `udp-relay-mode` | string | `native` / `quic`，默认 `native` |
+| `alpn` | list | 一般 `h3` |
+| `heartbeat-interval` | int | 毫秒 |
+| `request-timeout` | int | 毫秒 |
+| `max-udp-relay-packet-size` | int | 字节 |
 
-## 变体说明
+## 版本区分
+
+| 版本 | 字段 |
+|------|------|
+| v4 | `uuid` + `password` |
+| v5 | `token` |
+
+v4 和 v5 的字段不能混用。旧版 `token+uuid` 混填会按 v4 逻辑走，认证直接失败。
+
+## 变体
 
 | 文件 | 说明 |
 |------|------|
-| `tuic-v5.yaml` | TUIC v5 基础配置 |
-| `tuic-v5-multi.yaml` | TUIC v5 多 Token 配置 |
-| `tuic-v4.yaml` | TUIC v4 配置 |
+| `tuic-v5.yaml` | v5，token 认证 |
+| `tuic-v4.yaml` | v4，uuid + password |
+
+TUIC 没有多 token 字段，多个凭据要建多个节点。原来的 `tuic-v5-multi.yaml` 内容与 v4 模板重复、文件名声称的多账号认证无源码支持，已删除。
 
 ## 注意事项
 
-- **v5** 使用 token 认证，**v4** 使用 uuid + password
-- 建议使用 `h3` ALPN
-- `congestion-controller` 推荐 `bbr`
+- `ip` 字段不在 TUIC option 里，别照抄 WireGuard 的写法。
+- `ip-version` 等通用字段来自 BasicOption，写不写看需要。
+- `skip-cert-verify` 只应在证书确实无法验证时打开。
+- TUIC 走 QUIC，注意目标网络对 UDP 和 443 的 QoS。

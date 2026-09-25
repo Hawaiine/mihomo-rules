@@ -1,6 +1,6 @@
 # ===========================================
-# Hysteria 1 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria
+# Hysteria v1 基础配置
+# 来源: mihomo v1.19.31 adapter/outbound/hysteria.go
 # ===========================================
 
 - name: "hy1-basic"
@@ -8,19 +8,15 @@
   server: server.example.com
   port: 443
   udp: true
-  auth_str: "your-auth-string"                 # 认证字符串
-  # up: "50 Mbps"                              # 上行带宽
-  # down: "200 Mbps"                           # 下行带宽
+  auth-str: "your-auth-string"                # 不是 auth_str。up/down 为必填
+  up: "50 Mbps"                               # 必填，源码无 omitempty
+  down: "200 Mbps"                             # 必填
+  # auth: "base64-auth-string"                # auth 的 base64 形式，与 auth-str 二选一
   # sni: example.com                           # TLS SNI
-  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
   # alpn:
   #   - h3
-  # obfs:
-  #   type: salamander
-  #   password: "your-obfs-password"           # 混淆密码
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  # disable-mtu-discovery: false                # 禁用 MTU 发现
+  # obfs: "your-obfs-string"                   # xplus 混淆字符串，不是对象
+  # protocol: udp                              # 协议名
+  # obfs-protocol: udp                         # 协议名（兼容 Stash 写法）
+  # skip-cert-verify: false                    # 仅在证书确实无法验证时打开
+  # disable-mtu-discovery: false

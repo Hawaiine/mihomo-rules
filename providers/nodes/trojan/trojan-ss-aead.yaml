@@ -1,6 +1,6 @@
 # ===========================================
-# Trojan + Shadowsockd AEAD
-# 参考: https://wiki.metacubex.one/en/config/proxies/trojan
+# Trojan + Shadowsocks AEAD (Trojan-Go 的 ss 封装)
+# 来源: mihomo v1.19.31 adapter/outbound/trojan.go
 # ===========================================
 
 - name: "trojan-ss-aead"
@@ -8,18 +8,10 @@
   server: server.example.com
   port: 443
   udp: true
-  password:
-    - "your-password"                          # Trojan 密码
-  ss-password: "your-ss-password"              # Shadowsocks 密码
+  password: "your-password"                    # 字符串
   network: tcp
-  sni: example.com                              # TLS SNI
-  alpn:
-    - h2
-    - http/1.1
-  # client-fingerprint: chrome                 # TLS 指纹
-  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
+  sni: example.com
+  ss-opts:                                     # 不是 ss-password
+    enabled: true
+    method: chacha20-ietf-poly1305             # aes-128-gcm / aes-256-gcm / chacha20-ietf-poly1305
+    password: "your-ss-password"

@@ -1,6 +1,6 @@
 # ===========================================
 # VLESS + WebSocket + TLS
-# 参考: https://wiki.metacubex.one/en/config/proxies/vless
+# 来源: mihomo v1.19.31 adapter/outbound/vless.go
 # ===========================================
 
 - name: "vless-ws-tls"
@@ -8,31 +8,13 @@
   server: server.example.com
   port: 443
   udp: true
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  uuid: "11111111-1111-4111-8111-111111111111"
   tls: true
   network: ws
-  servername: example.com                      # TLS SNI
-  client-fingerprint: chrome                   # 推荐 chrome/firefox/safari/random
+  servername: example.com                      # TLS SNI，也是 Host 头的默认值
+  client-fingerprint: chrome
   ws-opts:
-    path: "/ws?ed=2048"                        # 路径 + ED
+    path: "/ws?ed=2048"
     headers:
-      Host: example.com                        # Host 头 (与 servername 一致)
-  # alpn:                                       # HTTP/2 优先
-  #   - h2
-  #   - http/1.1
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  # xudp: true                                  # 启用 XUDP (QUIC)
-  # packet-encoding: xudp                       # 数据包编码 (xudp/packetaddr)
-  # smux:                                       # 多路复用 (可选)
-  #   enabled: true
-  #   protocol: smux
-  #   max-connections: 4
-  #   min-streams: 4
-  #   statistic: false
-  #   only-tcp: false
-  #   padding: true
+      Host: example.com
+  # packet-encoding: xudp

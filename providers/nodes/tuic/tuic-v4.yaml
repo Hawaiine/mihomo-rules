@@ -1,6 +1,7 @@
 # ===========================================
 # TUIC v4
-# 参考: https://wiki.metacubex.one/en/config/proxies/tuic
+# 来源: mihomo v1.19.31 adapter/outbound/tuic.go
+# v4 用 uuid + password，与 v5 的 token 不能混用。
 # ===========================================
 
 - name: "tuic-v4"
@@ -8,18 +9,15 @@
   server: server.example.com
   port: 443
   udp: true
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # 用户 UUID
-  password: "your-password"                    # 用户密码
-  sni: server.example.com                      # TLS SNI
+  uuid: "11111111-1111-4111-8111-111111111111"  # v4 凭据之一
+  password: "your-password"                     # v4 凭据之二
+  sni: server.example.com
   alpn:
     - h3
-  # congestion-controller: bbr                 # 拥塞控制: cubic / bbr (默认 bbr)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # udp-relay-mode: native                      # UDP 中继模式: native / quic
-  # heartbeat-interval: 10000                   # 心跳间隔 (毫秒)
-  # request-timeout: 8000                       # 请求超时 (毫秒)
-  # max-udp-relay-packet-size: 1500             # UDP 最大包大小
-  # disable-sni: false                          # 禁用 SNI
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
+  # congestion-controller: bbr                  # cubic / bbr，默认 bbr
+  # udp-relay-mode: native                      # native / quic，默认 native
+  # heartbeat-interval: 10000                   # 毫秒
+  # request-timeout: 8000                       # 毫秒
+  # max-udp-relay-packet-size: 1500             # 字节
+  # disable-sni: false
+  # skip-cert-verify: false

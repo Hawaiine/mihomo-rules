@@ -1,7 +1,5 @@
-# ===========================================
-# 本地文件订阅配置示例
-# 适用: Mihomo / clash-meta proxy-providers
-# ===========================================
+# proxy-providers 片段（type: file）
+# path 指向的文件必须是带顶层 proxies: 的订阅，不是这个片段本身。
 
 my_provider:
   type: file
@@ -13,4 +11,4 @@ my_provider:
     lazy: true
   override:
     udp: true
-    skip-cert-verify: true
+    # skip-cert-verify: false
