@@ -51,21 +51,22 @@ class CanonicalRule(NamedTuple):
 def normalize_value(value: str, rule_type: str = "") -> str:
     """
     归一化值：去首尾空格、去尾部点号。
-    DOMAIN* 类继续小写；PROCESS* 类保留大小写（进程名大小写敏感）。
+
+    存盘保留上游大小写。PROCESS-NAME 不在这里改成小写。
+    Applications 与上游 applications.txt 一致，同名不同大小写各留一条。
+    品牌集合同名不分大小写，只留一条，由写入路径处理，不在归一化时合并。
 
     Args:
         value: 原始值
-        rule_type: 规则类型（可选，PROCESS 开头时不 lower）
+        rule_type: 规则类型
 
     Returns:
         归一化后的值
     """
     value = value.strip()
-    # PROCESS-NAME / PROCESS-PATH* 保留大小写（macOS/Linux 进程名大小写敏感）
     is_process = rule_type.upper().startswith('PROCESS')
     if not is_process:
         value = value.lower()
-    # 去除尾部 . 号（如 .google.com → google.com）
     while value.endswith("."):
         value = value[:-1]
     return value

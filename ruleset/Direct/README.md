@@ -5,8 +5,8 @@
 |------|------|
 | DOMAIN-KEYWORD | 0 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 0 |
-| DOMAIN-SUFFIX | 111122 |
+| DOMAIN | 505 |
+| DOMAIN-SUFFIX | 110601 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |

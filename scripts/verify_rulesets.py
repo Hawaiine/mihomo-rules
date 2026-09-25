@@ -11,7 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 
-from lib.canonical import parse_rule_line, TYPES_ORDER, CanonicalRule
+from lib.canonical import parse_rule_line, TYPES_ORDER, CanonicalRule, sort_rules
+from lib.policy import is_allowed_bare_suffix, is_bare, is_single_char
 from commit_writer import get_strategy_group, STRATEGY_GROUP_MAP
 
 SG_MAP = STRATEGY_GROUP_MAP
@@ -193,9 +194,17 @@ def check_brand(brand):
         rule = parse_rule_line(ln)
         if rule is not None:
             payload_rules.append(rule)
+            if rule.rule_type in ('DOMAIN', 'DOMAIN-SUFFIX') and is_single_char(rule.value):
+                errors.append(f'  {brand}: 单字符 (第 {i} 行) {rule.value}')
+            elif (
+                rule.rule_type == 'DOMAIN-SUFFIX'
+                and is_bare(rule.value)
+                and brand != 'Private'
+                and not is_allowed_bare_suffix(brand, rule.value)
+            ):
+                errors.append(f'  {brand}: 无点品牌词不在白名单 (第 {i} 行) {rule.value}')
     if not updated_ok:
         errors.append(f'  {brand}: # Updated 格式应为 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS')
-    from lib.canonical import sort_rules
     if payload_rules != sort_rules(payload_rules):
         errors.append(f'  {brand}: payload 排序不符合 canonical.sort_rules')
 

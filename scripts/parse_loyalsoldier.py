@@ -31,6 +31,12 @@ from lib.canonical import (
     sort_rules,
     count_by_type,
 )
+from lib.policy import is_allowed_bare_suffix, is_bare, is_single_char
+
+# 无 "+." 的有点域名怎么处理。
+# domain：写成 DOMAIN，只匹配这一个域名。
+# drop：丢弃并打印，不静默丢掉。
+LOYALSOLDIER_BARE_EXACT = "domain"
 
 
 # ── 基础规则集映射（7 个，全从 Loyalsoldier 获取） ────────────
@@ -112,7 +118,7 @@ def detect_rule_type(value: str) -> str:
     if PROCESS_NAME_RE.match(value):
         return "PROCESS-NAME"
 
-    # 域名格式（+. 前缀）
+    # "+." 开头是后缀。
     if value.startswith("+."):
         return "DOMAIN-SUFFIX"
 
@@ -125,10 +131,11 @@ def detect_rule_type(value: str) -> str:
     except ValueError:
         pass
 
-    # 裸域名（无 +. 前缀，但含 . 且有效）
+    # 无 "+." 且含点：只匹配这一个域名，不再写成后缀。
     if "." in value:
-        return "DOMAIN-SUFFIX"
+        return "DOMAIN"
 
+    # 无 "+." 且无点：类型仍标后缀，是否保留由白名单决定。
     return "DOMAIN-SUFFIX"
 
 
@@ -157,44 +164,48 @@ def extract_value(value: str) -> str:
 
 # ── YAML 解析 ─────────────────────────────────────────────────
 
-def parse_loyalsoldier_yaml(content: str) -> list[CanonicalRule]:
+def parse_loyalsoldier_yaml(content: str, bare_exact: str | None = None) -> list[CanonicalRule]:
     """
     解析 Loyalsoldier YAML 格式内容。
 
     Args:
         content: YAML 文件内容
+        bare_exact: 覆盖 LOYALSOLDIER_BARE_EXACT。domain 保留精确域名，drop 丢弃并打印。
 
     Returns:
         list[CanonicalRule]: 解析后的规则列表
     """
+    mode = LOYALSOLDIER_BARE_EXACT if bare_exact is None else bare_exact
+    if mode not in ("domain", "drop"):
+        raise ValueError(f"LOYALSOLDIER_BARE_EXACT 只能是 domain 或 drop，收到 {mode}")
+
     rules: list[CanonicalRule] = []
+    dropped_exact: list[str] = []
     in_payload = False
 
     for line in content.split("\n"):
         stripped = line.strip()
 
-        # 跳过空行
         if not stripped:
             continue
 
-        # 检测 payload: 开始
         if stripped == "payload:":
             in_payload = True
             continue
 
-        # payload 内的行
         if in_payload:
-            # 匹配 YAML 列表项：  - 'value' 或  - "value"
             if stripped.startswith("- "):
                 raw = stripped[2:].strip()
-                # 去掉引号
                 if (raw.startswith("'") and raw.endswith("'")) or \
                    (raw.startswith('"') and raw.endswith('"')):
                     raw = raw[1:-1]
 
-                # 判断类型并提取值
                 rule_type = detect_rule_type(raw)
                 value = extract_value(raw)
+
+                if rule_type == "DOMAIN" and mode == "drop":
+                    dropped_exact.append(value)
+                    continue
 
                 if rule_type == "PROCESS-NAME":
                     rules.append(CanonicalRule(
@@ -218,7 +229,48 @@ def parse_loyalsoldier_yaml(content: str) -> list[CanonicalRule]:
                         source="loyalsoldier",
                     ))
 
+    if dropped_exact:
+        print(f"  🧹 丢弃无 '+.' 的有点域名 {len(dropped_exact)} 条: {', '.join(dropped_exact[:8])}")
+
     return rules
+
+
+def drop_exact_covered_by_suffix(rules: list[CanonicalRule]) -> tuple[list[CanonicalRule], int]:
+    """同一个值既有 DOMAIN 又有 DOMAIN-SUFFIX 时，只留 DOMAIN-SUFFIX。
+
+    只比较完全相同的值。itunes.apple.com 和 hls.itunes.apple.com 都留。
+    """
+    suffixes = {rule.value.lower() for rule in rules if rule.rule_type == "DOMAIN-SUFFIX"}
+    kept = []
+    dropped = 0
+    for rule in rules:
+        if rule.rule_type == "DOMAIN" and rule.value.lower() in suffixes:
+            dropped += 1
+            continue
+        kept.append(rule)
+    return kept, dropped
+
+
+def filter_bare_suffixes(rules: list[CanonicalRule], ruleset: str) -> tuple[list[CanonicalRule], int]:
+    """Direct / Proxy：无点且不在白名单的删掉。单字符一律删。
+
+    Private 不调用这个函数。
+    """
+    kept = []
+    dropped = 0
+    for rule in rules:
+        if rule.rule_type == "DOMAIN-SUFFIX" and is_bare(rule.value):
+            if not is_allowed_bare_suffix(ruleset, rule.value):
+                dropped += 1
+                continue
+        kept.append(rule)
+    return kept, dropped
+
+
+def drop_all_bare(rules: list[CanonicalRule]) -> tuple[list[CanonicalRule], int]:
+    """品牌补充源：无点一律剔除。"""
+    kept = [rule for rule in rules if not (rule.rule_type == "DOMAIN-SUFFIX" and is_bare(rule.value))]
+    return kept, len(rules) - len(kept)
 
 
 def parse_loyalsoldier_file(filepath: str) -> list[CanonicalRule]:
@@ -280,6 +332,13 @@ def parse_loyalsoldier_basic(
             continue
 
         rules = parse_loyalsoldier_file(filepath)
+        rules, covered = drop_exact_covered_by_suffix(rules)
+        if covered:
+            print(f"  🧹 {ruleset_name}: 同值后缀盖住精确域名 {covered} 条")
+        if ruleset_name in ("Direct", "Proxy"):
+            rules, bare_dropped = filter_bare_suffixes(rules, ruleset_name)
+            if bare_dropped:
+                print(f"  🧹 {ruleset_name}: 白名单外无点品牌词 {bare_dropped} 条")
         rules = sort_rules(rules)
         type_counts = count_by_type(rules)
 
@@ -328,6 +387,12 @@ def parse_loyalsoldier_brand(
         return []
 
     rules = parse_loyalsoldier_file(filepath)
+    rules, covered = drop_exact_covered_by_suffix(rules)
+    rules, bare_dropped = drop_all_bare(rules)
+    if covered:
+        print(f"  🧹 {brand_name}: 同值后缀盖住精确域名 {covered} 条")
+    if bare_dropped:
+        print(f"  🧹 {brand_name}: 剔除无点品牌词 {bare_dropped} 条")
     rules = sort_rules(rules)
 
     return rules
