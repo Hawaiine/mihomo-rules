@@ -63,23 +63,26 @@ ALLOWED_TYPES: set[str] = {
 }
 
 
-# ── 品牌映射表 ─────────────────────────────────────────────────
-
-# blackmatrix7 目录名 → 我们项目中的品牌名
-# 47 个交集品牌（blackmatrix7 有，我们也有）
+# ── 品牌映射（blackmatrix7 rule/Clash 目录名 → 仓库技术 ID） ──
+# key/<key>.yaml 必须真实存在；value 必须是现有业务品牌目录。
+# WeChat / Weibo / TencentVideo 虽有上游文件，仍按项目约定手工维护。
+# Twitter 是上游名称，目标技术 ID 为 X；不要把上游名称当成本仓库 ID。
 BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "AbemaTV": "AbemaTV",
+    "AliPay": "AliPay",
     "Amazon": "Amazon",
     "Anthropic": "Anthropic",
     "Apple": "Apple",
     "AppleTV": "AppleTV",
     "Bahamut": "Bahamut",
+    "BiliBili": "Bilibili",
     "Cloudflare": "Cloudflare",
     "DAZN": "DAZN",
     "Deezer": "Deezer",
     "Discord": "Discord",
     "Disney": "Disney",
     "Docker": "Docker",
+    "DouYin": "Douyin",
     "Facebook": "Facebook",
     "GitHub": "GitHub",
     "Google": "Google",
@@ -89,7 +92,8 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "Instagram": "Instagram",
     "KKTV": "KKTV",
     "LiTV": "LiTV",
-    "LineTV": "LineTV",
+    "LineTV": "LINETV",
+    "MeiTuan": "Meituan",
     "Microsoft": "Microsoft",
     "Netflix": "Netflix",
     "Niconico": "Niconico",
@@ -98,6 +102,7 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "OneDrive": "OneDrive",
     "OpenAI": "OpenAI",
     "PayPal": "PayPal",
+    "Pinduoduo": "Pinduoduo",
     "Pinterest": "Pinterest",
     "Pixiv": "Pixiv",
     "PrimeVideo": "PrimeVideo",
@@ -106,16 +111,23 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "Spotify": "Spotify",
     "Steam": "Steam",
     "Synology": "Synology",
+    "TIDAL": "TIDAL",
     "TVer": "TVer",
     "Telegram": "Telegram",
     "Threads": "Threads",
     "TikTok": "TikTok",
+    "Tmdb": "TMDB",
     "Twitch": "Twitch",
+    "Twitter": "X",
+    "Whatsapp": "WhatsApp",
     "YouTube": "YouTube",
     "YouTubeMusic": "YouTubeMusic",
+    "Youku": "Youku",
+    "Zhihu": "Zhihu",
     "iCloud": "iCloud",
     "iCloudPrivateRelay": "iCloudPrivateRelay",
-    "Twitter": "X",
+    "iQIYI": "iQIYI",
+    "myTVSUPER": "myTVSUPER",
 }
 
 # 反向映射：品牌名 → blackmatrix7 目录名
