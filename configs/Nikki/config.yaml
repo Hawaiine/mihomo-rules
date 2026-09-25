@@ -1075,6 +1075,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hotstar/Hotstar.png"
 
+  - name: "Hulu"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hulu/Hulu.png"
+
   - name: "Instagram"
     type: select
     proxies:
@@ -2391,39 +2424,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo/HamiVideo.png"
-
-  - name: "Hulu"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hulu/Hulu.png"
 
   - name: "京东"
     type: select
@@ -4916,6 +4916,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Hotstar.yaml
 
+  Hulu:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hulu/Hulu.yaml"
+    interval: 86400
+    path: ./ruleset/Hulu.yaml
+
   Instagram:
     type: http
     behavior: classical
@@ -5195,13 +5202,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HamiVideo/HamiVideo.yaml"
     interval: 86400
     path: ./ruleset/HamiVideo.yaml
-
-  Hulu:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hulu/Hulu.yaml"
-    interval: 86400
-    path: ./ruleset/Hulu.yaml
 
   JD:
     type: http
@@ -5726,6 +5726,7 @@ rules:
                                                     # - RULE-SET,GoogleAI,Google AI
                                                     # - RULE-SET,GooglePlay,Google Play
                                                     # - RULE-SET,Hotstar,Hotstar
+                                                    # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,OneDrive,OneDrive
@@ -5766,7 +5767,6 @@ rules:
                                                     # - RULE-SET,HBO,HBO
                                                     # - RULE-SET,HOYTV,HOY TV
                                                     # - RULE-SET,HamiVideo,Hami Video
-                                                    # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,JD,京东
                                                     # - RULE-SET,KKTV,KKTV
                                                     # - RULE-SET,LINETV,LINE TV

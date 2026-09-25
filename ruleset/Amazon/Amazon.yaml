@@ -4,7 +4,7 @@
 # Updated: 2026-07-24 11:05:18
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 5
+# DOMAIN: 0
 # DOMAIN-SUFFIX: 157
 # IP-CIDR: 15
 # IP-CIDR6: 0
@@ -12,11 +12,6 @@
 # PROCESS-NAME: 1
 # ===========================================
 payload:
-  - DOMAIN,images-eu.ssl-images-amazon.com
-  - DOMAIN,images-fe.ssl-images-amazon.com
-  - DOMAIN,images-na.ssl-images-amazon.com
-  - DOMAIN,msh.amazon.co.uk
-  - DOMAIN,static.siege-amazon.com
   - DOMAIN-SUFFIX,a2z.com
   - DOMAIN-SUFFIX,aboutamazon.cn
   - DOMAIN-SUFFIX,aboutamazon.co.uk

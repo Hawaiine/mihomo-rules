@@ -27,6 +27,8 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from lib.canonical import (
     CanonicalRule,
+    drop_domain_covered_by_broader_suffix,
+    drop_domain_covered_by_suffix,
     normalize_value,
     sort_rules,
     count_by_type,
@@ -35,8 +37,12 @@ from lib.policy import is_allowed_bare_suffix, is_bare, is_single_char
 
 # 无 "+." 的有点域名怎么处理。
 # domain：写成 DOMAIN，只匹配这一个域名。
+# suffix：写成 DOMAIN-SUFFIX（Private 用：路由后台等任意子域都应命中）。
 # drop：丢弃并打印，不静默丢掉。
 LOYALSOLDIER_BARE_EXACT = "domain"
+
+# 走「裸域名 → DOMAIN」策略的基础集；其余基础集（Private 等）保持后缀语义。
+LOYALSOLDIER_BARE_DOMAIN_RULESETS: frozenset[str] = frozenset({"Direct", "Proxy"})
 
 
 # ── 基础规则集映射（7 个，全从 Loyalsoldier 获取） ────────────
@@ -170,14 +176,15 @@ def parse_loyalsoldier_yaml(content: str, bare_exact: str | None = None) -> list
 
     Args:
         content: YAML 文件内容
-        bare_exact: 覆盖 LOYALSOLDIER_BARE_EXACT。domain 保留精确域名，drop 丢弃并打印。
+        bare_exact: 覆盖 LOYALSOLDIER_BARE_EXACT。domain 无 "+." 的有点域名写成 DOMAIN；
+                    suffix 写成 DOMAIN-SUFFIX；drop 丢弃并打印。
 
     Returns:
         list[CanonicalRule]: 解析后的规则列表
     """
     mode = LOYALSOLDIER_BARE_EXACT if bare_exact is None else bare_exact
-    if mode not in ("domain", "drop"):
-        raise ValueError(f"LOYALSOLDIER_BARE_EXACT 只能是 domain 或 drop，收到 {mode}")
+    if mode not in ("domain", "suffix", "drop"):
+        raise ValueError(f"LOYALSOLDIER_BARE_EXACT 只能是 domain / suffix / drop，收到 {mode}")
 
     rules: list[CanonicalRule] = []
     dropped_exact: list[str] = []
@@ -206,6 +213,9 @@ def parse_loyalsoldier_yaml(content: str, bare_exact: str | None = None) -> list
                 if rule_type == "DOMAIN" and mode == "drop":
                     dropped_exact.append(value)
                     continue
+
+                if rule_type == "DOMAIN" and mode == "suffix":
+                    rule_type = "DOMAIN-SUFFIX"
 
                 if rule_type == "PROCESS-NAME":
                     rules.append(CanonicalRule(
@@ -239,16 +249,10 @@ def drop_exact_covered_by_suffix(rules: list[CanonicalRule]) -> tuple[list[Canon
     """同一个值既有 DOMAIN 又有 DOMAIN-SUFFIX 时，只留 DOMAIN-SUFFIX。
 
     只比较完全相同的值。itunes.apple.com 和 hls.itunes.apple.com 都留。
+    实现统一在 lib.canonical.drop_domain_covered_by_suffix（三个解析入口共用）。
     """
-    suffixes = {rule.value.lower() for rule in rules if rule.rule_type == "DOMAIN-SUFFIX"}
-    kept = []
-    dropped = 0
-    for rule in rules:
-        if rule.rule_type == "DOMAIN" and rule.value.lower() in suffixes:
-            dropped += 1
-            continue
-        kept.append(rule)
-    return kept, dropped
+    kept, dropped = drop_domain_covered_by_suffix(rules)
+    return kept, len(dropped)
 
 
 def filter_bare_suffixes(rules: list[CanonicalRule], ruleset: str) -> tuple[list[CanonicalRule], int]:
@@ -273,12 +277,13 @@ def drop_all_bare(rules: list[CanonicalRule]) -> tuple[list[CanonicalRule], int]
     return kept, len(rules) - len(kept)
 
 
-def parse_loyalsoldier_file(filepath: str) -> list[CanonicalRule]:
+def parse_loyalsoldier_file(filepath: str, bare_exact: str | None = None) -> list[CanonicalRule]:
     """
     解析单个 Loyalsoldier 文件。
 
     Args:
         filepath: 文件路径
+        bare_exact: 覆盖 LOYALSOLDIER_BARE_EXACT（domain / suffix / drop）
 
     Returns:
         list[CanonicalRule]: 解析后的规则列表
@@ -289,7 +294,7 @@ def parse_loyalsoldier_file(filepath: str) -> list[CanonicalRule]:
     except (FileNotFoundError, IOError):
         return []
 
-    return parse_loyalsoldier_yaml(content)
+    return parse_loyalsoldier_yaml(content, bare_exact=bare_exact)
 
 
 # ── 基础规则集入口 ────────────────────────────────────────────
@@ -331,7 +336,10 @@ def parse_loyalsoldier_basic(
             }
             continue
 
-        rules = parse_loyalsoldier_file(filepath)
+        # 裸域名策略：只有 Direct / Proxy 走「有点域名 → DOMAIN」；
+        # 其余基础集（Private 等）保持上游 domain 语义 → DOMAIN-SUFFIX。
+        bare_mode = None if ruleset_name in LOYALSOLDIER_BARE_DOMAIN_RULESETS else "suffix"
+        rules = parse_loyalsoldier_file(filepath, bare_exact=bare_mode)
         rules, covered = drop_exact_covered_by_suffix(rules)
         if covered:
             print(f"  🧹 {ruleset_name}: 同值后缀盖住精确域名 {covered} 条")
@@ -339,6 +347,11 @@ def parse_loyalsoldier_basic(
             rules, bare_dropped = filter_bare_suffixes(rules, ruleset_name)
             if bare_dropped:
                 print(f"  🧹 {ruleset_name}: 白名单外无点品牌词 {bare_dropped} 条")
+            rules, shadowed = drop_domain_covered_by_broader_suffix(rules)
+            if shadowed:
+                samples = ", ".join(r.value for r in shadowed[:8])
+                more = " …" if len(shadowed) > 8 else ""
+                print(f"  🧹 {ruleset_name}: 被同集更宽后缀覆盖的 DOMAIN {len(shadowed)} 条: {samples}{more}")
         rules = sort_rules(rules)
         type_counts = count_by_type(rules)
 

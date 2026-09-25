@@ -238,3 +238,68 @@ def count_by_type(rules: list[CanonicalRule]) -> dict[str, int]:
     for rule in rules:
         counts[rule.rule_type] = counts.get(rule.rule_type, 0) + 1
     return counts
+
+
+# ── 跨类型重复清理 ────────────────────────────────────────────
+
+def drop_domain_covered_by_suffix(
+    rules: list[CanonicalRule],
+) -> tuple[list[CanonicalRule], list[CanonicalRule]]:
+    """同值跨类型去重：删除被 DOMAIN-SUFFIX 覆盖的 DOMAIN。
+
+    同一个 value 同时存在 DOMAIN 与 DOMAIN-SUFFIX 时，删除 DOMAIN，
+    保留 DOMAIN-SUFFIX（后缀覆盖范围包含精确匹配，同集内属纯冗余）。
+
+    只比较完全相同的 value（大小写不敏感），不比较父子域。
+    itunes.apple.com 与 hls.itunes.apple.com 是不同值，各自保留。
+
+    Args:
+        rules: 规则列表
+
+    Returns:
+        (保留的规则, 被删除的规则列表)
+    """
+    suffixes = {rule.value.lower() for rule in rules if rule.rule_type == "DOMAIN-SUFFIX"}
+    kept: list[CanonicalRule] = []
+    dropped: list[CanonicalRule] = []
+    for rule in rules:
+        if rule.rule_type == "DOMAIN" and rule.value.lower() in suffixes:
+            dropped.append(rule)
+            continue
+        kept.append(rule)
+    return kept, dropped
+
+
+def drop_domain_covered_by_broader_suffix(
+    rules: list[CanonicalRule],
+) -> tuple[list[CanonicalRule], list[CanonicalRule]]:
+    """删除被同集「更宽后缀」覆盖的 DOMAIN（严格口径）。
+
+    DOMAIN 值的某个「多标签」父域（至少含一个点，如 adobe.com）已在同集
+    DOMAIN-SUFFIX 中时，该 DOMAIN 永不独立命中，属纯冗余，删除。
+
+    严格口径：单标签 TLD（cn / com / net / org / io / xn--* 等）不算覆盖父域——
+    DOMAIN-SUFFIX,cn 存在不得删除 *.cn 的 DOMAIN。
+
+    Args:
+        rules: 规则列表
+
+    Returns:
+        (保留的规则, 被删除的规则列表)
+    """
+    suffixes = {rule.value.lower() for rule in rules if rule.rule_type == "DOMAIN-SUFFIX"}
+    kept: list[CanonicalRule] = []
+    dropped: list[CanonicalRule] = []
+    for rule in rules:
+        if rule.rule_type == "DOMAIN":
+            parts = rule.value.lower().split(".")
+            # 父域从右往左扩展；只认至少两段（含点）的父域，单标签 TLD 跳过。
+            for i in range(1, len(parts) - 1):
+                if ".".join(parts[i:]) in suffixes:
+                    dropped.append(rule)
+                    break
+            else:
+                kept.append(rule)
+            continue
+        kept.append(rule)
+    return kept, dropped

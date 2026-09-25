@@ -40,6 +40,19 @@ def resolve_ancestor_chain(brand, sub_parent):
     return chain
 
 
+def is_owned_by_child(rule, child_rule_set):
+    """父品牌规则是否已被子品牌拥有（应剥离）。
+
+    两种情形：
+    1. 完全同 TYPE+VALUE（原有口径）。
+    2. 父品牌是精确域名、子品牌持有同值后缀：DOMAIN-SUFFIX,x 已声明 x 及
+       其全部子域，父品牌不应再单独持有 DOMAIN,x（否则去重/清理后被重新长回来）。
+    """
+    if (rule.rule_type, rule.value) in child_rule_set:
+        return True
+    return rule.rule_type == 'DOMAIN' and ('DOMAIN-SUFFIX', rule.value) in child_rule_set
+
+
 def parse_rules_to_canonical(yaml_path):
     """解析 YAML 文件的 payload 段，返回 CanonicalRule 列表"""
     rules = []
@@ -111,7 +124,7 @@ def resolve_ownership(dry_run=True):
             to_remove = []
             kept = []
             for r in parent_rules:
-                if (r.rule_type, r.value) in child_rule_set:
+                if is_owned_by_child(r, child_rule_set):
                     to_remove.append(r)
                 else:
                     kept.append(r)

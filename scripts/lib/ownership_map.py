@@ -15,6 +15,7 @@ SUB_PARENT: dict[str, str] = {
     'AWS': 'Amazon',
     'PrimeVideo': 'Amazon',
     'Hotstar': 'Disney',
+    'Hulu': 'Disney',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
     'Instagram': 'Facebook',

@@ -33,6 +33,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from lib.canonical import (
     CanonicalRule,
+    drop_domain_covered_by_suffix,
     normalize_value,
     sort_rules,
     count_by_type,
@@ -301,6 +302,12 @@ def parse_blackmatrix7_brand(
         return []
 
     rules = parse_blackmatrix7_file(filepath)
+    # 同值跨类型去重：与 v2fly / loyalsoldier 统一「同值只留 DOMAIN-SUFFIX」口径
+    rules, cross_dropped = drop_domain_covered_by_suffix(rules)
+    if cross_dropped:
+        samples = ", ".join(r.value for r in cross_dropped[:8])
+        more = " …" if len(cross_dropped) > 8 else ""
+        print(f"  🧹 {brand_name}: 同值跨类型去重 {len(cross_dropped)} 条: {samples}{more}")
     rules = sort_rules(rules)
 
     return rules

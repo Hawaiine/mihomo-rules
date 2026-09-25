@@ -660,7 +660,7 @@ def main():
                                         if not any(r.rule_type == cr.rule_type and r.value == cr.value
                                                   for r in merged_rules):
                                             manual_rules.append(cr)
-                            from lib.canonical import sort_rules
+                            from lib.canonical import drop_domain_covered_by_broader_suffix, drop_domain_covered_by_suffix, sort_rules
                             all_rules = sort_rules(merged_rules + manual_rules)
                             # 去重（sort_rules 只排序，不去重）
                             seen_keys = set()
@@ -671,6 +671,14 @@ def main():
                                     seen_keys.add(key)
                                     deduped.append(r)
                             all_rules = deduped
+                            # 同值跨类型去重（兜底）：manual 保留路径同样不得留同值双类型
+                            all_rules, cross_dropped = drop_domain_covered_by_suffix(all_rules)
+                            if cross_dropped:
+                                log(f'  🧹 {b}: 同值跨类型去重 {len(cross_dropped)} 条')
+                            # 阴影 DOMAIN 兜底：被同集更宽后缀覆盖的 DOMAIN（manual 保留路径同样不得留）
+                            all_rules, shadow_dropped = drop_domain_covered_by_broader_suffix(all_rules)
+                            if shadow_dropped:
+                                log(f'  🧹 {b}: 阴影 DOMAIN 去重 {len(shadow_dropped)} 条')
                             result = write_ruleset(b, all_rules, dry_run=False)
                             if result.success:
                                 ok_count += 1

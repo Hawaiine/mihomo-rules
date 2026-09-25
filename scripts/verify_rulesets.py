@@ -12,12 +12,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 from lib.canonical import parse_rule_line, TYPES_ORDER, CanonicalRule, sort_rules
+from lib.canonical import drop_domain_covered_by_broader_suffix
 from lib.policy import is_allowed_bare_suffix, is_bare, is_single_char
 from commit_writer import get_strategy_group, STRATEGY_GROUP_MAP
 
 SG_MAP = STRATEGY_GROUP_MAP
 
 BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
+
+# 冗余 DOMAIN 检查口径（恒为 FAIL，清理后应保持 0，防回退）：
+# - 同值跨类型：同一 value 同时出现 DOMAIN 与 DOMAIN-SUFFIX；
+# - 阴影覆盖：DOMAIN 的多标签父域已在同集 DOMAIN-SUFFIX 中（单标签 TLD 不参与）；
+# - 品牌集与基础集统一 FAIL（历史存量已随 fix/domain-shadow-cleanup 清零）。
 
 # 规则类型正则（用于 payload 计数）
 TYPE_RE = re.compile(r'^\s*[-–]\s*([A-Z][A-Z0-9_-]+)\s*,')
@@ -207,6 +213,22 @@ def check_brand(brand):
         errors.append(f'  {brand}: # Updated 格式应为 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS')
     if payload_rules != sort_rules(payload_rules):
         errors.append(f'  {brand}: payload 排序不符合 canonical.sort_rules')
+
+    # 同值跨类型重复：同一 value 同时出现 DOMAIN 与 DOMAIN-SUFFIX
+    # （写入路径已统一去重，这里防回退）
+    dom_values = {r.value.lower() for r in payload_rules if r.rule_type == 'DOMAIN'}
+    suf_values = {r.value.lower() for r in payload_rules if r.rule_type == 'DOMAIN-SUFFIX'}
+    cross = sorted(dom_values & suf_values)
+    if cross:
+        sample = ', '.join(cross[:3]) + (' …' if len(cross) > 3 else '')
+        errors.append(f'  {brand}: 同值跨类型重复 {len(cross)} 条（DOMAIN 与 DOMAIN-SUFFIX 同名）: {sample}')
+
+    # DOMAIN 被同集更宽后缀覆盖：仅多标签父域判定，单标签 TLD 不参与（恒为 FAIL）
+    if brand != 'Private':
+        _, shadowed = drop_domain_covered_by_broader_suffix(payload_rules)
+        if shadowed:
+            sample = ', '.join(r.value for r in shadowed[:3]) + (' …' if len(shadowed) > 3 else '')
+            errors.append(f'  {brand}: DOMAIN 被同集更宽后缀覆盖 {len(shadowed)} 条: {sample}')
 
     return len(errors) == 0, errors
 

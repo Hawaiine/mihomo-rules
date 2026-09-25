@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: 网易云音乐
 # Author: Hawaiine
-# Updated: 2026-09-01 00:00:00
+# Updated: 2026-09-24 23:49:36
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
+# DOMAIN: 0
 # DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -12,7 +12,6 @@
 # PROCESS-NAME: 1
 # ===========================================
 payload:
-  - DOMAIN,music.163.com
   - DOMAIN-SUFFIX,163.com
   - DOMAIN-SUFFIX,music.163.com
   - PROCESS-NAME,com.netease.cloudmusic

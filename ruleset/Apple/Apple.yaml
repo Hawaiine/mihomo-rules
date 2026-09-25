@@ -4,7 +4,7 @@
 # Updated: 2026-08-09 12:27:07
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
-# DOMAIN: 11
+# DOMAIN: 10
 # DOMAIN-SUFFIX: 1449
 # IP-CIDR: 10
 # IP-CIDR6: 3
@@ -14,7 +14,6 @@
 payload:
   - DOMAIN-KEYWORD,smp-device
   - DOMAIN-KEYWORD,testflight
-  - DOMAIN,apple-tv-plus-press.apple.com
   - DOMAIN,apple.com.akadns.net
   - DOMAIN,appleworldwidedeveloper.hb-api.omtrdc.net
   - DOMAIN,appleworldwidedeveloper.sc.omtrdc.net

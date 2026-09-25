@@ -4,7 +4,7 @@
 # Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 3
+# DOMAIN: 1
 # DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -13,7 +13,5 @@
 # ===========================================
 payload:
   - DOMAIN,android.clients.google.com
-  - DOMAIN,play.google.com
-  - DOMAIN,play.googleapis.com
   - DOMAIN-SUFFIX,play.google.com
   - DOMAIN-SUFFIX,play.googleapis.com
