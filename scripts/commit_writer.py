@@ -112,6 +112,8 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "GoogleDrive": "Google Drive",
     "GooglePhotos": "Google Photos",
     "GoogleMaps": "Google Maps",
+    "GoogleVoice": "Google Voice",
+    "GoogleNews": "Google News",
     "Grok": "Grok",
 }
 

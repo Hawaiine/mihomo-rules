@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-09-26 01:02:32
+# Updated: 2026-09-26 07:37:05
 # DOMAIN-KEYWORD: 4
 # DOMAIN-REGEX: 0
-# DOMAIN: 2
-# DOMAIN-SUFFIX: 700
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 699
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -17,7 +17,6 @@ payload:
   - DOMAIN-KEYWORD,google
   - DOMAIN-KEYWORD,recaptcha
   - DOMAIN,google-ohttp-relay-safebrowsing.fastly-edge.com
-  - DOMAIN,voice.telephony.goog
   - DOMAIN-SUFFIX,0emm.com
   - DOMAIN-SUFFIX,1e100.net
   - DOMAIN-SUFFIX,1ucrs.com
@@ -671,7 +670,6 @@ payload:
   - DOMAIN-SUFFIX,tiltbrush.com
   - DOMAIN-SUFFIX,txcloud.net
   - DOMAIN-SUFFIX,txvia.com
-  - DOMAIN-SUFFIX,unfiltered.news
   - DOMAIN-SUFFIX,urchin.com
   - DOMAIN-SUFFIX,useplannr.com
   - DOMAIN-SUFFIX,usvimosquito.com

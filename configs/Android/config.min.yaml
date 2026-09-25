@@ -1189,6 +1189,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleMaps/GoogleMaps.png"
+  - name: "Google News"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleNews/GoogleNews.png"
   - name: "Google Photos"
     type: select
     proxies:
@@ -1253,6 +1285,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePlay/GooglePlay.png"
+  - name: "Google Voice"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleVoice/GoogleVoice.png"
   - name: "Grok"
     type: select
     proxies:
@@ -3742,6 +3806,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ParamountPlus/ParamountPlus.png"
   - name: "PayPal"
     type: select
     proxies:
@@ -3805,6 +3870,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PeacockTV/PeacockTV.png"
   - name: "Perplexity"
     type: select
     proxies:
@@ -5554,6 +5620,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleMaps/GoogleMaps.yaml"
     interval: 86400
     path: ./ruleset/GoogleMaps.yaml
+  GoogleNews:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleNews/GoogleNews.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleNews.yaml
   GooglePhotos:
     type: http
     behavior: classical
@@ -5566,6 +5638,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GooglePlay/GooglePlay.yaml"
     interval: 86400
     path: ./ruleset/GooglePlay.yaml
+  GoogleVoice:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleVoice/GoogleVoice.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleVoice.yaml
   Grok:
     type: http
     behavior: classical

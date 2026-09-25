@@ -38,5 +38,7 @@ SUB_PARENT: dict[str, str] = {
     'GoogleDrive': 'Google',
     'GooglePhotos': 'Google',
     'GoogleMaps': 'Google',
+    'GoogleNews': 'Google',
+    'GoogleVoice': 'Google',
     'Grok': 'X',
 }

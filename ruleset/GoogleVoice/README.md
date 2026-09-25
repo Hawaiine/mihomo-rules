@@ -1,16 +1,16 @@
-# 📦 Google 规则集
+# 📦 Google Voice 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
-| DOMAIN-KEYWORD | 4 |
+| DOMAIN-KEYWORD | 0 |
 | DOMAIN-REGEX | 0 |
 | DOMAIN | 1 |
-| DOMAIN-SUFFIX | 699 |
-| IP-CIDR | 2 |
+| DOMAIN-SUFFIX | 0 |
+| IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |
-| PROCESS-NAME | 5 |
+| PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: Google
+- **策略组**: Google Voice
