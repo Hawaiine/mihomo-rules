@@ -1,20 +1,18 @@
 # ===========================================
-# Snell v4 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/snell
+# Snell v4
+# 来源: mihomo v1.19.31 adapter/outbound/snell.go
 # ===========================================
 
 - name: "snell-v4"
   type: snell
   server: server.example.com
-  port: 44000
+  port: 44000                                  # Snell 服务端端口，非固定值
   udp: true
-  psk: "your-psk"                              # Pre-Shared Key
-  version: 4                                   # Snell 版本: 3 / 4
+  psk: "your-psk"
+  version: 4                                   # 3 / 4，与 v3 模板只差这个字段
+  # reuse: true                                 # 复用连接
   # obfs-opts:
-  #   mode: plain                               # 混淆模式: plain / tls / http
-  #   host: example.com                         # 混淆域名
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
+  #   mode: tls                                  # tls / http，没有 plain
+  #   host: example.com
+  # client-fingerprint: chrome
+  # tfo: false

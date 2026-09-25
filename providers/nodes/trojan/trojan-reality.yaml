@@ -1,6 +1,6 @@
 # ===========================================
 # Trojan + REALITY
-# 参考: https://wiki.metacubex.one/en/config/proxies/trojan
+# 来源: mihomo v1.19.31 adapter/outbound/trojan.go
 # ===========================================
 
 - name: "trojan-reality"
@@ -8,18 +8,13 @@
   server: server.example.com
   port: 443
   udp: true
-  password:
-    - "your-password"                          # 密码
-  tls: true
+  password: "your-password"                    # 字符串
   network: tcp
-  servername: example.com                      # 回退域名
-  client-fingerprint: chrome                    # 推荐 chrome/firefox/safari/random
+  sni: your-reality-target.example.com         # 必须等于服务端 REALITY dest 的证书名。Trojan 用 sni，不是 servername
+  client-fingerprint: chrome
   reality-opts:
-    public-key: "your-reality-public-key"
-    short-id: "your-short-id"                  # 允许为空字符串, 留空则使用全 0
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
+    public-key: "your-reality-public-key"      # 32 字节，RawURL base64
+    short-id: "your-short-id"                  # hex，最长 8 字节
+    # support-x25519mlkem768: false            # 默认 false。服务端未启用该混合密钥
+                                               # 交换时不要打开。当前 uTLS 仅 chrome 指纹
+                                               # 真正携带。不解决 Xray v26.7.11+ 兼容问题。

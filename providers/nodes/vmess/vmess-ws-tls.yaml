@@ -1,6 +1,6 @@
 # ===========================================
-# VMess + WebSocket + TLS (抗封锁)
-# 参考: https://wiki.metacubex.one/en/config/proxies/vmess
+# VMess + WebSocket + TLS
+# 来源: mihomo v1.19.31 adapter/outbound/vmess.go
 # ===========================================
 
 - name: "vmess-ws-tls"
@@ -8,32 +8,14 @@
   server: server.example.com
   port: 443
   udp: true
-  uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  alter-id: 0                                   # 建议 0 (部分机场不支持)
-  cipher: auto                                  # 加密方式: auto / aes-128-gcm / chacha20-ietf / none
-  tls: true                                     # 启用 TLS (必须)
+  uuid: "11111111-1111-4111-8111-111111111111"
+  alterId: 0
+  cipher: auto
+  tls: true
   network: ws
-  servername: cloudflare.com                    # TLS SNI (推荐大站)
-  client-fingerprint: chrome                    # 推荐 chrome/firefox/safari/random
+  servername: cloudflare.com                   # TLS SNI。用真实目标域名，不要用假大站
+  client-fingerprint: chrome
   ws-opts:
-    path: "/ws?ed=2048"                         # 路径 + ED (Extended Data)
+    path: "/ws?ed=2048"
     headers:
-      Host: cloudflare.com                      # Host 头 (与 servername 一致)
-  # alpn:                                       # HTTP/2 优先
-  #   - h2
-  #   - http/1.1
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  # proxy-alive: false                          # 虚假存活连接 (对抗 QoS)
-  # smux:                                       # 多路复用
-  #   enabled: true
-  #   protocol: smux
-  #   max-connections: 4
-  #   min-streams: 4
-  #   statistic: false
-  #   only-tcp: false
-  #   padding: true
+      Host: cloudflare.com                     # 实际 Host 头，需与服务端一致

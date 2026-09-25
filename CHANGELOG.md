@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-09-25
+
+### Changed
+- **providers 模板按 mihomo v1.19.31 源码校正** — `providers/airport/`（file / filter / http）与 `providers/nodes/`（hysteria / shadowsocks / ssh-snell-anytls / trojan / tuic / vless / vmess / wireguard）全量对齐当前内核 schema（字段名、类型、取值、默认值）；删除无实际配置内容的空壳变体（tuic-v5-multi、wireguard-tunnel-http、wireguard-tunnel-socks5）；各 provider README 同步校正后的字段说明与示例；`scripts/reorder_node_files.py` 随文件集合变化调整
+
+---
+
 ## 2026-09-24
 
 ### Changed

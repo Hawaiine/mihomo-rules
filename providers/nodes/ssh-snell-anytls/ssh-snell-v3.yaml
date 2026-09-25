@@ -1,6 +1,6 @@
 # ===========================================
-# Snell v3 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/snell
+# Snell v3
+# 来源: mihomo v1.19.31 adapter/outbound/snell.go
 # ===========================================
 
 - name: "snell-v3"
@@ -8,13 +8,8 @@
   server: server.example.com
   port: 44000
   udp: true
-  psk: "your-psk"                              # Pre-Shared Key
-  version: 3                                   # Snell 版本: 3 / 4
+  psk: "your-psk"
+  version: 3                                   # 3 / 4
   # obfs-opts:
-  #   mode: plain                               # 混淆模式: plain / tls / http
-  #   host: example.com                         # 混淆域名
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
+  #   mode: tls                                  # tls / http
+  #   host: example.com

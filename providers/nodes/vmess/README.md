@@ -1,28 +1,40 @@
 # VMess 协议
 
-> V2Ray 的核心传输协议，支持多种传输方式。
+VMess 是 V2Ray 核心传输协议，用 UUID + alterId + 自选 cipher 认证。mihomo 从 v1.19.31 源码看，`alterId` 键名是 camelCase，且被标为必填（没有 omitempty）。
 
-## 关键参数
+## 前提
 
-| 参数 | 类型 | 说明 |
+目标版本：mihomo v1.19.31。
+
+模板都是 `proxies:` 下的节点列表片段。粘贴到主配置 `proxies:` 下，不要和 `proxy-providers` 片段混用。
+
+## 关键字段
+
+| 字段 | 类型 | 说明 |
 |------|------|------|
-| `type` | string | `vmess` |
-| `uuid` | string | 用户 UUID |
-| `alter-id` | int | 附加 ID，建议设为 0 |
-| `cipher` | string | 加密方式: `auto` (推荐), `aes-128-gcm`, `chacha20-ietf` |
-| `network` | string | 传输方式: `tcp`, `ws`, `grpc`, `h2` |
+| `type` | string | 固定 `vmess` |
+| `uuid` | string | 合法 UUID |
+| `alterId` | int | 附加 ID。源码要求 camelCase，写 `alter-id` 会被弱类型解析器忽略，等同 0 |
+| `cipher` | string | `auto` / `none` / `zero` / `aes-128-gcm` / `chacha20-poly1305`。不含 `chacha20-ietf` |
+| `network` | string | `tcp` / `ws` / `grpc` / `h2` |
+| `servername` | string | TLS SNI |
+| `packet-encoding` | string | `xudp` / `packetaddr`，缺省 `xudp` |
 
-## 变体说明
+## 变体
 
 | 文件 | 说明 |
 |------|------|
-| `vmess-tcp.yaml` | 基础 TCP 传输 |
-| `vmess-ws-tls.yaml` | WebSocket + TLS (抗封锁) |
-| `vmess-grpc.yaml` | gRPC 传输 |
-| `vmess-h2.yaml` | HTTP/2 传输 |
+| `vmess-tcp.yaml` | TCP，无 TLS |
+| `vmess-ws.yaml` | WebSocket，无 TLS |
+| `vmess-ws-tls.yaml` | WebSocket + TLS |
+| `vmess-grpc.yaml` | gRPC + TLS |
+| `vmess-h2.yaml` | HTTP/2 + TLS |
 
 ## 注意事项
 
-- **alter-id**: 建议设为 0，过高会降低安全性
-- **cipher**: 推荐使用 `auto`，自动选择最优加密方式
-- **ws-opts**: WebSocket 配置中 `path` 和 `headers.Host` 需与服务器一致
+- `alterId` 不是「越高越安全」。它是签名标签位，现代服务端普遍要求 0。若服务端配了非 0，这里必须写相同值。
+- cipher 写 `auto` 最稳：服务端是 AES-GCM 或 ChaCha20-Poly1305 都能协商。写死 cipher 时，双端必须完全一致。
+- `global-padding`、`authenticated-length` 是 VMess 自身加固字段，默认 0-4099；只有双端都用新版 Xray 时才需要。
+- VMess 也可以开 REALITY，字段和 VLESS 相同，但服务端必须配置 VMess+REALITY。
+- 早期模板里的 `proxy-alive` 没有源码支持，已删除。
+- WS 场景下 `ws-opts.headers.Host` 决定实际 Host 头，`servername` 决定 SNI，两者通常一致但不是同一个字段。

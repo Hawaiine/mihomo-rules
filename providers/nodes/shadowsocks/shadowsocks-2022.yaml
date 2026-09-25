@@ -1,6 +1,6 @@
 # ===========================================
 # Shadowsocks 2022
-# 参考: https://wiki.metacubex.one/en/config/proxies/shadowsocks
+# 来源: mihomo v1.19.31 adapter/outbound/shadowsocks.go
 # ===========================================
 
 - name: "ss-2022"
@@ -8,8 +8,9 @@
   server: server.example.com
   port: 443
   udp: true
-  cipher: 2022-blake3-aes-256-gcm              # SS 2022 加密方式
-  password: "your-password"                    # 密码 (SS 2022 格式: base64(password:psk))
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
+  cipher: 2022-blake3-aes-256-gcm
+  # 密码 = base64(主密钥)。主密钥 32 字节，例如 openssl rand -base64 32。
+  # mihomo v1.19.31 实测：写成 base64(主密钥):base64(psk) 两段会报
+  # "bad key length, required 32, got 16"，即第二段会被当成主密钥解析。
+  # 预共享密钥请放在服务端配置，客户端只写主密钥。
+  password: "REPLACE-WITH-BASE64-32B-KEY"

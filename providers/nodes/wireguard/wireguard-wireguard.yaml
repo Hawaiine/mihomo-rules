@@ -1,24 +1,28 @@
 # ===========================================
-# WireGuard 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/wireguard
+# WireGuard 标准配置
+# 来源: mihomo v1.19.31 adapter/outbound/wireguard.go
 # ===========================================
 
 - name: "wg-basic"
   type: wireguard
   server: server.example.com
-  port: 443
-  udp: true
-  ip: 10.0.0.2/32                              # 虚拟 IP (必填)
-  ipv6: "::2/128"                              # IPv6 (可选)
-  private-key: "your-private-key"              # Base64 编码的私钥
-  # public-key: "your-public-key"              # 对等方公钥
-  # preshared-key: "your-preshared-key"        # 预共享密钥
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # peer-dns: true                              # 使用服务端 DNS
-  # reserved: [0, 0, 0]                        # 保留字段
-  # allowed-ips:
-  #   - "0.0.0.0/0"
-  #   - "::/0"
-  # persistent-keepalive: 30                    # 保活间隔 (秒)
+  port: 51820
+  ip: 10.0.0.2/32                              # 本机虚拟接口地址
+  ipv6: "::2/128"                              # 可选
+  private-key: "your-base64-private-key"      # Base64
+  # mtu: 1420
+  # workers: 4
+  peers:
+    - server: server.example.com               # 对端地址
+      port: 51820
+      public-key: "your-base64-peer-public-key"   # 对端公钥
+      # pre-shared-key: "your-base64-psk"     # 带连字符
+      # reserved: [0, 0, 0]                    # 保留字节
+      allowed-ips:
+        - "0.0.0.0/0"
+        - "::/0"
+  # persistent-keepalive: 30                    # 秒
+  # remote-dns-resolve: false
+  # dns:
+  #   - 1.1.1.1
+  # refresh-server-ip-interval: 60

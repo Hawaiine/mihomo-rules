@@ -1,70 +1,50 @@
-# 📡 远程订阅配置
+# HTTP 订阅
 
-> 适用于 Mihomo / Clash Meta 的 `proxy-providers` 配置，`type: http`。
-
-## 完整参数参考
+复制 `config.yaml` 到主配置的 `proxy-providers:` 下，替换 `url`。这是 provider 定义，不是带 `proxies:` 的订阅文件。
 
 ```yaml
 proxy-providers:
   provider_name:
-    type: http                                    # 必填
-    url: "https://example.com/subscribe?token=xxx"  # 必填 (type=http)
-    interval: 86400                                # 更新间隔 (秒)
-    path: ./providers/provider_name.yaml           # 缓存路径
-    proxy: DIRECT                                  # 下载代理 (可选)
-    size-limit: 0                                  # 文件大小限制 (字节，0=不限制)
-    age-secret-key: "AGE-SECRET-KEY-xxx"          # age 私钥 (加密订阅)
-    header:                                        # 自定义请求头
+    type: http
+    url: "https://example.com/subscribe?token=YOUR_TOKEN"
+    path: ./providers/provider_name.yaml
+    interval: 86400
+    proxy: DIRECT
+    size-limit: 0
+    header:
       User-Agent:
-        - "mihomo/1.18.3"
-      # Authorization:
-      #   - "Bearer your_token"
-    filter: "(?i)(香港|HK|HKG)"                    # 保留节点 (正则)
-    exclude-filter: "(?i)(剩余|过期)"               # 排除节点 (正则)
-    exclude-type: ""                               # 排除类型: "ss|http|vmess"
+        - "mihomo"
+    filter: "(?i)(香港|\\bHK\\b|HKG)"
+    exclude-filter: "(?i)(剩余|过期|流量耗尽)"
+    exclude-type: "ss|http"
     health-check:
       enable: true
       url: https://cp.cloudflare.com/generate_204
       interval: 300
       timeout: 5000
-      lazy: true                                   # 仅当被代理组引用时检查
+      lazy: true
       expected-status: 204
     override:
       udp: true
-      skip-cert-verify: true
-      # additional-prefix: "[provider] "
-      # additional-suffix: " |"
-      # down: "50 Mbps"
-      # up: "10 Mbps"
-      # ip-version: ipv4-prefer
-      # proxy-name:
-      #   - pattern: "IPLC-(.?)倍"
-      #     target: "iplc $1"
-      # override-expr:
-      #   - '.name = "[provider] " + .name'
-    payload:                                      # 直接嵌入节点
-      - name: "inline"
-        type: vless
-        server: example.com
-        port: 443
-        uuid: xxx
+      # skip-cert-verify: false
 ```
 
-## 参数说明
+## 字段
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `type` | 是 | `http` 远程订阅 / `file` 本地文件 / `inline` 嵌入节点 |
-| `url` | 是 | 订阅链接 (type=http 时必填) |
-| `path` | 否 | 本地缓存路径 (默认使用 url 的 MD5) |
-| `interval` | 否 | 更新间隔 (秒), 默认 86400 |
-| `proxy` | 否 | 下载代理 (如 `DIRECT`, `Proxy`) |
-| `size-limit` | 否 | 文件大小限制 (字节), 默认 0 不限制 |
-| `age-secret-key` | 否 | age 私钥 (解密加密订阅) |
-| `header` | 否 | 自定义 HTTP 请求头 |
-| `filter` | 否 | 正则匹配保留节点名 |
-| `exclude-filter` | 否 | 正则排除节点名 |
-| `exclude-type` | 否 | 排除协议类型 (如 `ss|http`) |
-| `health-check` | 否 | 健康检查配置 |
-| `override` | 否 | 覆盖所有节点参数 |
-| `payload` | 否 | 直接嵌入的节点列表 |
+| 参数 | 说明 |
+|------|------|
+| `health-check.interval` | 秒。启用后默认 300 |
+| `health-check.timeout` | 毫秒 |
+| `health-check.lazy` | 默认 `true`，这组节点没人用时不测速 |
+| `health-check.expected-status` | 期望 HTTP 状态，如 `204` 或 `200/204/301-308` |
+| `override.skip-cert-verify` | 默认不要开。只在目标证书确实不可验证时单独打开 |
+| `override.udp-over-tcp` | 写到节点的 `udp-over-tcp`。Shadowsocks 会用，不是 TUIC 的字段 |
+| `override.up` / `down` | 只对认这个字段的协议生效（Hysteria / Hysteria2） |
+| `override.proxy-name` | `pattern` 是 regexp2，`target` 用 `$1` 引用分组。替换后才加前后缀 |
+| `override.override-expr` | yq v4 风格的子集，按顺序执行，晚于上面的固定字段 |
+
+`override-expr` 不是完整 jq/yq。没有变量、`reduce`、递归下降，也不能读环境变量或文件。每条结果必须是一个 mapping。条件筛选用 `select`。
+
+`age-secret-key` 只解密 age armor。核心不会主动把公钥发给服务器，要自己放进 `header` 或在服务器侧配置。私钥用 `mihomo age keygen` 生成，不要把真私钥写进仓库。
+
+`${ENV}` 不会被 Mihomo 展开。

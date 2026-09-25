@@ -1,6 +1,7 @@
 # ===========================================
 # AnyTLS 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/anytls
+# 来源: mihomo v1.19.31 adapter/outbound/anytls.go
+# 没有 username / client-id 字段。
 # ===========================================
 
 - name: "anytls-basic"
@@ -8,12 +9,11 @@
   server: server.example.com
   port: 443
   udp: true
-  username: "username"                         # 用户名
-  password: "your-password"                    # 密码
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  # idle-session-check-interval: 30             # 空闲会话检测间隔 (秒)
-  # client-id: ""                               # 客户端 ID (可选)
+  password: "your-password"
+  # sni: example.com                            # TLS SNI
+  # client-fingerprint: chrome
+  # idle-session-check-interval: 30             # 秒
+  # idle-session-timeout: 60                    # 秒
+  # min-idle-session: 2                         # 最小空闲会话数
+  # client-metadata: '{"device":"phone"}'       # JSON 字符串
+  # skip-cert-verify: false                     # 仅在证书确实无法验证时打开
