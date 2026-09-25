@@ -1,0 +1,18 @@
+# ===========================================
+# Rule Name: Grok
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:12
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 4
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,grok.com
+  - DOMAIN-SUFFIX,grok.x.com
+  - DOMAIN-SUFFIX,grokipedia.com
+  - DOMAIN-SUFFIX,x.ai

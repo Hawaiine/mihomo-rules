@@ -1,20 +1,19 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-09-25 01:20:04
-# DOMAIN-KEYWORD: 5
+# Updated: 2026-09-26 01:02:32
+# DOMAIN-KEYWORD: 4
 # DOMAIN-REGEX: 0
 # DOMAIN: 2
-# DOMAIN-SUFFIX: 706
+# DOMAIN-SUFFIX: 700
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
-# PROCESS-NAME: 6
+# PROCESS-NAME: 5
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,appspot
   - DOMAIN-KEYWORD,blogspot
-  - DOMAIN-KEYWORD,gmail
   - DOMAIN-KEYWORD,google
   - DOMAIN-KEYWORD,recaptcha
   - DOMAIN,google-ohttp-relay-safebrowsing.fastly-edge.com
@@ -258,7 +257,6 @@ payload:
   - DOMAIN-SUFFIX,gipscorp.com
   - DOMAIN-SUFFIX,gkecnapps.cn
   - DOMAIN-SUFFIX,globaledu.org
-  - DOMAIN-SUFFIX,gmail.com
   - DOMAIN-SUFFIX,gmodules.com
   - DOMAIN-SUFFIX,go-lang.com
   - DOMAIN-SUFFIX,go-lang.net
@@ -497,20 +495,16 @@ payload:
   - DOMAIN-SUFFIX,googlecompare.co.uk
   - DOMAIN-SUFFIX,googledanmark.com
   - DOMAIN-SUFFIX,googledomains.com
-  - DOMAIN-SUFFIX,googledrive.com
   - DOMAIN-SUFFIX,googlee.com
   - DOMAIN-SUFFIX,googleearth.com
   - DOMAIN-SUFFIX,googlefiber.com
   - DOMAIN-SUFFIX,googlefiber.net
   - DOMAIN-SUFFIX,googlefinland.com
   - DOMAIN-SUFFIX,googleflights-cn.net
-  - DOMAIN-SUFFIX,googlemail.com
-  - DOMAIN-SUFFIX,googlemaps.com
   - DOMAIN-SUFFIX,googlemashups.com
   - DOMAIN-SUFFIX,googleoptimize-cn.com
   - DOMAIN-SUFFIX,googleoptimize.com
   - DOMAIN-SUFFIX,googlepagecreator.com
-  - DOMAIN-SUFFIX,googlephotos.com
   - DOMAIN-SUFFIX,googleplus.com
   - DOMAIN-SUFFIX,googlescholar.com
   - DOMAIN-SUFFIX,googlesource.com
@@ -524,7 +518,6 @@ payload:
   - DOMAIN-SUFFIX,googletagservices.com
   - DOMAIN-SUFFIX,googletraveladservices-cn.com
   - DOMAIN-SUFFIX,googletraveladservices.com
-  - DOMAIN-SUFFIX,googleusercontent.com
   - DOMAIN-SUFFIX,googlevads-cn.com
   - DOMAIN-SUFFIX,googleventures.com
   - DOMAIN-SUFFIX,googlezip.net
@@ -727,7 +720,6 @@ payload:
   - DOMAIN-SUFFIX,zynamics.com
   - IP-CIDR,173.194.0.0/16,no-resolve
   - IP-CIDR,74.125.0.0/16,no-resolve
-  - PROCESS-NAME,BackupandSync
   - PROCESS-NAME,com.android.vending
   - PROCESS-NAME,com.google.android.gms
   - PROCESS-NAME,com.google.android.gsf

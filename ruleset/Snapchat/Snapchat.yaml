@@ -1,0 +1,22 @@
+# ===========================================
+# Rule Name: Snapchat
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:11
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 7
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,impala-media-production.s3.amazonaws.com
+  - DOMAIN-SUFFIX,sc-cdn.net
+  - DOMAIN-SUFFIX,sc-gw.com
+  - DOMAIN-SUFFIX,sc-static.net
+  - DOMAIN-SUFFIX,snap-dev.net
+  - DOMAIN-SUFFIX,snap.com
+  - DOMAIN-SUFFIX,snapchat.com
+  - DOMAIN-SUFFIX,snapkit.co

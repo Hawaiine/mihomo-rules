@@ -1,0 +1,16 @@
+# ===========================================
+# Rule Name: Pandora
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:10
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 2
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,p-cdn.us
+  - DOMAIN-SUFFIX,pandora.com

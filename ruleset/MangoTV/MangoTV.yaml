@@ -1,0 +1,22 @@
+# ===========================================
+# Rule Name: 芒果TV
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:10
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 8
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,hifuntv.com
+  - DOMAIN-SUFFIX,hitv.com
+  - DOMAIN-SUFFIX,hnbntv.com
+  - DOMAIN-SUFFIX,hunaniptv.com
+  - DOMAIN-SUFFIX,hunantv.com
+  - DOMAIN-SUFFIX,imgo.tv
+  - DOMAIN-SUFFIX,mgtv.com
+  - DOMAIN-SUFFIX,tazai.com

@@ -3,14 +3,14 @@
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
-| DOMAIN-KEYWORD | 5 |
+| DOMAIN-KEYWORD | 4 |
 | DOMAIN-REGEX | 0 |
 | DOMAIN | 2 |
-| DOMAIN-SUFFIX | 706 |
+| DOMAIN-SUFFIX | 700 |
 | IP-CIDR | 2 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |
-| PROCESS-NAME | 6 |
+| PROCESS-NAME | 5 |
 
 - **behavior**: classical
 - **策略组**: Google

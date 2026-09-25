@@ -93,6 +93,26 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "QQMusic": "QQ音乐",
     "NetEaseCloudMusic": "网易云音乐",
     "GooglePlay": "Google Play",
+    # ── 2026-09-25 新增品牌 ──
+    "MangoTV": "芒果TV",
+    "Crunchyroll": "Crunchyroll",
+    "PeacockTV": "Peacock TV",
+    "ParamountPlus": "Paramount+",
+    "DingTalk": "钉钉",
+    "Lark": "飞书",
+    "NousResearch": "Nous Research",
+    "AppleFitnessPlus": "Apple Fitness+",
+    "AppleMusic": "Apple Music",
+    "AppleNews": "Apple News",
+    "AppStore": "App Store",
+    "Azure": "Microsoft Azure",
+    "Outlook": "Microsoft Outlook",
+    "Bing": "Microsoft Bing",
+    "Copilot": "Microsoft Copilot",
+    "GoogleDrive": "Google Drive",
+    "GooglePhotos": "Google Photos",
+    "GoogleMaps": "Google Maps",
+    "Grok": "Grok",
 }
 
 

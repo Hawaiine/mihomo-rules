@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: X
 # Author: Hawaiine
-# Updated: 2026-07-29 06:51:50
+# Updated: 2026-09-26 01:02:32
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 30
+# DOMAIN-SUFFIX: 26
 # IP-CIDR: 6
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -15,9 +15,6 @@ payload:
   - DOMAIN-KEYWORD,twitter
   - DOMAIN-SUFFIX,ads-twitter.com
   - DOMAIN-SUFFIX,cms-twdigitalassets.com
-  - DOMAIN-SUFFIX,grok.com
-  - DOMAIN-SUFFIX,grok.x.com
-  - DOMAIN-SUFFIX,grokipedia.com
   - DOMAIN-SUFFIX,periscope.tv
   - DOMAIN-SUFFIX,pscp.tv
   - DOMAIN-SUFFIX,t.co
@@ -41,7 +38,6 @@ payload:
   - DOMAIN-SUFFIX,twttr.net
   - DOMAIN-SUFFIX,twvid.com
   - DOMAIN-SUFFIX,vine.co
-  - DOMAIN-SUFFIX,x.ai
   - DOMAIN-SUFFIX,x.com
   - IP-CIDR,192.133.76.0/22,no-resolve
   - IP-CIDR,199.59.148.0/22,no-resolve
