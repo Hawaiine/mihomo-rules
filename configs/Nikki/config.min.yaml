@@ -1042,7 +1042,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/FujiTV/FujiTV.png"
-  - name: "Game Japan"
+  - name: "🎮 Game Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1541,7 +1541,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RakutenTV/RakutenTV.png"
-  - name: "Reads Japan"
+  - name: "Read Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1551,6 +1551,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ReadJapan/ReadJapan.png"
   - name: "小红书"
     type: select
     proxies:
@@ -1606,6 +1607,17 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Synology/Synology.png"
+  - name: "TIDAL"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
   - name: "TMDB"
     type: select
     proxies:
@@ -1672,17 +1684,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo/TencentVideo.png"
-  - name: "Tidal"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
   - name: "TikTok"
     type: select
     proxies:
@@ -1881,7 +1882,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KaraokeDAM/KaraokeDAM.png"
-  - name: "myTV Super"
+  - name: "myTV SUPER"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -2486,12 +2487,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/RakutenTV/RakutenTV.yaml"
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
-  ReadsJapan:
+  ReadJapan:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadJapan/ReadJapan.yaml"
     interval: 86400
-    path: ./ruleset/ReadsJapan.yaml
+    path: ./ruleset/ReadJapan.yaml
   RedNote:
     type: http
     behavior: classical
@@ -2522,6 +2523,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Synology/Synology.yaml"
     interval: 86400
     path: ./ruleset/Synology.yaml
+  TIDAL:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TIDAL/TIDAL.yaml"
+    interval: 86400
+    path: ./ruleset/TIDAL.yaml
   TMDB:
     type: http
     behavior: classical
@@ -2558,12 +2565,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
     path: ./ruleset/TencentVideo.yaml
-  Tidal:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
-    interval: 86400
-    path: ./ruleset/Tidal.yaml
   TikTok:
     type: http
     behavior: classical
@@ -2672,12 +2673,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/karaokeDAM/karaokeDAM.yaml"
     interval: 86400
     path: ./ruleset/karaokeDAM.yaml
-  myTVSuper:
+  myTVSUPER:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSUPER/myTVSUPER.yaml"
     interval: 86400
-    path: ./ruleset/myTVSuper.yaml
+    path: ./ruleset/myTVSUPER.yaml
   Cloudflare:
     type: http
     behavior: classical

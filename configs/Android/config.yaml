@@ -1198,7 +1198,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/FujiTV/FujiTV.png"
 
-  - name: "Game Japan"
+  - name: "🎮 Game Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1743,7 +1743,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RakutenTV/RakutenTV.png"
 
-  - name: "Reads Japan"
+  - name: "Read Japan"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1753,6 +1753,7 @@ proxy-groups:
       - "🔀 负载均衡"
     use:
       - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ReadJapan/ReadJapan.png"
 
   - name: "小红书"
     type: select
@@ -1813,6 +1814,18 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Synology/Synology.png"
+
+  - name: "TIDAL"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
 
   - name: "TMDB"
     type: select
@@ -1885,18 +1898,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TencentVideo/TencentVideo.png"
-
-  - name: "Tidal"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
 
   - name: "TikTok"
     type: select
@@ -2114,7 +2115,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KaraokeDAM/KaraokeDAM.png"
 
-  - name: "myTV Super"
+  - name: "myTV SUPER"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -2818,12 +2819,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/RakutenTV.yaml
 
-  ReadsJapan:
+  ReadJapan:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadsJapan/ReadsJapan.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ReadJapan/ReadJapan.yaml"
     interval: 86400
-    path: ./ruleset/ReadsJapan.yaml
+    path: ./ruleset/ReadJapan.yaml
 
   RedNote:
     type: http
@@ -2859,6 +2860,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Synology/Synology.yaml"
     interval: 86400
     path: ./ruleset/Synology.yaml
+
+  TIDAL:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TIDAL/TIDAL.yaml"
+    interval: 86400
+    path: ./ruleset/TIDAL.yaml
 
   TMDB:
     type: http
@@ -2901,13 +2909,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TencentVideo/TencentVideo.yaml"
     interval: 86400
     path: ./ruleset/TencentVideo.yaml
-
-  Tidal:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Tidal/Tidal.yaml"
-    interval: 86400
-    path: ./ruleset/Tidal.yaml
 
   TikTok:
     type: http
@@ -3035,12 +3036,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/karaokeDAM.yaml
 
-  myTVSuper:
+  myTVSUPER:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSuper/myTVSuper.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/myTVSUPER/myTVSUPER.yaml"
     interval: 86400
-    path: ./ruleset/myTVSuper.yaml
+    path: ./ruleset/myTVSUPER.yaml
 
   Cloudflare:
     type: http
@@ -3102,7 +3103,7 @@ rules:
                                                     # - RULE-SET,F1TV,F1 TV
                                                     # - RULE-SET,Facebook,Facebook
                                                     # - RULE-SET,FujiTV,Fuji TV
-                                                    # - RULE-SET,GameJapan,Game Japan
+                                                    # - RULE-SET,GameJapan,🎮 Game Japan
                                                     # - RULE-SET,GeneralAI,🤖 General AI
                                                     # - RULE-SET,Google,Google
                                                     # - RULE-SET,HBO,HBO
@@ -3148,19 +3149,19 @@ rules:
                                                     # - RULE-SET,Qobuz,Qobuz
                                                     # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
-                                                    # - RULE-SET,ReadsJapan,Reads Japan
+                                                    # - RULE-SET,ReadJapan,Read Japan
                                                     # - RULE-SET,RedNote,小红书
                                                     # - RULE-SET,Reddit,Reddit
                                                     # - RULE-SET,Spotify,Spotify
                                                     # - RULE-SET,Steam,Steam
                                                     # - RULE-SET,Synology,Synology
+                                                    # - RULE-SET,TIDAL,TIDAL
                                                     # - RULE-SET,TMDB,TMDB
                                                     # - RULE-SET,TVer,TVer
                                                     # - RULE-SET,Taobao,淘宝
                                                     # - RULE-SET,Telasa,Telasa
                                                     # - RULE-SET,Telegram,Telegram
                                                     # - RULE-SET,TencentVideo,腾讯视频
-                                                    # - RULE-SET,Tidal,Tidal
                                                     # - RULE-SET,TikTok,TikTok
                                                     # - RULE-SET,Tubi,Tubi
                                                     # - RULE-SET,Twitch,Twitch
@@ -3179,7 +3180,7 @@ rules:
                                                     # - RULE-SET,friDayvideo,friDay video
                                                     # - RULE-SET,iQIYI,爱奇艺
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
-                                                    # - RULE-SET,myTVSuper,myTV Super
+                                                    # - RULE-SET,myTVSUPER,myTV SUPER
                                                     # - RULE-SET,Cloudflare,Cloudflare
 
                                                     # ----- 3. 应用程序直连 (进程匹配, 如迅雷/QQ/微信等不走代理) -----

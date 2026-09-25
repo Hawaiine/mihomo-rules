@@ -1,4 +1,4 @@
-# 📦 myTV Super 规则集
+# 📦 myTV SUPER 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: myTV Super
+- **策略组**: myTV SUPER

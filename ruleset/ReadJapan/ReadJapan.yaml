@@ -1,17 +1,15 @@
 # ===========================================
-# Rule Name: Tidal
+# Rule Name: Read Japan
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-07-22 11:35:00
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 3
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 0
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN-SUFFIX,tidal.com
-  - DOMAIN-SUFFIX,tidalhifi.com
-  - DOMAIN-SUFFIX,wimpmusic.com
+  - DOMAIN,data-cloudauthoring.magazine.rakuten.co.jp

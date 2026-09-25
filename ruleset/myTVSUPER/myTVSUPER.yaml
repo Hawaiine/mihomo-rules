@@ -1,15 +1,16 @@
 # ===========================================
-# Rule Name: Reads Japan
+# Rule Name: myTV SUPER
 # Author: Hawaiine
-# Updated: 2026-07-22 11:35:00
+# Updated: 2026-07-21 22:39:08
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 1
-# DOMAIN-SUFFIX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN,data-cloudauthoring.magazine.rakuten.co.jp
+  - DOMAIN-SUFFIX,mytvsuper.com
+  - DOMAIN-SUFFIX,tvb.com

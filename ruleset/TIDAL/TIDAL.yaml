@@ -1,16 +1,17 @@
 # ===========================================
-# Rule Name: myTV Super
+# Rule Name: TIDAL
 # Author: Hawaiine
-# Updated: 2026-07-21 22:39:08
+# Updated: 2026-07-23 17:36:04
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 2
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN-SUFFIX,mytvsuper.com
-  - DOMAIN-SUFFIX,tvb.com
+  - DOMAIN-SUFFIX,tidal.com
+  - DOMAIN-SUFFIX,tidalhifi.com
+  - DOMAIN-SUFFIX,wimpmusic.com
