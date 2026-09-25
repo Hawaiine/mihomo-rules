@@ -1,0 +1,18 @@
+# 数据来源与许可
+
+本仓库脚本使用 MIT License，见 `LICENSE`。
+
+`ruleset/` 中的规则是上游数据的派生作品，分发时必须同时遵守对应上游许可：
+
+| 上游 | 当前快照许可 | 用途 |
+|------|--------------|------|
+| v2fly/domain-list-community | MIT | 品牌域名主数据 |
+| Loyalsoldier/clash-rules | 仓库为 GPL-3.0；`release` 数据快照不含 LICENSE 文件 | 基础 7 集，以及 iCloud / Telegram 补充 |
+| blackmatrix7/ios_rule_script | GPL-2.0 | 品牌规则补充 |
+
+处理方式：
+
+- 仅分发或修改 `scripts/` 等不含上游规则数据的代码时，适用 MIT。
+- 规则集若包含 GPL 上游内容，则该衍生规则集按对应 GPL 许可分发。
+- `DirectDNS`、`ProxyDNS` 为手工维护规则集，不由上述三个上游自动覆盖。
+- 不把 Loyalsoldier 的 `apple.txt`、`google.txt`、`gfw.txt`、`greatfire.txt`、`tld-not-cn.txt` 当作基础规则集导入。
