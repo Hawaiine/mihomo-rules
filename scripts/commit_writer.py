@@ -20,7 +20,13 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from lib.canonical import CanonicalRule, count_by_type, TYPES_ORDER
+from lib.canonical import (
+    CanonicalRule,
+    count_by_type,
+    dedup_key,
+    sort_rules,
+    TYPES_ORDER,
+)
 
 
 # ── 策略组映射 ─────────────────────────────────────────────────
@@ -273,6 +279,36 @@ def diff_report(old_path: str, new_content: str) -> str:
     return "\n".join(diff)
 
 
+def dedup_exact(rules: list[CanonicalRule], case_sensitive: bool = False) -> list[CanonicalRule]:
+    """去除重复规则后重新排序。
+
+    case_sensitive=False（默认，品牌集与基础域名集）：
+        按 canonical.dedup_key（TYPE + VALUE.lower()）去重，同名只留首次出现。
+        典型场景：上游同一域名同时写为 'foo' 和 '+.foo'，归一化后都是 DOMAIN-SUFFIX,foo。
+    case_sensitive=True（仅 Applications）：
+        只去掉整行完全相同的规则。PROCESS-NAME 的大小写由上游决定，
+        tailscale 与 Tailscale 各留一条，不在这里合并。
+
+    Args:
+        rules: 待去重规则
+        case_sensitive: 是否把大小写不同视为不同规则
+
+    Returns:
+        去重且已排序的规则列表
+    """
+    seen: set[str] = set()
+    deduped: list[CanonicalRule] = []
+    for rule in rules:
+        if case_sensitive:
+            key = f"{rule.rule_type}|{rule.value}|{rule.param}"
+        else:
+            key = dedup_key(rule)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(rule)
+    return sort_rules(deduped)
+
+
 # ── 写入规则集 ────────────────────────────────────────────────
 
 def _normalize_for_compare(text: str) -> list[str]:
@@ -330,6 +366,10 @@ def write_ruleset(
     """
     if not strategy_group:
         strategy_group = get_strategy_group(brand_name)
+
+    # Applications 与上游 applications.txt 对齐：同名不同大小写各留一条。
+    # 其余规则集按 TYPE+VALUE 小写合并。
+    rules = dedup_exact(rules, case_sensitive=(brand_name == "Applications"))
 
     behavior = determine_behavior(rules)
     type_counts = count_by_type(rules)

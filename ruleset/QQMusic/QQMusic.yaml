@@ -1,7 +1,7 @@
 # ===========================================
 # Rule Name: QQ音乐
 # Author: Hawaiine
-# Updated: 2026-09-01 00:00:00
+# Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 2
@@ -12,8 +12,8 @@
 # PROCESS-NAME: 1
 # ===========================================
 payload:
-  - DOMAIN,y.qq.com
   - DOMAIN,qqmusic.qq.com
+  - DOMAIN,y.qq.com
   - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,qqmusic.qq.com
   - DOMAIN-SUFFIX,y.qq.com

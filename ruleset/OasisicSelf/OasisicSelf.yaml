@@ -1,7 +1,7 @@
 # ===========================================
 # Rule Name: 🏠 Oasisic Self
 # Author: Hawaiine
-# Updated: 2026-08-02 00:00:00
+# Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
@@ -12,5 +12,5 @@
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN-SUFFIX,oasisic.com
   - DOMAIN-SUFFIX,18185188.xyz
+  - DOMAIN-SUFFIX,oasisic.com

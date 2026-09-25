@@ -1,7 +1,7 @@
 # ===========================================
 # Rule Name: 🇨🇳 直连DNS
 # Author: Hawaiine
-# Updated: 2026-08-07
+# Updated: 2026-09-24 11:08:55
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
@@ -32,8 +32,8 @@ payload:
   - IP-CIDR6,2400:3200::1/128
   - IP-CIDR6,2400:3200:baba::1/128
   - IP-CIDR6,2400:da00::6666/128
-  - IP-CIDR6,2402:4e00::/128
   - IP-CIDR6,2402:4e00:1::/128
+  - IP-CIDR6,2402:4e00::/128
   - IP-CIDR6,2408:8899::8/128
   - IP-CIDR6,2409:8088::a/128
   - IP-CIDR6,240e:4c:4008::1/128
