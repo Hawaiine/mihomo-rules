@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: 京东
 # Author: Hawaiine
-# Updated: 2026-08-30 14:29:45
+# Updated: 2026-09-21 07:42:52
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 235
+# DOMAIN-SUFFIX: 247
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -21,6 +21,8 @@ payload:
   - DOMAIN-SUFFIX,360buyimg.com
   - DOMAIN-SUFFIX,360buyinternational.com
   - DOMAIN-SUFFIX,360top.com
+  - DOMAIN-SUFFIX,51epei.com
+  - DOMAIN-SUFFIX,51yipei.com
   - DOMAIN-SUFFIX,7fresh.com
   - DOMAIN-SUFFIX,baitiao.com
   - DOMAIN-SUFFIX,blackdragon.com
@@ -104,6 +106,7 @@ payload:
   - DOMAIN-SUFFIX,cloudzhongshan.com
   - DOMAIN-SUFFIX,cloudzhuhai.com
   - DOMAIN-SUFFIX,dao123.com
+  - DOMAIN-SUFFIX,dd-advisor.com
   - DOMAIN-SUFFIX,duiou.com.cn
   - DOMAIN-SUFFIX,duolabao.com
   - DOMAIN-SUFFIX,goselling.com
@@ -156,6 +159,7 @@ payload:
   - DOMAIN-SUFFIX,jd.id
   - DOMAIN-SUFFIX,jd.ru
   - DOMAIN-SUFFIX,jd.shop
+  - DOMAIN-SUFFIX,jdallianz.com
   - DOMAIN-SUFFIX,jdbusiness.com
   - DOMAIN-SUFFIX,jdcache.com
   - DOMAIN-SUFFIX,jdcdn.com
@@ -201,6 +205,7 @@ payload:
   - DOMAIN-SUFFIX,jdgslb.com
   - DOMAIN-SUFFIX,jdgslb.net
   - DOMAIN-SUFFIX,jdh.com
+  - DOMAIN-SUFFIX,jdindustry.com
   - DOMAIN-SUFFIX,jdjinrong.com
   - DOMAIN-SUFFIX,jdl.cn
   - DOMAIN-SUFFIX,jdl.com
@@ -211,12 +216,15 @@ payload:
   - DOMAIN-SUFFIX,jdwl.com
   - DOMAIN-SUFFIX,jdx.com
   - DOMAIN-SUFFIX,jhscm.com
+  - DOMAIN-SUFFIX,jingbantong.com
   - DOMAIN-SUFFIX,jingdong.com
   - DOMAIN-SUFFIX,jingdonghealth.cn
   - DOMAIN-SUFFIX,jingdongjinrong.com
   - DOMAIN-SUFFIX,jingpinhui.com
   - DOMAIN-SUFFIX,jingxi.com
+  - DOMAIN-SUFFIX,jingxiaoling.com
   - DOMAIN-SUFFIX,jkcsjd.com
+  - DOMAIN-SUFFIX,joyai.com
   - DOMAIN-SUFFIX,joybuy.com
   - DOMAIN-SUFFIX,joybuy.es
   - DOMAIN-SUFFIX,linglonglife.com
@@ -242,8 +250,12 @@ payload:
   - DOMAIN-SUFFIX,wuliujie.com
   - DOMAIN-SUFFIX,xianjiqun.com
   - DOMAIN-SUFFIX,xjoycity.com
+  - DOMAIN-SUFFIX,ybscjp.com
   - DOMAIN-SUFFIX,yhd.com
   - DOMAIN-SUFFIX,yihaodian.com
   - DOMAIN-SUFFIX,yihaodianimg.com
   - DOMAIN-SUFFIX,yiyaojd.com
   - DOMAIN-SUFFIX,yizhitou.com
+  - DOMAIN-SUFFIX,yunpei.com
+  - DOMAIN-SUFFIX,yunxiu.com
+  - DOMAIN-SUFFIX,zhongyouex.com

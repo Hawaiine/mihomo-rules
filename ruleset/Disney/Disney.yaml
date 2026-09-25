@@ -1,17 +1,18 @@
 # ===========================================
 # Rule Name: Disney
 # Author: Hawaiine
-# Updated: 2026-07-24 11:05:18
+# Updated: 2026-09-25 01:20:04
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 167
+# DOMAIN-SUFFIX: 185
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 2
 # ===========================================
 payload:
+  - DOMAIN-SUFFIX,20thcenturystudios.com
   - DOMAIN-SUFFIX,20thcenturystudios.com.au
   - DOMAIN-SUFFIX,20thcenturystudios.com.br
   - DOMAIN-SUFFIX,20thcenturystudios.jp
@@ -25,11 +26,13 @@ payload:
   - DOMAIN-SUFFIX,babyzone.com
   - DOMAIN-SUFFIX,bam.nr-data.net
   - DOMAIN-SUFFIX,bamgrid.com
+  - DOMAIN-SUFFIX,bamtech.net
   - DOMAIN-SUFFIX,beautyandthebeastmusical.co.uk
   - DOMAIN-SUFFIX,braze.com
   - DOMAIN-SUFFIX,cdn.optimizely.com
   - DOMAIN-SUFFIX,conviva.com
   - DOMAIN-SUFFIX,d9.flashtalking.com
+  - DOMAIN-SUFFIX,detpress.com
   - DOMAIN-SUFFIX,dilcdn.com
   - DOMAIN-SUFFIX,disney-asia.com
   - DOMAIN-SUFFIX,disney-discount.com
@@ -77,7 +80,9 @@ payload:
   - DOMAIN-SUFFIX,disney.ru
   - DOMAIN-SUFFIX,disney.se
   - DOMAIN-SUFFIX,disney.sg
+  - DOMAIN-SUFFIX,disneyaccount.com
   - DOMAIN-SUFFIX,disneyadsales.com
+  - DOMAIN-SUFFIX,disneyanimation.com
   - DOMAIN-SUFFIX,disneyarena.com
   - DOMAIN-SUFFIX,disneyaulani.com
   - DOMAIN-SUFFIX,disneybaby.com
@@ -141,9 +146,14 @@ payload:
   - DOMAIN-SUFFIX,espndotcom.tt.omtrdc.net
   - DOMAIN-SUFFIX,espnqa.com
   - DOMAIN-SUFFIX,execute-api.us-east-1.amazonaws.com
+  - DOMAIN-SUFFIX,freeform.com
+  - DOMAIN-SUFFIX,fxnetwork.com
+  - DOMAIN-SUFFIX,fxnetworks.com
   - DOMAIN-SUFFIX,go-disneyworldgo.com
   - DOMAIN-SUFFIX,go.com
+  - DOMAIN-SUFFIX,hongkongdisneyland.com
   - DOMAIN-SUFFIX,js-agent.newrelic.com
+  - DOMAIN-SUFFIX,lucasfilm.com
   - DOMAIN-SUFFIX,marvel.com
   - DOMAIN-SUFFIX,marvel10thanniversary.com
   - DOMAIN-SUFFIX,marveldimensionofheroes.com
@@ -160,13 +170,19 @@ payload:
   - DOMAIN-SUFFIX,nationalgeographicpartners.com
   - DOMAIN-SUFFIX,ngeo.com
   - DOMAIN-SUFFIX,nomadlandmovie.ch
+  - DOMAIN-SUFFIX,pixar.com
   - DOMAIN-SUFFIX,playmation.com
+  - DOMAIN-SUFFIX,searchlightpictures.com
   - DOMAIN-SUFFIX,shopdisney.com
   - DOMAIN-SUFFIX,shops-disney.com
   - DOMAIN-SUFFIX,sorcerersarena.com
   - DOMAIN-SUFFIX,spaindisney.com
   - DOMAIN-SUFFIX,star-brasil.com
   - DOMAIN-SUFFIX,star-latam.com
+  - DOMAIN-SUFFIX,star.api.edge.bamgrid.com
+  - DOMAIN-SUFFIX,star.connections.edge.bamgrid.com
+  - DOMAIN-SUFFIX,star.content.edge.bamgrid.com
+  - DOMAIN-SUFFIX,star.playback.edge.bamgrid.com
   - DOMAIN-SUFFIX,starott.com
   - DOMAIN-SUFFIX,starplus.com
   - DOMAIN-SUFFIX,starwars.com
@@ -177,6 +193,8 @@ payload:
   - DOMAIN-SUFFIX,thestationbymaker.com
   - DOMAIN-SUFFIX,thewaltdisneycompany.com
   - DOMAIN-SUFFIX,thisispolaris.com
+  - DOMAIN-SUFFIX,tokyodisneyresort.jp
+  - DOMAIN-SUFFIX,waltdisneystudios.com
   - DOMAIN-SUFFIX,watchdisneyfe.com
   - DOMAIN-SUFFIX,watchespn.com
   - PROCESS-NAME,com.disney.datg.videoplatforms.android.abc

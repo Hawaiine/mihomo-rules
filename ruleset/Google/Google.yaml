@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google
 # Author: Hawaiine
-# Updated: 2026-09-24 00:09:16
+# Updated: 2026-09-25 01:20:04
 # DOMAIN-KEYWORD: 5
 # DOMAIN-REGEX: 0
 # DOMAIN: 2
-# DOMAIN-SUFFIX: 709
+# DOMAIN-SUFFIX: 706
 # IP-CIDR: 2
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -225,6 +225,8 @@ payload:
   - DOMAIN-SUFFIX,fflick.com
   - DOMAIN-SUFFIX,financeleadsonline.com
   - DOMAIN-SUFFIX,firebase.com
+  - DOMAIN-SUFFIX,firebase.dev
+  - DOMAIN-SUFFIX,firebase.google.com
   - DOMAIN-SUFFIX,firebase.io
   - DOMAIN-SUFFIX,firebaseapp.com
   - DOMAIN-SUFFIX,firebaseio.com
@@ -509,7 +511,6 @@ payload:
   - DOMAIN-SUFFIX,googleoptimize.com
   - DOMAIN-SUFFIX,googlepagecreator.com
   - DOMAIN-SUFFIX,googlephotos.com
-  - DOMAIN-SUFFIX,googleplay.com
   - DOMAIN-SUFFIX,googleplus.com
   - DOMAIN-SUFFIX,googlescholar.com
   - DOMAIN-SUFFIX,googlesource.com
@@ -613,9 +614,6 @@ payload:
   - DOMAIN-SUFFIX,pittpatt.com
   - DOMAIN-SUFFIX,pixate.com
   - DOMAIN-SUFFIX,pki.goog
-  - DOMAIN-SUFFIX,play-fe.googleapis.com
-  - DOMAIN-SUFFIX,play-games.googleusercontent.com
-  - DOMAIN-SUFFIX,play-lh.googleusercontent.com
   - DOMAIN-SUFFIX,plus.codes
   - DOMAIN-SUFFIX,polymer-project.org
   - DOMAIN-SUFFIX,polymerproject.org
@@ -723,7 +721,6 @@ payload:
   - DOMAIN-SUFFIX,xn--ggle-55da.com
   - DOMAIN-SUFFIX,xn--gogl-0nd52e.com
   - DOMAIN-SUFFIX,xn--gogl-1nd42e.com
-  - DOMAIN-SUFFIX,xn--ngstr-lra8j.com
   - DOMAIN-SUFFIX,xn--p8j9a0d9c9a.xn--q9jyb4c
   - DOMAIN-SUFFIX,xplr.co
   - DOMAIN-SUFFIX,zukunftswerkstatt.de

@@ -3,11 +3,11 @@
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|
-| DOMAIN-KEYWORD | 0 |
+| DOMAIN-KEYWORD | 1 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 0 |
-| DOMAIN-SUFFIX | 11 |
-| IP-CIDR | 0 |
+| DOMAIN | 1 |
+| DOMAIN-SUFFIX | 13 |
+| IP-CIDR | 11 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |
 | PROCESS-NAME | 0 |

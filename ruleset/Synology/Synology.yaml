@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Synology
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 1
-# DOMAIN-SUFFIX: 17
+# DOMAIN-SUFFIX: 24
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -21,13 +21,20 @@ payload:
   - DOMAIN-SUFFIX,dsmunas.com
   - DOMAIN-SUFFIX,dsmunas.net
   - DOMAIN-SUFFIX,dsmunas.org
+  - DOMAIN-SUFFIX,dsmynas.com
+  - DOMAIN-SUFFIX,dsmynas.net
+  - DOMAIN-SUFFIX,dsmynas.org
   - DOMAIN-SUFFIX,familyds.com
   - DOMAIN-SUFFIX,familyds.net
   - DOMAIN-SUFFIX,familyds.org
+  - DOMAIN-SUFFIX,gofile.me
   - DOMAIN-SUFFIX,i234.me
   - DOMAIN-SUFFIX,myds.com
+  - DOMAIN-SUFFIX,myds.me
   - DOMAIN-SUFFIX,quickconnect.to
   - DOMAIN-SUFFIX,synodns.com
   - DOMAIN-SUFFIX,synology.cn
   - DOMAIN-SUFFIX,synology.com
   - DOMAIN-SUFFIX,synology.me
+  - DOMAIN-SUFFIX,synologydownload.com
+  - DOMAIN-SUFFIX,synologyupdate.com

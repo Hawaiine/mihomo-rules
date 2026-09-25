@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google AI
 # Author: Hawaiine
-# Updated: 2026-08-02 10:59:43
+# Updated: 2026-09-21 07:42:52
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 11
-# DOMAIN-SUFFIX: 30
+# DOMAIN-SUFFIX: 32
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -34,6 +34,7 @@ payload:
   - DOMAIN-SUFFIX,deepmind.com
   - DOMAIN-SUFFIX,deepmind.google
   - DOMAIN-SUFFIX,flow.google
+  - DOMAIN-SUFFIX,flow.google.com
   - DOMAIN-SUFFIX,geller-pa.googleapis.com
   - DOMAIN-SUFFIX,gemini.google
   - DOMAIN-SUFFIX,gemini.google.com
@@ -45,6 +46,7 @@ payload:
   - DOMAIN-SUFFIX,labs.google
   - DOMAIN-SUFFIX,labs.google.com
   - DOMAIN-SUFFIX,makersuite.google.com
+  - DOMAIN-SUFFIX,notebook.google
   - DOMAIN-SUFFIX,notebook.google.com
   - DOMAIN-SUFFIX,notebooklm.google
   - DOMAIN-SUFFIX,notebooklm.google.com

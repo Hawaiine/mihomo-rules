@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Niconico
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:02
+# Updated: 2026-09-24 14:50:20
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 9
+# DOMAIN-SUFFIX: 11
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -13,6 +13,8 @@
 # ===========================================
 payload:
   - DOMAIN-SUFFIX,dmc.nico
+  - DOMAIN-SUFFIX,nico.ms
+  - DOMAIN-SUFFIX,nicochannel.jp
   - DOMAIN-SUFFIX,nicodic.jp
   - DOMAIN-SUFFIX,nicomanga.jp
   - DOMAIN-SUFFIX,niconico.com

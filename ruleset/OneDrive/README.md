@@ -6,7 +6,7 @@
 | DOMAIN-KEYWORD | 3 |
 | DOMAIN-REGEX | 0 |
 | DOMAIN | 0 |
-| DOMAIN-SUFFIX | 13 |
+| DOMAIN-SUFFIX | 19 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |

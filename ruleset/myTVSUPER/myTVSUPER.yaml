@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: myTV SUPER
 # Author: Hawaiine
-# Updated: 2026-07-21 22:39:08
-# DOMAIN-KEYWORD: 0
+# Updated: 2026-09-24 14:50:22
+# DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
+# DOMAIN: 2
 # DOMAIN-SUFFIX: 2
 # IP-CIDR: 0
 # IP-CIDR6: 0
@@ -12,5 +12,9 @@
 # PROCESS-NAME: 0
 # ===========================================
 payload:
+  - DOMAIN-KEYWORD,nowtv100
+  - DOMAIN-KEYWORD,rthklive
+  - DOMAIN,mytvsuperlimited.hb.omtrdc.net
+  - DOMAIN,mytvsuperlimited.sc.omtrdc.net
   - DOMAIN-SUFFIX,mytvsuper.com
   - DOMAIN-SUFFIX,tvb.com

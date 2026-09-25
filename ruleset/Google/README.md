@@ -5,8 +5,8 @@
 |------|------|
 | DOMAIN-KEYWORD | 5 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 107 |
-| DOMAIN-SUFFIX | 709 |
+| DOMAIN | 2 |
+| DOMAIN-SUFFIX | 706 |
 | IP-CIDR | 2 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |

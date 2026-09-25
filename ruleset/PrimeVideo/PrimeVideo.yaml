@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Prime Video
 # Author: Hawaiine
-# Updated: 2026-07-23 17:36:04
+# Updated: 2026-09-24 14:50:22
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 9
-# DOMAIN-SUFFIX: 6
+# DOMAIN: 14
+# DOMAIN-SUFFIX: 14
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -21,10 +21,23 @@ payload:
   - DOMAIN,d27xxe7juh1us6.cloudfront.net
   - DOMAIN,dmqdd6hw24ucf.cloudfront.net
   - DOMAIN,fls-na.amazon.com
+  - DOMAIN,images-eu.ssl-images-amazon.com
+  - DOMAIN,images-fe.ssl-images-amazon.com
+  - DOMAIN,images-na.ssl-images-amazon.com
+  - DOMAIN,msh.amazon.co.uk
+  - DOMAIN,static.siege-amazon.com
   - DOMAIN,www.amazon.com
   - DOMAIN-SUFFIX,aiv-cdn.net
   - DOMAIN-SUFFIX,aiv-delivery.net
+  - DOMAIN-SUFFIX,amazonprimevideos.com
+  - DOMAIN-SUFFIX,amazonvideo.cc
   - DOMAIN-SUFFIX,amazonvideo.com
   - DOMAIN-SUFFIX,media-amazon.com
+  - DOMAIN-SUFFIX,prime-video.com
+  - DOMAIN-SUFFIX,primevideo.cc
   - DOMAIN-SUFFIX,primevideo.com
+  - DOMAIN-SUFFIX,primevideo.info
+  - DOMAIN-SUFFIX,primevideo.org
+  - DOMAIN-SUFFIX,primevideo.tv
+  - DOMAIN-SUFFIX,prod.service.minerva.devices.a2z.com
   - DOMAIN-SUFFIX,pv-cdn.net

@@ -1,17 +1,19 @@
 # ===========================================
 # Rule Name: 抖音
 # Author: Hawaiine
-# Updated: 2026-08-30 14:29:45
+# Updated: 2026-09-24 14:50:19
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 0
-# DOMAIN-SUFFIX: 68
+# DOMAIN: 2
+# DOMAIN-SUFFIX: 77
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
+  - DOMAIN,lf3-static.bytednsdoc.com
+  - DOMAIN,v5-dy-o-abtest.zjcdn.com
   - DOMAIN-SUFFIX,activity-wbsj.com
   - DOMAIN-SUFFIX,aihst8.com
   - DOMAIN-SUFFIX,amemv.cn
@@ -28,8 +30,10 @@ payload:
   - DOMAIN-SUFFIX,douyinact.com
   - DOMAIN-SUFFIX,douyinact.net
   - DOMAIN-SUFFIX,douyincdn.com
+  - DOMAIN-SUFFIX,douyinec.com
   - DOMAIN-SUFFIX,douyinfe.com
   - DOMAIN-SUFFIX,douyinliving.com
+  - DOMAIN-SUFFIX,douyinmusicpromotion.com
   - DOMAIN-SUFFIX,douyinpay.com
   - DOMAIN-SUFFIX,douyinpic.com
   - DOMAIN-SUFFIX,douyinstatic.com
@@ -65,18 +69,25 @@ payload:
   - DOMAIN-SUFFIX,ihuoshanlive.com
   - DOMAIN-SUFFIX,ihuoshanstatic.com
   - DOMAIN-SUFFIX,ihuoshanvod.com
+  - DOMAIN-SUFFIX,ixigua.com
+  - DOMAIN-SUFFIX,ixiguavideo.com
   - DOMAIN-SUFFIX,kesong.co
   - DOMAIN-SUFFIX,kolbuyer.cn
+  - DOMAIN-SUFFIX,lifexue.com
   - DOMAIN-SUFFIX,nextvid.net
   - DOMAIN-SUFFIX,open-douyin.com
   - DOMAIN-SUFFIX,ppkankan01.com
+  - DOMAIN-SUFFIX,pstatp.com
   - DOMAIN-SUFFIX,qishui.cn
   - DOMAIN-SUFFIX,qishui.com
   - DOMAIN-SUFFIX,qishui.com.cn
   - DOMAIN-SUFFIX,qishuimusic.cn
   - DOMAIN-SUFFIX,qishuimusic.com.cn
+  - DOMAIN-SUFFIX,snssdk.com
   - DOMAIN-SUFFIX,supercachenet.com
   - DOMAIN-SUFFIX,supercachenode.com
+  - DOMAIN-SUFFIX,toutiao.com
+  - DOMAIN-SUFFIX,ulpay.com
   - DOMAIN-SUFFIX,ultracachenode.com
   - DOMAIN-SUFFIX,woaihuoshan.com
   - DOMAIN-SUFFIX,wohst8.com
