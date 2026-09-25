@@ -12,8 +12,8 @@ order = {
     'vless': ['vless-ws', 'vless-ws-tls', 'vless-grpc', 'vless-reality', 'vless-reality-vision'],
     'trojan': ['trojan-base', 'trojan-ws', 'trojan-ss-aead', 'trojan-reality'],
     'hysteria': ['hysteria-hy1', 'hysteria-hy1-portjump', 'hysteria-hy2', 'hysteria-hy2-optimized', 'hysteria-hy2-portjump'],
-    'tuic': ['tuic-v4', 'tuic-v5', 'tuic-v5-multi'],
-    'wireguard': ['wireguard-wireguard', 'wireguard-tunnel-http', 'wireguard-tunnel-socks5'],
+    'tuic': ['tuic-v4', 'tuic-v5'],
+    'wireguard': ['wireguard-wireguard'],
     'ssh-snell-anytls': ['ssh-ssh', 'ssh-snell', 'ssh-snell-v3', 'ssh-anytls'],
 }
 

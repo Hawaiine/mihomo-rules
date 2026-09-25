@@ -1,6 +1,6 @@
 # ===========================================
-# Trojan 基础配置
-# 参考: https://wiki.metacubex.one/en/config/proxies/trojan
+# Trojan 基础配置 (TCP + TLS)
+# 来源: mihomo v1.19.31 adapter/outbound/trojan.go
 # ===========================================
 
 - name: "trojan-base"
@@ -8,15 +8,10 @@
   server: server.example.com
   port: 443
   udp: true
-  password:
-    - "your-password"                          # 密码 (支持多密码)
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
+  password: "your-password"                    # 字符串，不是列表
   sni: example.com                              # TLS SNI
-  alpn:
+  alpn:                                         # 可选
     - h2
     - http/1.1
-  # skip-cert-verify: false                     # 跳过证书验证 (不推荐)
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
+  # client-fingerprint: chrome
+  # skip-cert-verify: false                     # 仅在证书确实无法验证时打开

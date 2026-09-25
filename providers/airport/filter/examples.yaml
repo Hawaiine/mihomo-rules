@@ -1,31 +1,33 @@
-# ===========================================
-# 地区过滤正则示例
-# 适用: Mihomo / clash-meta proxy-providers filter/exclude-filter
-# ===========================================
+# filter / exclude-filter 片段
+# 复制到某个 proxy-provider 下。引擎是 regexp2。
 
 hk_filter:
-  filter: "(?i)(香港|Hong.Kong|HongKong|HK|HKG|🇭🇰)"
+  filter: "(?i)(香港|Hong\\s?Kong|\\bHK\\b|HKG)"
 
 jp_filter:
-  filter: "(?i)(日本|Japan|JP|JPN|Tokyo|🇯🇵)"
+  filter: "(?i)(日本|Japan|\\bJP\\b|JPN|Tokyo|东京|東京)"
 
 us_filter:
-  filter: "(?i)(美国|United.States|UnitedStates|US|USA|🇺🇸)"
+  filter: "(?i)(美国|United\\s?States|\\bUS\\b|\\bUSA\\b)"
 
 sg_filter:
-  filter: "(?i)(新加坡|Singapore|SG|SGP|🇸🇬)"
+  filter: "(?i)(新加坡|Singapore|\\bSG\\b|SGP)"
+
+uk_filter:
+  filter: "(?i)(英国|英國|\\bUK\\b|\\bGB\\b|London|伦敦)"
 
 tw_filter:
-  filter: "(?i)(台湾|Taiwan|TW|TWN|🇹🇼)"
+  filter: "(?i)(台湾|台灣|Taiwan|\\bTW\\b|TWN)"
 
 kr_filter:
-  filter: "(?i)(韩国|Korea|KR|KOR|Seoul|🇰🇷)"
+  filter: "(?i)(韩国|Korea|\\bKR\\b|KOR|Seoul|首尔)"
 
 multi_region_filter:
-  filter: "(?i)(香港|HK|日本|JP|美国|US|新加坡|SG|台湾|TW)"
+  filter: "(?i)(香港|\\bHK\\b|日本|\\bJP\\b|美国|\\bUS\\b|新加坡|\\bSG\\b|台湾|\\bTW\\b)"
 
-exclude_test:
-  exclude-filter: "(?i)(剩余|过期|GIA|CN2|IPv6|测试)"
+exclude_expired:
+  exclude-filter: "(?i)(剩余|过期|流量耗尽|到期)"
 
-all_except_test:
-  filter: "(?i)(^(?!(剩余|过期|GIA|测试)).*$)"
+# 名称中任意位置出现这些词就丢弃。不要用 ^(?!(剩余|过期))，那只看开头。
+exclude_expired_inline:
+  filter: "(?i)^(?!.*(剩余|过期|流量耗尽|到期)).+$"

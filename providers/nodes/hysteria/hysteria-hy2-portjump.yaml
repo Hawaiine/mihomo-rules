@@ -1,26 +1,19 @@
 # ===========================================
-# Hysteria 2 + Port Jump
-# 参考: https://wiki.metacubex.one/en/config/proxies/hysteria2
+# Hysteria2 + 端口跳跃
+# 来源: mihomo v1.19.31 adapter/outbound/hysteria2.go
 # ===========================================
 
 - name: "hy2-portjump"
   type: hysteria2
   server: server.example.com
-  port: 443
+  port: 443                                   # 起始端口
+  ports: "443-8443"                           # 跳跃范围，服务端需开放整段
   udp: true
-  password: "your-password"                    # 认证密码
-  # up: "50 Mbps"                              # 上行带宽 (不填则自动检测)
-  # down: "200 Mbps"                           # 下行带宽
-  # sni: example.com                           # TLS SNI
-  # skip-cert-verify: false                    # 跳过证书验证 (不推荐)
+  password: "your-password"
+  # hop-interval: "30s"                        # 换端口间隔，可带单位；纯数字按秒
+  # up: "50 Mbps"
+  # down: "200 Mbps"
+  # sni: example.com
   # alpn:
   #   - h3
-  # obfs:
-  #   type: salamander
-  #   password: "your-obfs-password"           # 混淆密码
-  # ip-version: dual                            # IP版本: dual/ipv4/ipv6/ipv4-prefer/ipv6-prefer
-  # interface-name: ""                          # 网络接口 (如: eth0, tailscale0)
-  # routing-mark: 0                             # 路由标记
-  # tfo: false                                  # TCP Fast Open
-  # mptcp: false                                # Multipath TCP
-  # disable-mtu-discovery: false                # 禁用 MTU 发现
+  # skip-cert-verify: false

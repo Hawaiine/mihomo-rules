@@ -1,26 +1,24 @@
-# ===========================================
-# 机场订阅配置示例 (proxy-providers)
-# 适用: Mihomo / clash-meta
-# 参考: https://wiki.metacubex.one/en/config/proxy-providers
-# ===========================================
+# proxy-providers 片段
+# 复制到主配置的 proxy-providers: 下面，不要再包一层。
+# 参考: https://wiki.metacubex.one/config/proxy-providers/
 
-# 主要订阅 (填写你的真实订阅链接)
 provider_main:
   type: http
-  url: "https://example.com/api/v1/client/subscribe?token=your_token_here"
+  url: "https://example.com/api/v1/client/subscribe?token=YOUR_TOKEN"
   interval: 86400
   path: ./providers/provider_main.yaml
-  # proxy: DIRECT                          # 下载订阅时使用的代理 (可选，默认 DIRECT)
-  # size-limit: 0                        # 下载文件最大大小 (字节，0 不限制)
-  # age-secret-key: AGE-SECRET-KEY-xxx    # age 私钥 (解密加密订阅，可选)
+  # proxy: DIRECT
+  # size-limit: 0
   header:
     User-Agent:
-      - "clash.meta"
+      - "mihomo"
     # Authorization:
-    #   - "Bearer your_token_here"  # 部分机场需要 Token 认证
-  filter: "(?i)(香港|Hong.Kong|HongKong|HK|HKG|日本|Japan|JP|JPN|美国|United.States|UnitedStates|US|新加坡|Singapore|SG|SGP|台湾|Taiwan|TW|TWN)"
-  exclude-filter: "(?i)(剩余|过期|GIA|CN2|IPv6)"
-  exclude-type: ""  # 排除类型，如 "ss|http"
+    #   - "Bearer YOUR_TOKEN"
+  # 英文缩写加词边界，避免 PLUS / TRUST 被当成美国。
+  filter: "(?i)(香港|\\bHK\\b|HKG|日本|\\bJP\\b|美国|\\bUS\\b|\\bUSA\\b|新加坡|\\bSG\\b|台湾|\\bTW\\b)"
+  # 只排除过期和流量耗尽。不要默认排除 GIA / CN2 / IPv6。
+  exclude-filter: "(?i)(剩余|过期|流量耗尽|到期)"
+  # exclude-type: "ss|http"
   health-check:
     enable: true
     url: https://cp.cloudflare.com/generate_204
@@ -30,49 +28,45 @@ provider_main:
     expected-status: 204
   override:
     udp: true
-    skip-cert-verify: true
-    # tfo: false                # TCP Fast Open
-    # mptcp: false              # Multipath TCP
-    # udp-over-tcp: false       # TUIC 专用
-    # down: "50 Mbps"           # 下行带宽限制
-    # up: "10 Mbps"             # 上行带宽限制
-    # ip-version: ipv4-prefer   # IP 版本偏好
-    # additional-prefix: "[主]"  # 节点名前缀
-    # additional-suffix: "]"     # 节点名后缀
-    # proxy-name:               # 节点名替换规则
-    #   - pattern: "IPLC-(.?)倍"
+    # skip-cert-verify: false
+    # tfo: false
+    # mptcp: false
+    # udp-over-tcp: false       # Shadowsocks 的 UDP over TCP，不是 TUIC
+    # down: "50 Mbps"           # 仅 Hysteria / Hysteria2
+    # up: "10 Mbps"
+    # ip-version: ipv4-prefer
+    # additional-prefix: "[主] "
+    # additional-suffix: ""
+    # proxy-name:
+    #   - pattern: "IPLC-(.*?)倍"
     #     target: "iplc x $1"
-    # override-expr:            # 表达式覆盖 (JQ 语法)
+    # override-expr 是 yq v4 子集，不是完整 jq。没有变量、reduce、环境变量。
+    # override-expr:
     #   - '.name = "[provider] " + .name'
-    #   - '.tags |= unique | sort'
 
-# 备用订阅
 provider_backup:
   type: http
-  url: "https://backup.example.com/subscribe?token=your_backup_token"
+  url: "https://backup.example.com/subscribe?token=YOUR_TOKEN"
   interval: 86400
   path: ./providers/provider_backup.yaml
-  proxy: DIRECT  # 备用订阅直连下载
+  proxy: DIRECT
   health-check:
     enable: true
     url: https://cp.cloudflare.com/generate_204
     interval: 300
-  filter: "(?i)(香港|HK|HKG|日本|JP|JPN|新加坡|SG|SGP|台湾|TW|TWN)"
-  exclude-filter: "(?i)(GIA|CN2|IPv6)"
+  filter: "(?i)(香港|\\bHK\\b|HKG|日本|\\bJP\\b|新加坡|\\bSG\\b|台湾|\\bTW\\b)"
+  exclude-filter: "(?i)(剩余|过期|流量耗尽|到期)"
   override:
     udp: true
-    skip-cert-verify: true
 
-# 加密订阅 (age 加密)
+# 加密订阅。私钥用 `mihomo age keygen` 生成，不要提交真私钥。
 provider_encrypted:
   type: http
   url: "https://example.com/encrypted-subscribe"
   interval: 86400
   path: ./providers/provider_encrypted.yaml
-  # 来源：mihomo 官方 proxy-providers 文档中的示例私钥，不是可用凭据。
-  age-secret-key: "AGE-SECRET-KEY-1...（示例，请替换）"
+  age-secret-key: "AGE-SECRET-KEY-REPLACE-ME"
 
-# 本地文件订阅 (可直接导出订阅文件)
 provider_local:
   type: file
   path: ./providers/provider_local.yaml
@@ -82,7 +76,6 @@ provider_local:
     interval: 300
     lazy: true
 
-# 嵌入节点 (直接配置节点，无需外部订阅)
 provider_inline:
   type: inline
   payload:
@@ -90,7 +83,7 @@ provider_inline:
       type: vless
       server: server.example.com
       port: 443
-      uuid: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+      uuid: "11111111-1111-4111-8111-111111111111"
       udp: true
       tls: true
       servername: example.com
