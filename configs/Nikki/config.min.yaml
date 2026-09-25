@@ -782,6 +782,134 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/AWS/AWS.png"
+  - name: "App Store"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppStore/AppStore.png"
+  - name: "Apple Fitness+"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleFitnessPlus/AppleFitnessPlus.png"
+  - name: "Apple Music"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleMusic/AppleMusic.png"
+  - name: "Apple News"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleNews/AppleNews.png"
   - name: "Apple TV"
     type: select
     proxies:
@@ -814,6 +942,102 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV/AppleTV.png"
+  - name: "Microsoft Azure"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Azure/Azure.png"
+  - name: "Microsoft Bing"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Bing/Bing.png"
+  - name: "Microsoft Copilot"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Copilot/Copilot.png"
   - name: "GitHub"
     type: select
     proxies:
@@ -846,6 +1070,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/GitHub/GitHub.png"
+  - name: "Gmail"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Gmail/Gmail.png"
   - name: "Google AI"
     type: select
     proxies:
@@ -878,6 +1134,134 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleAI/GoogleAI.png"
+  - name: "Google Drive"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleDrive/GoogleDrive.png"
+  - name: "Google Maps"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleMaps/GoogleMaps.png"
+  - name: "Google News"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleNews/GoogleNews.png"
+  - name: "Google Photos"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePhotos/GooglePhotos.png"
   - name: "Google Play"
     type: select
     proxies:
@@ -910,6 +1294,70 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePlay/GooglePlay.png"
+  - name: "Google Voice"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleVoice/GoogleVoice.png"
+  - name: "Grok"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Grok/Grok.png"
   - name: "Hotstar"
     type: select
     proxies:
@@ -1070,6 +1518,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/OneDrive/OneDrive.png"
+  - name: "Microsoft Outlook"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Outlook/Outlook.png"
   - name: "Prime Video"
     type: select
     proxies:
@@ -1198,6 +1678,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/WhatsApp/WhatsApp.png"
+  - name: "Xbox"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Xbox/Xbox.png"
   - name: "YouTube"
     type: select
     proxies:
@@ -1613,6 +2125,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CATCHPLAY/CATCHPLAY.png"
+  - name: "Crunchyroll"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Crunchyroll/Crunchyroll.png"
   - name: "Cursor"
     type: select
     proxies:
@@ -1805,6 +2349,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Deezer/Deezer.png"
+  - name: "钉钉"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/DingTalk/DingTalk.png"
   - name: "Discord"
     type: select
     proxies:
@@ -2315,6 +2891,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV/KKTV.png"
+  - name: "KakaoTalk"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/KakaoTalk/KakaoTalk.png"
   - name: "LINE TV"
     type: select
     proxies:
@@ -2347,6 +2955,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LINETV/LINETV.png"
+  - name: "飞书"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tool/Lark/Lark.png"
   - name: "Lemino"
     type: select
     proxies:
@@ -2411,6 +3051,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV/LiTV.png"
+  - name: "芒果TV"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MangoTV/MangoTV.png"
   - name: "Manus"
     type: select
     proxies:
@@ -2859,6 +3531,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Nintendo/Nintendo.png"
+  - name: "Nous Research"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/NousResearch/NousResearch.png"
   - name: "Now E"
     type: select
     proxies:
@@ -2954,6 +3658,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI/OpenAI.png"
+  - name: "Oracle"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/DevOps/Oracle/Oracle.png"
   - name: "💊 PT"
     type: select
     proxies:
@@ -3016,6 +3752,70 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
+  - name: "Pandora"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Pandora/Pandora.png"
+  - name: "Paramount+"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ParamountPlus/ParamountPlus.png"
   - name: "PayPal"
     type: select
     proxies:
@@ -3048,6 +3848,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/PayPal/PayPal.png"
+  - name: "Peacock TV"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PeacockTV/PeacockTV.png"
   - name: "Perplexity"
     type: select
     proxies:
@@ -3176,6 +4008,38 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pixiv/Pixiv.png"
+  - name: "PlayStation"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/PlayStation/PlayStation.png"
   - name: "Podcast"
     type: select
     proxies:
@@ -3590,6 +4454,70 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Reddit/Reddit.png"
+  - name: "Snapchat"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Snapchat/Snapchat.png"
+  - name: "SoundCloud"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/SoundCloud/SoundCloud.png"
   - name: "Spotify"
     type: select
     proxies:
@@ -4623,30 +5551,114 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AWS/AWS.yaml"
     interval: 86400
     path: ./ruleset/AWS.yaml
+  AppStore:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppStore/AppStore.yaml"
+    interval: 86400
+    path: ./ruleset/AppStore.yaml
+  AppleFitnessPlus:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleFitnessPlus/AppleFitnessPlus.yaml"
+    interval: 86400
+    path: ./ruleset/AppleFitnessPlus.yaml
+  AppleMusic:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleMusic/AppleMusic.yaml"
+    interval: 86400
+    path: ./ruleset/AppleMusic.yaml
+  AppleNews:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleNews/AppleNews.yaml"
+    interval: 86400
+    path: ./ruleset/AppleNews.yaml
   AppleTV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleTV/AppleTV.yaml"
     interval: 86400
     path: ./ruleset/AppleTV.yaml
+  Azure:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Azure/Azure.yaml"
+    interval: 86400
+    path: ./ruleset/Azure.yaml
+  Bing:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Bing/Bing.yaml"
+    interval: 86400
+    path: ./ruleset/Bing.yaml
+  Copilot:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Copilot/Copilot.yaml"
+    interval: 86400
+    path: ./ruleset/Copilot.yaml
   GitHub:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GitHub/GitHub.yaml"
     interval: 86400
     path: ./ruleset/GitHub.yaml
+  Gmail:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Gmail/Gmail.yaml"
+    interval: 86400
+    path: ./ruleset/Gmail.yaml
   GoogleAI:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleAI/GoogleAI.yaml"
     interval: 86400
     path: ./ruleset/GoogleAI.yaml
+  GoogleDrive:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleDrive/GoogleDrive.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleDrive.yaml
+  GoogleMaps:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleMaps/GoogleMaps.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleMaps.yaml
+  GoogleNews:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleNews/GoogleNews.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleNews.yaml
+  GooglePhotos:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GooglePhotos/GooglePhotos.yaml"
+    interval: 86400
+    path: ./ruleset/GooglePhotos.yaml
   GooglePlay:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GooglePlay/GooglePlay.yaml"
     interval: 86400
     path: ./ruleset/GooglePlay.yaml
+  GoogleVoice:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/GoogleVoice/GoogleVoice.yaml"
+    interval: 86400
+    path: ./ruleset/GoogleVoice.yaml
+  Grok:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Grok/Grok.yaml"
+    interval: 86400
+    path: ./ruleset/Grok.yaml
   Hotstar:
     type: http
     behavior: classical
@@ -4677,6 +5689,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OneDrive/OneDrive.yaml"
     interval: 86400
     path: ./ruleset/OneDrive.yaml
+  Outlook:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Outlook/Outlook.yaml"
+    interval: 86400
+    path: ./ruleset/Outlook.yaml
   PrimeVideo:
     type: http
     behavior: classical
@@ -4701,6 +5719,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/WhatsApp/WhatsApp.yaml"
     interval: 86400
     path: ./ruleset/WhatsApp.yaml
+  Xbox:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Xbox/Xbox.yaml"
+    interval: 86400
+    path: ./ruleset/Xbox.yaml
   YouTube:
     type: http
     behavior: classical
@@ -4779,6 +5803,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/CATCHPLAY/CATCHPLAY.yaml"
     interval: 86400
     path: ./ruleset/CATCHPLAY.yaml
+  Crunchyroll:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Crunchyroll/Crunchyroll.yaml"
+    interval: 86400
+    path: ./ruleset/Crunchyroll.yaml
   Cursor:
     type: http
     behavior: classical
@@ -4815,6 +5845,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Deezer/Deezer.yaml"
     interval: 86400
     path: ./ruleset/Deezer.yaml
+  DingTalk:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DingTalk/DingTalk.yaml"
+    interval: 86400
+    path: ./ruleset/DingTalk.yaml
   Discord:
     type: http
     behavior: classical
@@ -4911,12 +5947,24 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KKTV/KKTV.yaml"
     interval: 86400
     path: ./ruleset/KKTV.yaml
+  KakaoTalk:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/KakaoTalk/KakaoTalk.yaml"
+    interval: 86400
+    path: ./ruleset/KakaoTalk.yaml
   LINETV:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LINETV/LINETV.yaml"
     interval: 86400
     path: ./ruleset/LINETV.yaml
+  Lark:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Lark/Lark.yaml"
+    interval: 86400
+    path: ./ruleset/Lark.yaml
   Lemino:
     type: http
     behavior: classical
@@ -4929,6 +5977,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/LiTV/LiTV.yaml"
     interval: 86400
     path: ./ruleset/LiTV.yaml
+  MangoTV:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/MangoTV/MangoTV.yaml"
+    interval: 86400
+    path: ./ruleset/MangoTV.yaml
   Manus:
     type: http
     behavior: classical
@@ -5013,6 +6067,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Nintendo/Nintendo.yaml"
     interval: 86400
     path: ./ruleset/Nintendo.yaml
+  NousResearch:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NousResearch/NousResearch.yaml"
+    interval: 86400
+    path: ./ruleset/NousResearch.yaml
   NowE:
     type: http
     behavior: classical
@@ -5031,6 +6091,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/OpenAI/OpenAI.yaml"
     interval: 86400
     path: ./ruleset/OpenAI.yaml
+  Oracle:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Oracle/Oracle.yaml"
+    interval: 86400
+    path: ./ruleset/Oracle.yaml
   PT:
     type: http
     behavior: classical
@@ -5043,12 +6109,30 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PTChina/PTChina.yaml"
     interval: 86400
     path: ./ruleset/PTChina.yaml
+  Pandora:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pandora/Pandora.yaml"
+    interval: 86400
+    path: ./ruleset/Pandora.yaml
+  ParamountPlus:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ParamountPlus/ParamountPlus.yaml"
+    interval: 86400
+    path: ./ruleset/ParamountPlus.yaml
   PayPal:
     type: http
     behavior: classical
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PayPal/PayPal.yaml"
     interval: 86400
     path: ./ruleset/PayPal.yaml
+  PeacockTV:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PeacockTV/PeacockTV.yaml"
+    interval: 86400
+    path: ./ruleset/PeacockTV.yaml
   Perplexity:
     type: http
     behavior: classical
@@ -5073,6 +6157,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Pixiv/Pixiv.yaml"
     interval: 86400
     path: ./ruleset/Pixiv.yaml
+  PlayStation:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PlayStation/PlayStation.yaml"
+    interval: 86400
+    path: ./ruleset/PlayStation.yaml
   Podcast:
     type: http
     behavior: classical
@@ -5151,6 +6241,18 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Reddit/Reddit.yaml"
     interval: 86400
     path: ./ruleset/Reddit.yaml
+  Snapchat:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Snapchat/Snapchat.yaml"
+    interval: 86400
+    path: ./ruleset/Snapchat.yaml
+  SoundCloud:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/SoundCloud/SoundCloud.yaml"
+    interval: 86400
+    path: ./ruleset/SoundCloud.yaml
   Spotify:
     type: http
     behavior: classical

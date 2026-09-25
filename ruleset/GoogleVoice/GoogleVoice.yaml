@@ -1,0 +1,15 @@
+# ===========================================
+# Rule Name: Google Voice
+# Author: Hawaiine
+# Updated: 2026-09-26 07:37:05
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 0
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,voice.telephony.goog

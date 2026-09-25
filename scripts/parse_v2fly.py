@@ -130,6 +130,21 @@ V2FLY_BRAND_MAP: dict[str, str] = {
     "youtube": "YouTube",
     "z-library": "ZLibrary",
     "zhihu": "Zhihu",
+    # ── 2026-09-25 新增品牌 ──
+    "apple-music": "AppleMusic",
+    "azure": "Azure",
+    "bing": "Bing",
+    "dingtalk": "DingTalk",
+    "github-copilot": "Copilot",
+    "hunantv": "MangoTV",
+    "kakao": "KakaoTalk",
+    "lark": "Lark",
+    "oracle": "Oracle",
+    "playstation": "PlayStation",
+    "snap": "Snapchat",
+    "soundcloud": "SoundCloud",
+    "xai": "Grok",
+    "xbox": "Xbox",
 }
 
 # 反向映射：品牌名 → v2fly 文件名

@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-09-26
+
+### Added
+- **新增 29 个品牌规则集**（130 → 159 规则集，121 → 150 品牌）— Apple 子品牌（App Store / Apple Fitness+ / Apple Music / Apple News）· Microsoft 子品牌（Azure / Outlook / Bing / Copilot / Xbox）· Google 子品牌（Gmail / Google Drive / Google Maps / Google News / Google Photos / Google Voice）· X 子品牌（Grok）· 流媒体与社区品牌（Crunchyroll / MangoTV / Paramount+ / Peacock TV / Pandora / SoundCloud / PlayStation / Snapchat / 钉钉 / 飞书 / KakaoTalk / Oracle / Nous Research）
+- **`scripts/readme_stats.py`** — README 统计口径唯一来源：品牌数 / 规则集数 / 规则总数 / 类型分布 / 分类统计全部从 `ruleset/` 实测计算；`--check` 校验 README 与实测一致，`--check-structure` 作为单测硬门禁，`--update` 一键刷新
+- **`scripts/tests/test_readme_consistency.py`** — README 口径防漂移门禁（结构性口径 + `--update` 幂等）
+
+### Changed
+- **Google News / Google Voice 提取为独立规则集** — 从父品牌 `Google` 剥离服务域名，`SUB_PARENT` / `ownership_map` 与 `commit_writer.py` 品牌映射同步
+- **README 统计口径按实测刷新** — 品牌 121 → 150、规则集 130 → 159、规则总数 352,352 → 352,525、类型分布与分类统计全部重算；`configs/Nikki/README.md` 品牌策略组计数 116 → 150
+
+---
+
 ## 2026-09-25
 
 ### Changed

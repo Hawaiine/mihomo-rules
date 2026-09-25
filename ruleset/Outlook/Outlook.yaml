@@ -1,0 +1,27 @@
+# ===========================================
+# Rule Name: Microsoft Outlook
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:22
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 13
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,hotmail.co
+  - DOMAIN-SUFFIX,hotmail.com
+  - DOMAIN-SUFFIX,hotmail.eu
+  - DOMAIN-SUFFIX,hotmail.net
+  - DOMAIN-SUFFIX,hotmail.org
+  - DOMAIN-SUFFIX,live.cn
+  - DOMAIN-SUFFIX,live.com
+  - DOMAIN-SUFFIX,live.com.au
+  - DOMAIN-SUFFIX,live.eu
+  - DOMAIN-SUFFIX,live.net
+  - DOMAIN-SUFFIX,outlook.cn
+  - DOMAIN-SUFFIX,outlook.com
+  - DOMAIN-SUFFIX,outlookgroups.ms

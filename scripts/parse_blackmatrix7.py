@@ -129,6 +129,24 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "iCloudPrivateRelay": "iCloudPrivateRelay",
     "iQIYI": "iQIYI",
     "myTVSUPER": "myTVSUPER",
+    # ── 2026-09-25 新增品牌 ──
+    "AppleMusic": "AppleMusic",
+    "AppleNews": "AppleNews",
+    "AppStore": "AppStore",
+    "FitnessPlus": "AppleFitnessPlus",
+    "GoogleDrive": "GoogleDrive",
+    "Bing": "Bing",
+    "Copilot": "Copilot",
+    "Xbox": "Xbox",
+    "Pandora": "Pandora",
+    "SoundCloud": "SoundCloud",
+    "DingTalk": "DingTalk",
+    "KakaoTalk": "KakaoTalk",
+    "Oracle": "Oracle",
+    "PlayStation": "PlayStation",
+    "Peacock": "PeacockTV",
+    "ParamountPlus": "ParamountPlus",
+    "HunanTV": "MangoTV",
 }
 
 # 反向映射：品牌名 → blackmatrix7 目录名
