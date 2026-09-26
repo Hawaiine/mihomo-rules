@@ -1,16 +1,17 @@
 # ===========================================
 # Rule Name: Google News
 # Author: Hawaiine
-# Updated: 2026-09-26 10:09:12
+# Updated: 2026-09-26 10:54:57
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 2
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
+  - DOMAIN-SUFFIX,news.google
   - DOMAIN-SUFFIX,news.google.com
   - DOMAIN-SUFFIX,unfiltered.news

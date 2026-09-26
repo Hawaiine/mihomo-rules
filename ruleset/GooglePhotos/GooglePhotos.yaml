@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google Photos
 # Author: Hawaiine
-# Updated: 2026-09-26 10:09:12
+# Updated: 2026-09-26 10:54:57
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 3
+# DOMAIN-SUFFIX: 5
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -15,3 +15,5 @@ payload:
   - DOMAIN-SUFFIX,googlephotos.com
   - DOMAIN-SUFFIX,photos.app.goo.gl
   - DOMAIN-SUFFIX,photos.google.com
+  - DOMAIN-SUFFIX,photos.googleapis.com
+  - DOMAIN-SUFFIX,photosdata-pa.googleapis.com
