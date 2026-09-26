@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Google Maps
 # Author: Hawaiine
-# Updated: 2026-09-26 01:02:22
+# Updated: 2026-09-26 10:09:12
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 1
+# DOMAIN-SUFFIX: 3
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -13,3 +13,5 @@
 # ===========================================
 payload:
   - DOMAIN-SUFFIX,googlemaps.com
+  - DOMAIN-SUFFIX,maps.app.goo.gl
+  - DOMAIN-SUFFIX,maps.google.com
