@@ -12,9 +12,17 @@
 - **`scripts/readme_stats.py`** — README 统计口径唯一来源：品牌数 / 规则集数 / 规则总数 / 类型分布 / 分类统计全部从 `ruleset/` 实测计算；`--check` 校验 README 与实测一致，`--check-structure` 作为单测硬门禁，`--update` 一键刷新
 - **`scripts/tests/test_readme_consistency.py`** — README 口径防漂移门禁（结构性口径 + `--update` 幂等）
 
+- **Google 四子品牌服务域名按 DoH 实测补齐** — Google Maps 1 → 6、Google Photos 1 → 5、Google Voice 1 → 2、Google News 1 → 2；`DOMAIN,voice.telephony.goog` 放宽为 `DOMAIN-SUFFIX,telephony.goog`（`telephony.goog` 属 Google 自有 `goog` TLD，DoH 正常解析；原窄式规则为其子集）
+
 ### Changed
 - **Google News / Google Voice 提取为独立规则集** — 从父品牌 `Google` 剥离服务域名，`SUB_PARENT` / `ownership_map` 与 `commit_writer.py` 品牌映射同步
 - **README 统计口径按实测刷新** — 品牌 121 → 150、规则集 130 → 159、规则总数 352,352 → 352,525、类型分布与分类统计全部重算；`configs/Nikki/README.md` 品牌策略组计数 116 → 150
+
+### Fixed
+- **`GoogleNews` 移除 `DOMAIN-SUFFIX,news.google`** — Cloudflare DoH 与 Google DoH 对 `news.google` 均返回 NXDOMAIN（A / AAAA / CNAME 皆无记录），不是可用 hostname；保留 `news.google.com`（DoH 正常解析）与 `unfiltered.news`（blackmatrix7 `Google.yaml` 第 649 行 + v2fly `data/google` 第 498 行双上游佐证）
+
+### Verified
+`GoogleMaps` 6 条 · `GooglePhotos` 5 条 · `GoogleVoice` 2 条 · `GoogleNews` 2 条域名逐个经 Cloudflare DoH + Google DoH 实测（15/15 有 A 记录，`news.google` 为唯一 NXDOMAIN 已移除）
 
 ---
 
