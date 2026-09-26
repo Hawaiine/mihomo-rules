@@ -1,15 +1,15 @@
 # ===========================================
 # Rule Name: Apple
 # Author: Hawaiine
-# Updated: 2026-09-25 01:20:04
+# Updated: 2026-09-26 01:02:32
 # DOMAIN-KEYWORD: 2
 # DOMAIN-REGEX: 0
 # DOMAIN: 9
-# DOMAIN-SUFFIX: 1447
+# DOMAIN-SUFFIX: 1436
 # IP-CIDR: 10
 # IP-CIDR6: 3
 # IP-ASN: 0
-# PROCESS-NAME: 12
+# PROCESS-NAME: 11
 # ===========================================
 payload:
   - DOMAIN-KEYWORD,smp-device
@@ -270,14 +270,6 @@ payload:
   - DOMAIN-SUFFIX,applemagickeyboard.com
   - DOMAIN-SUFFIX,applemalaysia.com.my
   - DOMAIN-SUFFIX,applemasters.info
-  - DOMAIN-SUFFIX,applemusic.berlin
-  - DOMAIN-SUFFIX,applemusic.co
-  - DOMAIN-SUFFIX,applemusic.com
-  - DOMAIN-SUFFIX,applemusic.com.au
-  - DOMAIN-SUFFIX,applemusic.hamburg
-  - DOMAIN-SUFFIX,applemusic.wang
-  - DOMAIN-SUFFIX,applemusicconnect.com
-  - DOMAIN-SUFFIX,applemusicfestival.com
   - DOMAIN-SUFFIX,applenews.berlin
   - DOMAIN-SUFFIX,applenews.hamburg
   - DOMAIN-SUFFIX,applenews.tv
@@ -1292,8 +1284,6 @@ payload:
   - DOMAIN-SUFFIX,moreheadphones.com
   - DOMAIN-SUFFIX,mr-apple.com.tw
   - DOMAIN-SUFFIX,ms4dre.com
-  - DOMAIN-SUFFIX,music.apple.com
-  - DOMAIN-SUFFIX,musickit.net
   - DOMAIN-SUFFIX,myappleid.com
   - DOMAIN-SUFFIX,mybeatsbydrestudio.com
   - DOMAIN-SUFFIX,mybeatsbydreuk.com
@@ -1462,7 +1452,6 @@ payload:
   - DOMAIN-SUFFIX,www-sms-apple.com
   - DOMAIN-SUFFIX,wwwapple.com
   - DOMAIN-SUFFIX,wwwapple.net
-  - DOMAIN-SUFFIX,wwwapplemusic.com
   - DOMAIN-SUFFIX,wwwipodlounge.com
   - DOMAIN-SUFFIX,wwwitunes.com
   - DOMAIN-SUFFIX,wwwlapple.com
@@ -1491,7 +1480,6 @@ payload:
   - PROCESS-NAME,fmfd
   - PROCESS-NAME,LookupViewService
   - PROCESS-NAME,mapspushd
-  - PROCESS-NAME,Music
   - PROCESS-NAME,netbiosd
   - PROCESS-NAME,trustd
   - PROCESS-NAME,WeatherWidget

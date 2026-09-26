@@ -1,0 +1,28 @@
+# ===========================================
+# Rule Name: 钉钉
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:11
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 14
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,ddurl.to
+  - DOMAIN-SUFFIX,dg-work.cn
+  - DOMAIN-SUFFIX,dingding.xin
+  - DOMAIN-SUFFIX,dingstore.cn
+  - DOMAIN-SUFFIX,dingtalk.cn
+  - DOMAIN-SUFFIX,dingtalk.com
+  - DOMAIN-SUFFIX,dingtalk.com.cn
+  - DOMAIN-SUFFIX,dingtalk.net
+  - DOMAIN-SUFFIX,dingtalkapps.com
+  - DOMAIN-SUFFIX,dingtalkcloud.com
+  - DOMAIN-SUFFIX,laiwang.com
+  - DOMAIN-SUFFIX,lwurl.to
+  - DOMAIN-SUFFIX,realapp.xin
+  - DOMAIN-SUFFIX,ztna-dingtalk.com

@@ -1,0 +1,23 @@
+# ===========================================
+# Rule Name: Paramount+
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:10
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 4
+# DOMAIN-SUFFIX: 5
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,cbsi.live.ott.irdeto.com
+  - DOMAIN,cbsplaylistserver.aws.syncbak.com
+  - DOMAIN,cbsservice.aws.syncbak.com
+  - DOMAIN,link.theplatform.com
+  - DOMAIN-SUFFIX,cbsaavideo.com
+  - DOMAIN-SUFFIX,cbsi.com
+  - DOMAIN-SUFFIX,cbsivideo.com
+  - DOMAIN-SUFFIX,paramountplus.com
+  - DOMAIN-SUFFIX,pplusstatic.com

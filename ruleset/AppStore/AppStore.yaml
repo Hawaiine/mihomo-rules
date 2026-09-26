@@ -1,0 +1,16 @@
+# ===========================================
+# Rule Name: App Store
+# Author: Hawaiine
+# Updated: 2026-09-26 01:02:11
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 2
+# DOMAIN-SUFFIX: 0
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,apps.apple.com
+  - DOMAIN,itunes.apple.com
