@@ -5577,7 +5577,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Zhihu/Zhihu.png"
 
-  - name: "friDay video"
+  - name: "friDay影音"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -6821,12 +6821,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Zhihu.yaml
 
-  friDayvideo:
+  friDayVideo:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayVideo/friDayVideo.yaml"
     interval: 86400
-    path: ./ruleset/friDayvideo.yaml
+    path: ./ruleset/friDayVideo.yaml
 
   iQIYI:
     type: http
@@ -7012,7 +7012,7 @@ rules:
                                                     # - RULE-SET,Youku,优酷
                                                     # - RULE-SET,ZLibrary,Z-Library
                                                     # - RULE-SET,Zhihu,知乎
-                                                    # - RULE-SET,friDayvideo,friDay video
+                                                    # - RULE-SET,friDayVideo,friDay影音
                                                     # - RULE-SET,iQIYI,爱奇艺
                                                     # - RULE-SET,karaokeDAM,Karaoke@DAM
                                                     # - RULE-SET,myTVSUPER,myTV SUPER

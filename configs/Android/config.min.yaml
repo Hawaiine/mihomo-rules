@@ -5309,7 +5309,7 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Zhihu/Zhihu.png"
-  - name: "friDay video"
+  - name: "friDay影音"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -6394,12 +6394,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Zhihu/Zhihu.yaml"
     interval: 86400
     path: ./ruleset/Zhihu.yaml
-  friDayvideo:
+  friDayVideo:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayvideo/friDayvideo.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/friDayVideo/friDayVideo.yaml"
     interval: 86400
-    path: ./ruleset/friDayvideo.yaml
+    path: ./ruleset/friDayVideo.yaml
   iQIYI:
     type: http
     behavior: classical

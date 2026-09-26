@@ -29,7 +29,7 @@ BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCI
 # 显式覆盖（优先级高于自动匹配）
 ICON_OVERRIDES = {
     # 图标仓库改过名 / 改过分类，自动匹配不到或需固定指向（对齐 Oasisic-Icons 2026-09 最新结构）
-    'friDay video': 'Media/friDayVideo/friDayVideo.png',
+    'friDay影音': 'Media/friDayVideo/friDayVideo.png',
     'Disney': 'Media/DisneyPlus/DisneyPlus.png',
     'HBO': 'Media/HBOMAX/HBOMAX.png',
     '网易云音乐': 'Music/NetEaseCloudMusic/NetEaseCloudMusic.png',

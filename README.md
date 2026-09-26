@@ -117,7 +117,7 @@ mihomo-rules/
 - `Applications` 与上游 `applications.txt` 一致，同名不同大小写各留一条；品牌集合同名不分大小写，只留一条
 - v2fly 不走这套规则：没写 `full:` 的有点域名仍是 `DOMAIN-SUFFIX`，`full:` 才是 `DOMAIN`
 
-**技术 ID 与显示名：** 目录和 provider key 使用无空格技术 ID，策略组使用显示名。例如 `NetEaseCloudMusic` → `网易云音乐`，`myTVSUPER` → `myTV SUPER`，`iQIYI` → `爱奇艺`。
+**技术 ID 与显示名：** 目录和 provider key 使用无空格技术 ID，策略组使用显示名。例如 `NetEaseCloudMusic` → `网易云音乐`，`myTVSUPER` → `myTV SUPER`，`iQIYI` → `爱奇艺`，`friDayVideo` → `friDay影音`。
 
 ## 🚀 快速使用
 
@@ -305,6 +305,7 @@ python3 scripts/generate_config.py
 | 日期 | 内容 |
 |------|------|
 | 2026-09-26 | Google 四子品牌服务域名按 DoH 实测补齐（移除 NXDOMAIN 的 `news.google`）· 清理被 `DOMAIN-SUFFIX` 完整覆盖的 `DOMAIN` 与同值跨类型重复 |
+| 2026-09-26 | friDay 命名统一：技术 ID `friDayVideo` / 显示名 `friDay影音`（目录 · 文件名 · provider key/url/path · RULE-SET 两段 · 策略组名 · icon 覆盖表一次落最终态） |
 | 2026-09-26 | 新增 29 个品牌规则集（Apple/Microsoft/Google/X 子品牌 + 流媒体，130→159 规则集 / 121→150 品牌）· Google News / Google Voice 从父品牌 Google 提取为独立规则集 · README 统计口径改由 `scripts/readme_stats.py` 从 `ruleset/` 实测计算并加防漂移门禁 |
 | 2026-09-23 | 图标引用对齐 Oasisic-Icons 最新结构（4 config 各 8 组：OneDrive→Microsoft/ · Disney→DisneyPlus · LINETV→Media/LINETV/ · 网易云音乐→Music/NetEaseCloudMusic/ · Twitch→Game/ · friDay video→Media/friDayVideo/ · 爱奇艺→Media/iQIYI/；HBO 补 HBOMAX 图标）· match_icons 覆盖表同步 · 通知缩略图死链修复 |
 | 2026-09-18 | 文档口径全面校正（品牌 121 / 规则集 130 / 系统组 30 / 分类表计数与列名对齐、剔除 ViuTV·BiAn·OKX·SWIFT 幽灵条目、纠正规则类型分布）· verify_configs 新增 3 项地区组结构检查（品牌组 5+21、5 个基础功能组 21、地区组不得进 use，20→23 项/变体）· 图标映射内置 emoji 前缀组抑制（上游补图不回流） |
@@ -344,7 +345,7 @@ python3 scripts/generate_config.py
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
-| 🎬 流媒体 | 54 | 1,250 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · Crunchyroll · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · PeacockTV · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNews · friDayvideo · iQIYI · karaokeDAM · myTVSUPER |
+| 🎬 流媒体 | 54 | 1,250 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · Crunchyroll · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · PeacockTV · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNews · friDayVideo · iQIYI · karaokeDAM · myTVSUPER |
 | 🤖 AI | 14 | 236 | Anthropic · Copilot · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Grok · Manus · NousResearch · OpenAI · Perplexity · Poe · SiriAI |
 | 📱 社交 | 21 | 1,023 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
 | ☁️ 云服务 | 22 | 1,734 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |

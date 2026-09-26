@@ -16,6 +16,7 @@
 
 ### Changed
 - **Google News / Google Voice 提取为独立规则集** — 从父品牌 `Google` 剥离服务域名，`SUB_PARENT` / `ownership_map` 与 `commit_writer.py` 品牌映射同步
+- **friDay 命名统一** — 技术 ID 旧名 `friDayvideo` → `friDayVideo`（目录 · 文件名 · provider key · url · path · RULE-SET 第一段），显示名旧名 `friDay video` → `friDay影音`（策略组名 · `# Rule Name` · README 标题 · RULE-SET 第二段 · icon 覆盖表键）。**旧名仅在本 CHANGELOG 与 README 历史记录中出现**，仓库其余位置不再保留
 - **README 统计口径按实测刷新** — 品牌 121 → 150、规则集 130 → 159、规则总数 352,352 → 352,525、类型分布与分类统计全部重算；`configs/Nikki/README.md` 品牌策略组计数 116 → 150
 
 ### Fixed

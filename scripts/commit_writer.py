@@ -70,7 +70,7 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "ReadJapan": "Read Japan",
     "UNext": "U-NEXT",
     "VideoMarket": "Video Market",
-    "friDayvideo": "friDay video",
+    "friDayVideo": "friDay影音",
     "karaokeDAM": "Karaoke@DAM",
     "AliPay": "支付宝",
     "QQ": "腾讯QQ",
