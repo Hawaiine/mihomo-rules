@@ -15,39 +15,40 @@ CONFIG_DIRS = {
 }
 VARIANTS = ['android_full', 'android_min', 'nikki_full', 'nikki_min']
 
-# 基础 provider (9)
-BASE_PROVIDERS = {'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR', 'DirectDNS', 'ProxyDNS'}
-
-# 系统组 (30)
-SYSTEM_GROUPS = [
-    '♻️ 自动选择',
-    '🇭🇰 香港节点',
-    '🇯🇵 日本节点',
-    '🇺🇸 美国节点',
-    '🇸🇬 新加坡节点',
-    '🇹🇼 台湾节点',
-    '🇰🇷 韩国节点',
-    '🇬🇧 英国节点',
-    '🇩🇪 德国节点',
-    '🇫🇷 法国节点',
-    '🇨🇦 加拿大节点',
-    '🇦🇺 澳大利亚节点',
-    '🇮🇳 印度节点',
-    '🇹🇷 土耳其节点',
-    '🇦🇷 阿根廷节点',
-    '🇧🇷 巴西节点',
-    '🇷🇺 俄罗斯节点',
-    '🇲🇾 马来西亚节点',
-    '🇹🇭 泰国节点',
-    '🇻🇳 越南节点',
-    '🇵🇭 菲律宾节点',
-    '🇮🇩 印尼节点',
-    '🛑 全球拦截', '🎯 全球直连', '🔧 手动切换',
-    '🔯 故障转移', '🔀 负载均衡', '🐟 漏网之鱼',
-    '🇨🇳 直连DNS', '🌍 代理DNS',
-]
-
 from lib.ownership_map import SUB_PARENT
+
+
+def _load_generate_config():
+    """读取 generate_config.py 的单一来源常量。
+
+    REGION_GROUPS / SYSTEM_GROUPS / BASE_PROVIDERS 都只在这里定义一次，
+    verify 侧一律 import 而非复制，避免两处硬编码漂移。
+    """
+    import importlib.util
+    if str(ROOT / 'scripts') not in sys.path:
+        sys.path.insert(0, str(ROOT / 'scripts'))
+    spec = importlib.util.spec_from_file_location(
+        'generate_config', ROOT / 'scripts' / 'generate_config.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_GEN = _load_generate_config()
+
+# emoji 前缀组判定：与 match_icons / generate_config 同一实现（唯一来源）
+import match_icons
+is_emoji_group = match_icons.is_emoji_group
+
+# 基础 provider 集合与固定顺序（9）——单一来源 generate_config.BASE_PROVIDERS
+BASE_PROVIDER_ORDER = list(getattr(_GEN, 'BASE_PROVIDERS', {}).keys())
+BASE_PROVIDERS = set(BASE_PROVIDER_ORDER)
+
+# 系统组（自动选择 + 21 地区组 + 8 个功能组）——单一来源 generate_config.SYSTEM_GROUPS
+SYSTEM_GROUPS = list(getattr(_GEN, 'SYSTEM_GROUPS', []))
+
+# 21 个地区组——单一来源 generate_config.REGION_GROUPS
+REGION_GROUPS = list(getattr(_GEN, 'REGION_GROUPS', []))
 
 # Oasisic-Icons 仓库位置（用于校验 icon 引用是否真实存在）
 ICON_REPO_CANDIDATES = [
@@ -161,9 +162,9 @@ def check_rules_blank_line_before(lines, variant):
     return False
 
 def check_proxy_groups_count(lines, variant):
-    """proxy-groups 总数 = 30 个系统组 + 当前品牌数"""
+    """proxy-groups 总数 = 系统组数（generate_config.SYSTEM_GROUPS）+ 当前品牌数"""
     names = extract_proxy_group_names(lines)
-    expected = 30 + len(ALL_BRANDS)
+    expected = len(SYSTEM_GROUPS) + len(ALL_BRANDS)
     if len(names) != expected:
         print(f'  FAIL: {variant} — proxy-groups={len(names)}, expected {expected}')
         return False
@@ -179,7 +180,7 @@ def check_rule_providers_count(lines, variant):
     return True
 
 def check_system_groups_first(names, variant):
-    """前 30 组必须是系统组"""
+    """前 N 组必须是系统组（N = len(SYSTEM_GROUPS)）"""
     for i, sg in enumerate(SYSTEM_GROUPS):
         if i >= len(names) or names[i] != sg:
             print(f'  FAIL: {variant} — system group #{i} expected "{sg}", got "{names[i] if i < len(names) else "N/A"}"')
@@ -188,7 +189,7 @@ def check_system_groups_first(names, variant):
 
 def check_brand_set_equality(names, variant):
     """品牌组集合必须与 BRAND_DISPLAYS 全等"""
-    brand_names = set(names[30:])  # skip 28 system groups
+    brand_names = set(names[len(SYSTEM_GROUPS):])  # 跳过系统组，只比品牌组
     only_old = brand_names - BRAND_DISPLAYS
     only_new = BRAND_DISPLAYS - brand_names
     if only_old or only_new:
@@ -202,7 +203,7 @@ def check_brand_set_equality(names, variant):
 
 def check_sub_parent_order(names, variant):
     """子品牌必须在父品牌前"""
-    brand_names = names[30:]
+    brand_names = names[len(SYSTEM_GROUPS):]
     for child, parent in SUB_PARENT.items():
         child_display = get_display(child)
         parent_display = get_display(parent)
@@ -220,7 +221,7 @@ def check_naming_consistency(lines, variant):
     providers = extract_rule_provider_keys(lines)
     provider_set = set(providers)
     names = extract_proxy_group_names(lines)
-    brand_names = names[30:]  # skip 28 system groups
+    brand_names = names[len(SYSTEM_GROUPS):]  # 跳过系统组
 
     errors = []
     for line in lines:
@@ -275,13 +276,17 @@ def check_applications_semantics(variant, lines):
             return False
     return True
 
-def check_full_min_rules_equivalence(variant, lines):
-    """full vs min: 未注释规则行列表必须全等"""
-    is_full = 'full' in variant
+def check_active_rules_count(variant, lines):
+    """激活规则**条数**检查（不是等价检查）。
+
+    只断言未注释规则行数等于 generate_config.gen_rules 的固定结构条数；
+    full 与 min 的规则**列表全等**由 check_cross_variant_rules 负责。
+    两者分工明确，避免「名义等价、实际只数条数」。
+    """
     is_nikki = 'nikki' in variant
     rules = extract_rules_lines(lines)
-    # 检查基本结构
-    expected_lines = 11 if not is_nikki else 10  # Android 11条, Nikki 10条(无Applications)
+    # Android 11 条 / Nikki 10 条（无 Applications）：见 generate_config.gen_rules
+    expected_lines = 11 if not is_nikki else 10
     if len(rules) != expected_lines:
         print(f'  FAIL: {variant} — active rules={len(rules)}, expected {expected_lines}')
         return False
@@ -290,50 +295,84 @@ def check_full_min_rules_equivalence(variant, lines):
 def check_rule_providers_base_order(lines, variant):
     """前 9 个 rule-provider 必须是固定顺序: DirectDNS,ProxyDNS,Reject,Direct,Proxy,Applications,Private,LanCIDR,CNCIDR"""
     keys = extract_rule_provider_keys(lines)
-    base_order = ['DirectDNS', 'ProxyDNS', 'Reject', 'Direct', 'Proxy', 'Applications', 'Private', 'LanCIDR', 'CNCIDR']
-    for i, expected in enumerate(base_order):
+    for i, expected in enumerate(BASE_PROVIDER_ORDER):
         if i >= len(keys) or keys[i] != expected:
             print(f'  FAIL: {variant} — base provider #{i} expected "{expected}", got "{keys[i] if i < len(keys) else "N/A"}"')
             return False
     return True
 
 
-def check_full_comment_order(lines, variant):
-    """full 版注释 RULE-SET 顺序必须与 proxy-groups 品牌段顺序一致"""
-    if 'full' not in variant:
-        return True  # min 版无注释，跳过
-    names = extract_proxy_group_names(lines)
-    brand_names = names[30:]  # skip 28 system groups
-
-    # 提取 # - RULE-SET 注释行中的策略组名
-    commented_sgs = []
+def _comment_rule_set_lines(lines):
+    """配置 rules 段中所有注释 RULE-SET 行（已 strip，保留原始顺序）"""
+    out = []
     in_rules = False
     for line in lines:
         if line.strip().startswith('rules:'):
             in_rules = True
             continue
-        if in_rules:
-            m = re.match(r'\s*#\s*-\s*RULE-SET,\w+,(.+)', line)
-            if m:
-                sg = m.group(1).strip().strip('"')
-                commented_sgs.append(sg)
+        if in_rules and re.match(r'\s*#\s*-\s*RULE-SET,\w+,', line):
+            out.append(line.strip())
+    return out
 
-    if not commented_sgs:
+
+def check_full_comment_order(lines, variant):
+    """full 版注释 RULE-SET 序列必须与 generate_config 的输出完全一致
+
+    三层不变量（比旧版「只比品牌段」严格）：
+    1. 品牌组数量 == 品牌 provider 注释数量 —— 显式断言，禁止 zip() 静默截断；
+    2. 品牌 provider 注释顺序 == proxy-groups 品牌段顺序；
+    3. **整段注释 RULE-SET 序列（含基础集注释）== 生成器输出** —— 基础集注释
+       （如 Nikki full 的 Applications）不再「跳过即忽略」：生成器不产出、
+       却出现在配置里的任何注释行都会 FAIL。
+    """
+    if 'full' not in variant:
+        return True  # min 版无注释，跳过
+    names = extract_proxy_group_names(lines)
+    brand_names = names[len(SYSTEM_GROUPS):]  # 跳过系统组
+
+    actual = _comment_rule_set_lines(lines)
+    if not actual:
         print(f'  FAIL: {variant} — no commented RULE-SET lines found in full version')
         return False
 
-    # 比较
-    mismatches = []
-    for i, (expected, actual) in enumerate(zip(brand_names, commented_sgs)):
-        if expected != actual:
-            mismatches.append(f'  #{i}: proxy-groups "{expected}" ≠ commented RULE-SET "{actual}"')
+    # 品牌 provider 注释（基础集注释单列，不参与品牌顺序比较）
+    brand_comments = [l for l in actual if l.split(',')[1] not in BASE_PROVIDERS]
+    brand_sgs = [l.split(',', 2)[2].strip().strip('"') for l in brand_comments]
 
+    # 1) 条数显式断言（zip() 截断不得掩盖「注释行缺失」）
+    if len(brand_names) != len(brand_sgs):
+        print(f'  FAIL: {variant} — 品牌组 {len(brand_names)} 个 ≠ 品牌注释 RULE-SET {len(brand_sgs)} 个')
+        print(f'  proxy-groups brands ({len(brand_names)}): {brand_names[:5]}...{brand_names[-3:]}')
+        print(f'  commented brands ({len(brand_sgs)}): {brand_sgs[:5]}...{brand_sgs[-3:]}')
+        return False
+
+    # 2) 品牌注释顺序
+    mismatches = [f'  #{i}: proxy-groups "{e}" ≠ commented RULE-SET "{a}"'
+                  for i, (e, a) in enumerate(zip(brand_names, brand_sgs)) if e != a]
     if mismatches:
         for m in mismatches:
             print(f'  FAIL: {variant} — {m}')
         print(f'  proxy-groups brands ({len(brand_names)}): {brand_names[:5]}...{brand_names[-3:]}')
-        print(f'  commented RULE-SET ({len(commented_sgs)}): {commented_sgs[:5]}...{commented_sgs[-3:]}')
+        print(f'  commented brands ({len(brand_sgs)}): {brand_sgs[:5]}...{brand_sgs[-3:]}')
         return False
+
+    # 3) 整段与生成器输出全等（含基础集注释，单一来源）
+    # gen_rules() 返回拼接后的字符串，需 splitlines()
+    sg_map = _GEN.load_strategy_group_map()
+    brand_info = _GEN.build_brand_info(_GEN.sort_brands(_GEN.scan_brands(), sg_map), sg_map)
+    expected = [l.strip() for l in _GEN.gen_rules(brand_info, variant).splitlines()
+                if re.match(r'\s*#\s*-\s*RULE-SET,\w+,', l)]
+    if len(expected) != len(actual):
+        print(f'  FAIL: {variant} — 注释 RULE-SET 行数 {len(actual)} ≠ 生成器输出 {len(expected)}')
+        print(f'    config 独有: {sorted(set(actual) - set(expected))[:3]}')
+        print(f'    生成器独有: {sorted(set(expected) - set(actual))[:3]}')
+        return False
+    for i, (e, a) in enumerate(zip(expected, actual)):
+        if e != a:
+            print(f'  FAIL: {variant} — 注释 RULE-SET 第 {i} 行与生成器不一致')
+            print(f'    生成器: {e}')
+            print(f'    配置:   {a}')
+            return False
     return True
 
 
@@ -420,7 +459,11 @@ def check_min_proxy_providers_no_blank_lines(lines, variant):
 
 
 def check_rules_no_quoted_strategy(lines, variant):
-    """rules 激活行出站策略名不得有引号（如 ,"🎯 全球直连" 应为 ,🎯 全球直连）"""
+    """rules 激活行的出站目标不得加引号。
+
+    例：`RULE-SET,Direct,🎯 全球直连` 合法；`RULE-SET,Direct,"🎯 全球直连"` 非法。
+    不针对具体策略组名做白名单，任何被引号包住的第三段都判失败。
+    """
     in_rules = False
     for line in lines:
         stripped = line.strip()
@@ -432,11 +475,39 @@ def check_rules_no_quoted_strategy(lines, variant):
                 continue
             if not stripped.startswith('- '):
                 break
-            # 检查激活行（非注释）是否包含 ,"🎯 或 ,"🛑
-            if stripped.startswith('- RULE-SET,') or stripped.startswith('- GEOIP,') or stripped.startswith('- MATCH,'):
-                if ',"🎯' in stripped or ',"🛑' in stripped or ',"🐟' in stripped or ',"🔧' in stripped:
-                    print(f'  FAIL: {variant} — quoted strategy name in rule: {stripped}')
-                    return False
+            if not (stripped.startswith('- RULE-SET,')
+                    or stripped.startswith('- GEOIP,')
+                    or stripped.startswith('- MATCH,')):
+                continue
+            target = stripped.rsplit(',', 1)[-1].strip()
+            if target.startswith('"') or target.startswith("'"):
+                print(f'  FAIL: {variant} — quoted strategy name in rule: {stripped}')
+                return False
+    return True
+
+
+def check_emoji_groups_have_no_icon(lines, variant):
+    """emoji 前缀策略组不得出现 icon 行（项目约定）。
+
+    规则与 match_icons.build_icon_map() / generate_config.gen_proxy_groups 一致：
+    显示名以 emoji 开头的组一律不配 icon，上游补图也不得回流。
+    """
+    emoji_groups = {sg for sg in (SYSTEM_GROUPS + list(BRAND_DISPLAYS)) if is_emoji_group(sg)}
+    if not emoji_groups:
+        return True
+    current = None
+    offenders = []
+    for line in lines:
+        m = re.match(r'\s*-\s*name:\s*"([^"]+)"', line)
+        if m:
+            current = m.group(1)
+            continue
+        if current in emoji_groups and re.match(r'\s+icon:\s*"', line):
+            offenders.append((current, line.strip()))
+    if offenders:
+        for name, icon in offenders[:8]:
+            print(f'  FAIL: {variant} — emoji 组「{name}」不应有 icon: {icon}')
+        return False
     return True
 
 
@@ -482,7 +553,10 @@ def check_use_provider_exists(lines, variant):
             if m:
                 providers.add(m.group(1))
 
-    # Collect all use references from proxy-groups (only unquoted provider keys)
+    # Collect all use references from proxy-groups
+    # 兼容三种写法：块式裸键（生成器输出）、块式带引号、行内 flow（use: [a, b]）
+    # 判据：引用既不是 provider 也不是 proxy-group 名 → FAIL（幽灵引用）
+    group_names = set(extract_proxy_group_names(lines))
     use_refs = set()
     in_groups = False
     in_use = False
@@ -503,16 +577,23 @@ def check_use_provider_exists(lines, variant):
             if stripped == 'use:':
                 in_use = True
                 continue
+            m_inline = re.match(r'^use:\s*\[(.*)\]\s*$', stripped)
+            if m_inline:
+                in_use = False
+                for item in m_inline.group(1).split(','):
+                    val = item.strip().strip('"').strip("'").strip()
+                    if val:
+                        use_refs.add(val)
+                continue
             if in_use and stripped.startswith('- '):
-                val = stripped[2:].strip()
-                # Only accept bare provider keys (no quotes), skip group name refs
-                if val and not val.startswith('"') and not val.startswith("'"):
+                val = stripped[2:].strip().strip('"').strip("'").strip()
+                if val:
                     use_refs.add(val)
 
-    # Check every use reference exists in providers
+    # Check every use reference exists in providers（或本身是组名，非 provider 引用）
     missing = []
     for ref in sorted(use_refs):
-        if ref not in providers:
+        if ref not in providers and ref not in group_names:
             missing.append(ref)
             print(f'  FAIL: {variant} — use reference "{ref}" not defined in proxy-providers')
 
@@ -529,23 +610,8 @@ def parse_proxy_groups(path):
 
 
 def load_region_groups():
-    """从 generate_config.py 读取 REGION_GROUPS（单一来源，避免两处硬编码漂移）
-
-    若 generate_config.py 尚未定义 REGION_GROUPS（地区注入尚未引入的阶段），
-    返回空列表，让地区相关检查降级为 no-op，保证 verify_configs 在每个历史
-    阶段都可独立运行。
-    """
-    import importlib.util
-    if str(ROOT / 'scripts') not in sys.path:
-        sys.path.insert(0, str(ROOT / 'scripts'))
-    spec = importlib.util.spec_from_file_location('generate_config', ROOT / 'scripts' / 'generate_config.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return list(getattr(mod, 'REGION_GROUPS', []))
-
-
-# 21 个地区组：单一来源取自 generate_config.py
-REGION_GROUPS = load_region_groups()
+    """兼容旧调用：地区组现在与 SYSTEM_GROUPS 一起在模块顶部单一来源加载。"""
+    return list(REGION_GROUPS)
 
 # 品牌组 proxies 固定头（generate_config.gen_proxy_groups 约定）
 BRAND_GROUP_HEAD = ['🎯 全球直连', '♻️ 自动选择', '🔧 手动切换', '🔯 故障转移', '🔀 负载均衡']
@@ -664,8 +730,8 @@ def load_icon_reference():
     return None, '未找到 Oasisic-Icons'
 
 
-def check_cross_variant_rules(configs, all_lines):
-    """同平台 full vs min 激活规则列表必须全等"""
+def check_cross_variant_rules(all_lines):
+    """同平台 full vs min 激活规则列表必须全等（真等价检查，含条数）"""
     platforms = {
         'android': ('android_full', 'android_min'),
         'nikki': ('nikki_full', 'nikki_min'),
@@ -678,17 +744,17 @@ def check_cross_variant_rules(configs, all_lines):
         if platform == 'nikki':
             full_rules = [r for r in full_rules if 'Applications' not in r]
             min_rules = [r for r in min_rules if 'Applications' not in r]
-        if full_rules != min_rules:
+        if len(full_rules) != len(min_rules) or full_rules != min_rules:
             print(f'  FAIL: cross-variant — {platform} full vs min active rules mismatch')
-            print(f'    full only: {[r for r in full_rules if r not in min_rules]}')
-            print(f'    min only:  {[r for r in min_rules if r not in full_rules]}')
+            print(f'    full ({len(full_rules)}): {full_rules}')
+            print(f'    min  ({len(min_rules)}): {min_rules}')
             all_pass = False
     return all_pass
 
 
 def print_order_summary(names, variant):
     """打印品牌组顺序摘要"""
-    brand_names = names[30:]  # skip 28 system groups
+    brand_names = names[len(SYSTEM_GROUPS):]  # 跳过系统组
     print(f'  ORDER: {variant} — {len(brand_names)} brands')
     # 显示前 5 和后 5
     print(f'    first 5: {brand_names[:5]}')
@@ -758,7 +824,7 @@ def main():
             ('SUB_PARENT order', check_sub_parent_order(names, variant)),
             ('naming consistency', check_naming_consistency(lines, variant)),
             ('Applications semantics', check_applications_semantics(variant, lines)),
-            ('active rules count', check_full_min_rules_equivalence(variant, lines)),
+            ('active rules count', check_active_rules_count(variant, lines)),
             ('rule-providers base order', check_rule_providers_base_order(lines, variant)),
             ('full comment RULE-SET order', check_full_comment_order(lines, variant)),
             ('min rules no blank lines', check_min_rules_no_blank_lines(lines, variant)),
@@ -772,6 +838,7 @@ def main():
             ('basic group region injection', check_basic_group_region_injection(groups_cfg, variant)),
             ('regions not in use blocks', check_regions_not_in_use(groups_cfg, variant)),
             ('icon files exist', check_icons_exist(lines, variant, icon_ref)),
+            ('emoji groups have no icon', check_emoji_groups_have_no_icon(lines, variant)),
         ]
 
         variant_pass = all(r for _, r in checks)
@@ -787,7 +854,7 @@ def main():
 
     # 跨变体校验
     print(f'\n--- cross-variant ---')
-    cv_pass = check_cross_variant_rules(configs, all_lines)
+    cv_pass = check_cross_variant_rules(all_lines)
     if cv_pass:
         print('  [PASS] full vs min active rules match')
     all_pass = all_pass and cv_pass

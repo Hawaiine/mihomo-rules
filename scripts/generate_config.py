@@ -520,11 +520,12 @@ def main():
         
         # 写入 /tmp 用于 diff
         tmp_path = Path(f'/tmp/{variant}.yaml')
-        changed = write_if_changed(tmp_path, output)
+        write_if_changed(tmp_path, output)
+        # 判定依据必须是**实际 config 文件**，不能只比 /tmp：
+        # 只比 /tmp 时，手工改动过的 configs/*.yaml 会被 /tmp 的旧内容掩盖，
+        # 永远不会被纠正，也无法据此断言「configs 与生成结果一致」。
+        changed = write_if_changed(config_path, output)
         if changed:
-            # 有实质变化才复制到 configs/
-            import shutil
-            shutil.copy2(str(tmp_path), str(config_path))
             print(f'[+] 生成 /tmp/{variant}.yaml')
             print(f'    → 已同步到 {config_path}')
         else:

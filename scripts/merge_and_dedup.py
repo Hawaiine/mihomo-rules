@@ -21,7 +21,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from lib.canonical import (
     CanonicalRule,
-    dedup_key,
+    dedup_rules,
     sort_rules,
     count_by_type,
     TYPES_ORDER,
@@ -36,11 +36,11 @@ def merge_rules(
     """
     合并多个规则列表，去重后排序。
 
-    去重规则：
+    去重规则（由 canonical.dedup_rules 保证）：
     - 按 TYPE+VALUE 去重（大小写不敏感）
-    - param 不同不影响去重（同 TYPE+VALUE 不同 param 视为重复）
     - source 不同不影响去重（跨上游的同 TYPE+VALUE 应去重）
-    - 保留第一个出现的规则
+    - param 不同**不静默丢弃**：同 TYPE+VALUE 保留带 param 的那条，
+      结果与上游顺序无关；多个不同 param 视为歧义，全部保留
 
     Args:
         *rule_lists: 可变数量的规则列表
@@ -48,17 +48,12 @@ def merge_rules(
     Returns:
         合并去重排序后的规则列表
     """
-    seen: set[str] = set()
-    merged: list[CanonicalRule] = []
-
+    flat: list[CanonicalRule] = []
     for rules in rule_lists:
-        for rule in rules:
-            key = dedup_key(rule)
-            if key not in seen:
-                seen.add(key)
-                merged.append(rule)
+        flat.extend(rules)
 
-    return sort_rules(merged)
+    kept, _dropped, _conflicts = dedup_rules(flat)
+    return sort_rules(kept)
 
 
 def merge_with_stats(

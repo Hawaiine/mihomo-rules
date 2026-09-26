@@ -24,6 +24,7 @@ from lib.canonical import (
     CanonicalRule,
     count_by_type,
     dedup_key,
+    dedup_rules,
     drop_domain_covered_by_broader_suffix,
     drop_domain_covered_by_suffix,
     sort_rules,
@@ -307,8 +308,10 @@ def dedup_exact(rules: list[CanonicalRule], case_sensitive: bool = False) -> lis
     """去除重复规则后重新排序。
 
     case_sensitive=False（默认，品牌集与基础域名集）：
-        按 canonical.dedup_key（TYPE + VALUE.lower()）去重，同名只留首次出现。
+        按 canonical.dedup_rules（TYPE + VALUE.lower()）归并，同名只留一条。
         典型场景：上游同一域名同时写为 'foo' 和 '+.foo'，归一化后都是 DOMAIN-SUFFIX,foo。
+        同 TYPE+VALUE 而 param 不同时**不静默丢弃**：保留带 param 的那条
+        （param 更精确），结果与输入顺序无关；多个不同 param 视为歧义，全部保留。
     case_sensitive=True（仅 Applications）：
         只去掉整行完全相同的规则。PROCESS-NAME 的大小写由上游决定，
         tailscale 与 Tailscale 各留一条，不在这里合并。
@@ -320,17 +323,8 @@ def dedup_exact(rules: list[CanonicalRule], case_sensitive: bool = False) -> lis
     Returns:
         去重且已排序的规则列表
     """
-    seen: set[str] = set()
-    deduped: list[CanonicalRule] = []
-    for rule in rules:
-        if case_sensitive:
-            key = f"{rule.rule_type}|{rule.value}|{rule.param}"
-        else:
-            key = dedup_key(rule)
-        if key not in seen:
-            seen.add(key)
-            deduped.append(rule)
-    return sort_rules(deduped)
+    kept, _dropped, _conflicts = dedup_rules(rules, case_sensitive=case_sensitive)
+    return sort_rules(kept)
 
 
 def prepare_rules_for_write(

@@ -660,17 +660,14 @@ def main():
                                         if not any(r.rule_type == cr.rule_type and r.value == cr.value
                                                   for r in merged_rules):
                                             manual_rules.append(cr)
-                            from lib.canonical import drop_domain_covered_by_broader_suffix, drop_domain_covered_by_suffix, sort_rules
-                            all_rules = sort_rules(merged_rules + manual_rules)
-                            # 去重（sort_rules 只排序，不去重）
-                            seen_keys = set()
-                            deduped = []
-                            for r in all_rules:
-                                key = f"{r.rule_type}|{r.value.lower()}"
-                                if key not in seen_keys:
-                                    seen_keys.add(key)
-                                    deduped.append(r)
-                            all_rules = deduped
+                            from lib.canonical import drop_domain_covered_by_broader_suffix, drop_domain_covered_by_suffix, sort_rules, dedup_rules
+                            # 去重（sort_rules 只排序，不去重）；走 canonical.dedup_rules，
+                            # 与写入路径同一口径：param 不同不静默丢弃
+                            all_rules, _dup_dropped, dup_conflicts = dedup_rules(
+                                sort_rules(merged_rules + manual_rules))
+                            all_rules = sort_rules(all_rules)
+                            for key, params in dup_conflicts:
+                                log(f'  ⚠️ {b}: 同 {key[0]},{key[1]} 出现多个 param {params}，未自行裁决')
                             # 同值跨类型去重（兜底）：manual 保留路径同样不得留同值双类型
                             all_rules, cross_dropped = drop_domain_covered_by_suffix(all_rules)
                             if cross_dropped:

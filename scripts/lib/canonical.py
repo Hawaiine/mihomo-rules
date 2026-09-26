@@ -105,6 +105,11 @@ def dedup_key(rule: CanonicalRule) -> str:
     不包含 param，因为同 TYPE+VALUE 不同 param 视为重复。
     不包含 source，因为跨上游的同 TYPE+VALUE 应去重。
 
+    注意：该 key 只用于「判定是否同一规则」，**不用于决定丢弃哪一条**。
+    同 TYPE+VALUE 而 param 不同时语义并不等价（如 IP-CIDR 的 no-resolve），
+    因此去重必须走 dedup_rules()，由它决定保留带参还是报冲突，
+    不得直接用本 key 做「保留首次出现」的静默丢弃。
+
     Args:
         rule: CanonicalRule
 
@@ -112,6 +117,61 @@ def dedup_key(rule: CanonicalRule) -> str:
         str: 去重 key
     """
     return f"{rule.rule_type}|{rule.value.lower()}"
+
+
+def dedup_rules(
+    rules: list[CanonicalRule],
+    case_sensitive: bool = False,
+) -> tuple[list[CanonicalRule], list[CanonicalRule], list[tuple]]:
+    """按 TYPE+VALUE 归并重复规则，param 不同不静默丢弃。
+
+    不变量：
+    1. 同 TYPE+VALUE+PARAM 的多条 → 只留 1 条（完全重复）。
+    2. 同 TYPE+VALUE，一条带 param、其余不带 → 只留带 param 的那条
+       （param 是更精确的语义，如 IP-CIDR 的 no-resolve 阻止 DNS 解析；
+       结果与输入顺序无关）。
+    3. 同 TYPE+VALUE，出现 **多个不同** param → 语义歧义，全部保留并
+       记入 conflicts，交由 verify_rulesets 报错，不自行裁决。
+    4. case_sensitive=True（仅 Applications）时，value 大小写不同视为不同规则。
+
+    Args:
+        rules: 待归并规则
+        case_sensitive: 是否区分 value 大小写
+
+    Returns:
+        (保留的规则, 被丢弃的规则, 冲突列表 [(key, sorted(params)), ...])
+    """
+    groups: dict[tuple, list[CanonicalRule]] = {}
+    order: list[tuple] = []
+    for rule in rules:
+        key = (rule.rule_type, rule.value if case_sensitive else rule.value.lower())
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(rule)
+
+    kept: list[CanonicalRule] = []
+    dropped: list[CanonicalRule] = []
+    conflicts: list[tuple] = []
+    for key in order:
+        group = groups[key]
+        params = {r.param for r in group}
+        if len(params) == 1:
+            kept.append(group[0])
+            dropped.extend(group[1:])
+            continue
+        with_param = [r for r in group if r.param]
+        without = [r for r in group if not r.param]
+        if without and len({r.param for r in with_param}) == 1:
+            # 恰好一种非空 param：保留它，丢弃无参版本
+            kept.append(with_param[0])
+            dropped.extend(without)
+            dropped.extend(with_param[1:])
+            continue
+        # 多个不同 param：歧义，全部保留并上报
+        kept.extend(group)
+        conflicts.append((key, sorted(params)))
+    return kept, dropped, conflicts
 
 
 # ── 行解析 ────────────────────────────────────────────────────

@@ -1,36 +1,49 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 130 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 159 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
 
 ---
 
 ## 2026-09-26
 
 ### Added
-- **新增 29 个品牌规则集**（130 → 159 规则集，121 → 150 品牌）— Apple 子品牌（App Store / Apple Fitness+ / Apple Music / Apple News）· Microsoft 子品牌（Azure / Outlook / Bing / Copilot / Xbox）· Google 子品牌（Gmail / Google Drive / Google Maps / Google News / Google Photos / Google Voice）· X 子品牌（Grok）· 流媒体与社区品牌（Crunchyroll / MangoTV / Paramount+ / Peacock TV / Pandora / SoundCloud / PlayStation / Snapchat / 钉钉 / 飞书 / KakaoTalk / Oracle / Nous Research）
-- **`scripts/readme_stats.py`** — README 统计口径唯一来源：品牌数 / 规则集数 / 规则总数 / 类型分布 / 分类统计全部从 `ruleset/` 实测计算；`--check` 校验 README 与实测一致，`--check-structure` 作为单测硬门禁，`--update` 一键刷新
-- **`scripts/tests/test_readme_consistency.py`** — README 口径防漂移门禁（结构性口径 + `--update` 幂等）
-
-- **Google 四子品牌服务域名按 DoH 实测补齐** — Google Maps 1 → 6、Google Photos 1 → 5、Google Voice 1 → 2、Google News 1 → 2；`DOMAIN,voice.telephony.goog` 放宽为 `DOMAIN-SUFFIX,telephony.goog`（`telephony.goog` 属 Google 自有 `goog` TLD，DoH 正常解析；原窄式规则为其子集）
+- **新增 29 个品牌规则集**（130 → 159 规则集，121 → 150 品牌；含 9 兜底共 159）— Apple 子品牌（App Store / Apple Fitness+ / Apple Music / Apple News）· Microsoft 子品牌（Microsoft Azure / Microsoft Outlook / Microsoft Bing / Microsoft Copilot / Xbox）· Google 子品牌（Gmail / Google Drive / Google Maps / Google News / Google Photos / Google Voice）· X 子品牌（Grok）· 流媒体与社区品牌（Crunchyroll / MangoTV / Paramount+ / Peacock TV / Pandora / SoundCloud / PlayStation / Snapchat / 钉钉 / 飞书 / KakaoTalk / Oracle / Nous Research）
+- **`scripts/lib/upstream_coverage.py` `MANUAL_BRANDS`** — 显式登记「无上游、手工维护」的品牌。单测断言每个品牌要么是上游映射目标、要么在本清单内，新增品牌漏接线或映射被误删都会直接 CI 失败
+- **`scripts/readme_stats.py`** — README 统计口径唯一来源：品牌数 / 规则集数 / 规则总数 / 类型分布 / 分类统计全部从 `ruleset/` 实测计算，`--check` 校验 README 与实测一致（分类归属漏项直接报错）
+- **`scripts/tests/test_verify_hardening.py`**（14 用例）— 覆盖 param 语义、verify_rulesets 三类新错误、verify_configs 条数断言/emoji icon/引号检查
+- **`scripts/tests/test_readme_consistency.py`** — README 口径防漂移门禁
+- **`scripts/tests/test_full_comment_invariant.py`**（7 用例）— full 版注释 RULE-SET 序列不变量：多出基础集注释 / 缺失品牌注释 / 重复 / 顺序颠倒均须 FAIL
+- **`scripts/tests/test_hardening_gaps.py`**（7 用例）— 锁死独立验证发现的三个校验盲区（`use` 三种写法、README 逐处口径、`generate_config` 以 `configs/` 为判定依据）
 
 ### Changed
-- **Google News / Google Voice 提取为独立规则集** — 从父品牌 `Google` 剥离服务域名，`SUB_PARENT` / `ownership_map` 与 `commit_writer.py` 品牌映射同步
-- **friDay 命名统一** — 技术 ID 旧名 `friDayvideo` → `friDayVideo`（目录 · 文件名 · provider key · url · path · RULE-SET 第一段），显示名旧名 `friDay video` → `friDay影音`（策略组名 · `# Rule Name` · README 标题 · RULE-SET 第二段 · icon 覆盖表键）。**旧名仅在本 CHANGELOG 与 README 历史记录中出现**，仓库其余位置不再保留
-- **README 统计口径按实测刷新** — 品牌 121 → 150、规则集 130 → 159、规则总数 352,352 → 352,525、类型分布与分类统计全部重算；`configs/Nikki/README.md` 品牌策略组计数 116 → 150
+- **`verify_configs` 检查项 24 → 25**（24 项/变体 + 1 项跨变体）：新增「emoji 前缀组不得带 icon」；`SYSTEM_GROUPS` / `BASE_PROVIDERS` / `REGION_GROUPS` 改为从 `generate_config.py` 单一来源加载，删除 verify 侧的第二套硬编码（系统组 30 与基础 provider 顺序）
+- **`check_full_min_rules_equivalence` → `check_active_rules_count`** — 原名声称「等价」实际只数条数；改名后职责明确：条数由本项负责，full/min 规则**列表全等**由 `check_cross_variant_rules` 负责（并补条数断言）
+- **`canonical.dedup_rules()`** — 新的统一去重口径，`merge_and_dedup` / `commit_writer.dedup_exact` / `batch_update` 全部改走它，删除 `batch_update` 里第三份内联去重实现
+- **friDay 命名统一** — 技术 ID `friDayvideo` → `friDayVideo`（目录 / 文件名 / provider key / url / path / RULE-SET 第一段），显示名 `friDay video` → `friDay影音`（策略组名 / `# Rule Name` / README 标题 / RULE-SET 第二段 / icon 覆盖表键）。旧名仅在本 CHANGELOG 历史记录中出现
+- **README 统计口径按实测刷新** — 品牌 121 → 150、规则集 130 → 159、规则总数 352,352 → 353,099、分类统计与类型分布全部重算
 
 ### Fixed
-- **`GoogleNews` 移除 `DOMAIN-SUFFIX,news.google`** — Cloudflare DoH 与 Google DoH 对 `news.google` 均返回 NXDOMAIN（A / AAAA / CNAME 皆无记录），不是可用 hostname；保留 `news.google.com`（DoH 正常解析）与 `unfiltered.news`（blackmatrix7 `Google.yaml` 第 649 行 + v2fly `data/google` 第 498 行双上游佐证）
+- **`GoogleNews` 移除 `DOMAIN-SUFFIX,news.google`** — Cloudflare DoH / Google DoH 均为 NXDOMAIN（A/AAAA 皆无记录），不是可用 hostname；保留 `news.google.com` 与 `unfiltered.news`（两者均有真实解析或上游佐证）
+- **`check_full_comment_order` 的 `zip()` 截断** — 品牌组数与注释 RULE-SET 行数不一致时 zip 会静默截断，导致「注释行缺失」被判 PASS。补显式条数断言后立即暴露真实缺陷：Nikki full 为 151 条注释 vs 150 个品牌组（多出的那条是基础集 `Applications` 注释被误计入品牌段）。最终实现改为**整段注释序列与 `generate_config.gen_rules()` 输出全等**（单一来源）：品牌段条数与顺序 + 基础集注释一并校验，凭空多出的基础集注释（如给 Android full 加 `Applications`）也会 FAIL，不再「跳过即忽略」
+- **`generate_config` 的写入判定比的是 `/tmp` 暂存文件而非 `configs/`** — 第二次运行恒报「无变化」，导致手工改动过的 `configs/*.yaml` 永远不被纠正，也无法据此断言 configs 与生成结果一致。改为以实际 config 文件内容为判定依据（`/tmp` 仍写出供 diff）
+- **`check_use_provider_exists` 只解析块式裸键** — `use: ["ghost"]` 行内 flow 写法、块式带引号写法都能绕过检查，运行时才会暴露幽灵 provider。改为兼容三种写法，判据为「既非 provider 也非组名即 FAIL」
+- **`readme_stats` 口径检查只做 substring 存在性** — 「N 品牌 · M 规则集」在 README 出现两处（简介行 + 概述段），只校验存在性时，其中一处漂移会被另一处掩盖（`--check` 甚至只约束了含「万规则」的那一处）。改为 `_scan_brand_ruleset_occurrences()` 唯一实现逐处正则校验，`--check` 与 `--check-structure` 共用
+- **CHANGELOG 数字无自洽校验** — 历史条目曾把「新增数量」与括号内的区间差值写成互相矛盾的两个数（区间差 2，新增数 29），README 侧检查完全覆盖不到。新增 `check_changelog_arithmetic()` + `readme_stats.py --check-changelog`（并纳入 `--check`）：同行出现「新增 N 个」时，所有 `A → B 品牌/规则集` 须满足 B − A == N，「含 X 兜底共 Y」的 X / Y 须等于实测兜底数与规则集总数
+- **同 TYPE+VALUE 不同 param 被静默丢弃** — 旧去重 key 为 `TYPE|VALUE` 且「保留首次出现」，跨上游 `IP-CIDR,x` 与 `IP-CIDR,x,no-resolve` 谁先出现谁胜出（顺序相关）。改为保留带 param 版本（与顺序无关），多个不同非空 param 视为歧义并上报，`verify_rulesets` 对歧义与带参/无参重复直接 FAIL
+- **`verify_rulesets` 不再静默跳过解析不了的行** — 新增 `INVALID_PAYLOAD_LINE`（无法按 `TYPE,VALUE[,PARAM]` 解析）与 `UNSUPPORTED_RULE_TYPE`（8 种类型之外），杜绝「不计数 → 恰好数字对上 → PASS」
+- **`check_rules_no_quoted_strategy` 不再依赖组名白名单** — 旧实现只匹配 `,"🎯` / `,"🛑` / `,"🐟` / `,"🔧` 四种，其他组被引号包住不会报；改为任意被引号包住的出站目标都判失败
+- **`check_cross_variant_rules` 删除未使用参数**，并在比较前补条数断言
 
 ### Verified
-`GoogleMaps` 6 条 · `GooglePhotos` 5 条 · `GoogleVoice` 2 条 · `GoogleNews` 2 条域名逐个经 Cloudflare DoH + Google DoH 实测（15/15 有 A 记录，`news.google` 为唯一 NXDOMAIN 已移除）
+`verify_configs` 4/4 PASS（25 项）· `verify_rulesets` 159 PASS · 单测 221 OK · `generate_config` 复跑 4 变体全部 `[=]` 幂等 · `readme_stats --check` PASS · 142 个 icon URL 全部命中 Oasisic-Icons `origin/main` · Google 四子品牌 13 个域名逐个 DoH 实测
 
 ---
 
 ## 2026-09-25
 
 ### Changed
-- **providers 模板按 mihomo v1.19.31 源码校正** — `providers/airport/`（file / filter / http）与 `providers/nodes/`（hysteria / shadowsocks / ssh-snell-anytls / trojan / tuic / vless / vmess / wireguard）全量对齐当前内核 schema（字段名、类型、取值、默认值）；删除无实际配置内容的空壳变体（tuic-v5-multi、wireguard-tunnel-http、wireguard-tunnel-socks5）；各 provider README 同步校正后的字段说明与示例；`scripts/reorder_node_files.py` 随文件集合变化调整
+- **providers 模板按 mihomo v1.19.31 源码校正** — `providers/airport/`（file / filter / http）与 `providers/nodes/`（hysteria / shadowsocks / ssh-snell-anytls / trojan / tuic / vless / vmess / wireguard）全量对齐当前内核 schema，删除空壳变体（tuic-v5-multi、wireguard-tunnel-http/socks5），README 同步；`scripts/reorder_node_files.py` 随之微调
 
 ---
 

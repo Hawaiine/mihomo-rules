@@ -36,7 +36,7 @@
 | 📦 **即用配置** | 内置 Android + Nikki 完整配置，带注释版 + 无注释精简版，替换订阅链接即可使用 |
 | 🎨 **品牌图标注入** | 自动匹配 Oasisic-Icons 品牌图标（150 品牌，emoji 前缀组不配图标），`generate_config.py` 生成配置时自动注入 |
 | ⚡ **Python 管线** | 4 步自动（fetch → write → resolve → config）+ verify 双脚本 |
-| 🛡️ **双 verify 门禁** | `verify_configs`（24 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
+| 🛡️ **双 verify 门禁** | `verify_configs`（25 项）+ `verify_rulesets` 提交前必过，失败则 `sys.exit(1)` 阻止 CI 提交 |
 | 🔒 **PROCESS 大小写保护** | `PROCESS-NAME`/`PROCESS-PATH` 不做全局 lower，仅 strip 去尾点号，上游原始大小写保留 |
 | 🔧 **写入幂等** | `has_meaningful_diff` 忽略 `Updated:` 噪音；payload 不变不写 YAML，统计不变不写 README |
 | 🔁 **全量解析** | 每次同步全量解析全部上游；写入阶段按差异决定是否落盘，不是增量清洗 |
@@ -82,8 +82,9 @@ mihomo-rules/
 │   ├── resolve_ownership.py      # 品牌归属去重（从父品牌移除子品牌已经拥有的规则）
 │   ├── match_icons.py            # 从 Oasisic-Icons 生成品牌图标映射
 │   ├── generate_config.py        # 生成 Android + Nikki 双平台配置
-│   ├── verify_configs.py         # 配置校验（24 项检查）
+│   ├── verify_configs.py         # 配置校验（25 项检查）
 │   ├── verify_rulesets.py        # ruleset 一致性校验（header/payload/README/behavior）
+│   ├── readme_stats.py           # README 统计口径唯一来源（--check 防漂移）
 │   ├── reorder_node_files.py     # 节点文件重排
 │   └── lib/                      # 共享库
 │       ├── canonical.py          # 规则解析、标准化、排序
@@ -288,7 +289,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 ### 校验与幂等
 
 ```bash
-# 全量校验（24 项检查，失败 exit≠0）
+# 全量校验（25 项检查，失败 exit≠0）
 python3 scripts/verify_configs.py
 
 # ruleset 一致性校验（header/payload/README/behavior，失败 exit≠0）
@@ -297,16 +298,24 @@ python3 scripts/verify_rulesets.py
 # 生成配置（幂等，无实质变化会 [=] 跳过）
 python3 scripts/generate_config.py
 
-# 日更提交前两者均须 PASS；CI 与 batch_update 双门禁
+# README 统计口径防漂移（品牌数/规则集数/规则总数/类型分布/分类统计）
+python3 scripts/readme_stats.py --check
+
+# 单测（含 README 口径、param 语义、校验强化）
+python3 -m unittest discover -s scripts/tests
+
+# 日更提交前均须 PASS；CI 与 batch_update 双门禁
 ```
 
 ## 📋 近期更新
 
 | 日期 | 内容 |
 |------|------|
+| 2026-09-26 | 新增 29 个品牌规则集（Apple/Microsoft/Google/X 子品牌 + 流媒体，130→159 规则集 / 121→150 品牌）· Google News / Google Voice 从父品牌 Google 提取为独立规则集 · README 统计口径改由 `scripts/readme_stats.py` 从 `ruleset/` 实测计算并加防漂移门禁 |
 | 2026-09-26 | Google 四子品牌服务域名按 DoH 实测补齐（移除 NXDOMAIN 的 `news.google`）· 清理被 `DOMAIN-SUFFIX` 完整覆盖的 `DOMAIN` 与同值跨类型重复 |
 | 2026-09-26 | friDay 命名统一：技术 ID `friDayVideo` / 显示名 `friDay影音`（目录 · 文件名 · provider key/url/path · RULE-SET 两段 · 策略组名 · icon 覆盖表一次落最终态） |
-| 2026-09-26 | 新增 29 个品牌规则集（Apple/Microsoft/Google/X 子品牌 + 流媒体，130→159 规则集 / 121→150 品牌）· Google News / Google Voice 从父品牌 Google 提取为独立规则集 · README 统计口径改由 `scripts/readme_stats.py` 从 `ruleset/` 实测计算并加防漂移门禁 |
+| 2026-09-26 | 校验强化：`verify_configs` 第 25 项（emoji 组不得带 icon）+ 注释 RULE-SET 条数断言（修复 `zip()` 截断掩盖的 Nikki full 151≠150）· `verify_rulesets` 新增 INVALID_PAYLOAD_LINE / UNSUPPORTED_RULE_TYPE / param 歧义 · `canonical.dedup_rules` 不再静默丢弃 param · `SYSTEM_GROUPS`/`BASE_PROVIDERS` 单一来源 · `MANUAL_BRANDS` 手工品牌清单 |
+| 2026-09-25 | providers 模板按 mihomo v1.19.31 源码校正（providers/airport · providers/nodes 全量对齐 schema，删除空壳变体） |
 | 2026-09-23 | 图标引用对齐 Oasisic-Icons 最新结构（4 config 各 8 组：OneDrive→Microsoft/ · Disney→DisneyPlus · LINETV→Media/LINETV/ · 网易云音乐→Music/NetEaseCloudMusic/ · Twitch→Game/ · friDay video→Media/friDayVideo/ · 爱奇艺→Media/iQIYI/；HBO 补 HBOMAX 图标）· match_icons 覆盖表同步 · 通知缩略图死链修复 |
 | 2026-09-18 | 文档口径全面校正（品牌 121 / 规则集 130 / 系统组 30 / 分类表计数与列名对齐、剔除 ViuTV·BiAn·OKX·SWIFT 幽灵条目、纠正规则类型分布）· verify_configs 新增 3 项地区组结构检查（品牌组 5+21、5 个基础功能组 21、地区组不得进 use，20→23 项/变体）· 图标映射内置 emoji 前缀组抑制（上游补图不回流） |
 | 2026-09-17 | 品牌命名规范统一：GameJapan 显示名 → 🎮 Game Japan · TIDAL 技术 ID 与显示名统一（目录 `ruleset/TIDAL`、文件 `TIDAL.yaml`、provider key、url/path、RULE-SET 注释）· ReadsJapan → ReadJapan 目录与文件改名 |
@@ -320,12 +329,13 @@ python3 scripts/generate_config.py
 | 脚本 | 说明 | 用法 |
 |------|------|------|
 | `batch_update.py` | 日更入口：4 步自动（fetch → write → resolve → config）+ 循环外 verify 双脚本 | `python3 scripts/batch_update.py` 或 `--no-commit` |
-| `verify_configs.py` | 配置校验（24 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性/地区组结构/icon 文件存在性） | `python3 scripts/verify_configs.py` |
+| `verify_configs.py` | 配置校验（25 项检查，集合等价/命名两线/顺序约束/格式约定/use: 引用一致性/地区组结构/icon 文件存在性） | `python3 scripts/verify_configs.py` |
 | `verify_rulesets.py` | ruleset 一致性校验（header/payload/README/behavior 对齐） | `python3 scripts/verify_rulesets.py` |
 | `generate_config.py` | 生成 Android + Nikki 双平台配置（幂等，无实质变化跳过） | `python3 scripts/generate_config.py` |
 | `resolve_ownership.py` | 品牌归属去重（子品牌规则从父品牌剥离，含父品牌精确域名被同值后缀覆盖的情形） | `python3 scripts/resolve_ownership.py --apply` |
 | `commit_writer.py` | 写入单个品牌 YAML + README（含幂等，跳过 Updated 噪音） | 由 batch_update 调用 |
 | `match_icons.py` | 品牌图标映射唯一入口（`build_icon_map()`），基准取 Oasisic-Icons git tree，含显式覆盖表 | `python3 scripts/match_icons.py` |
+| `readme_stats.py` | README 统计口径唯一来源（从 `ruleset/` 实测计算，含分类归属） | `python3 scripts/readme_stats.py [--check]` |
 
 > 日更入口：`python3 scripts/batch_update.py`（自动 pull → 同步 → 校验 → commit → push）
 > CI 入口：`.github/workflows/daily-sync.yml`（`batch_update --no-commit` + 显式 verify + 提交）
@@ -356,13 +366,15 @@ python3 scripts/generate_config.py
 
 ## 🤝 贡献指南
 
-1. **新增品牌**：创建 `ruleset/<Brand>/<Brand>.yaml`；有上游时同步补 `parse_v2fly.py`、`parse_blackmatrix7.py` 或 `parse_loyalsoldier.py` 的映射；显示名不同于技术 ID 时补 `commit_writer.py` 的 `STRATEGY_GROUP_MAP`；父子关系补 `ownership_map.py` 后运行 `resolve_ownership.py --apply`，最后运行 `generate_config.py`。
+1. **新增品牌**：创建 `ruleset/<Brand>/<Brand>.yaml`；有上游时同步补 `parse_v2fly.py`、`parse_blackmatrix7.py` 或 `parse_loyalsoldier.py` 的映射；显示名不同于技术 ID 时补 `commit_writer.py` 的 `STRATEGY_GROUP_MAP`；父子关系补 `ownership_map.py` 后运行 `resolve_ownership.py --apply`，最后运行 `generate_config.py`。无上游的品牌必须登记到 `scripts/lib/upstream_coverage.py` 的 `MANUAL_BRANDS`，否则单测失败。
 2. **修复规则**：修改 YAML 文件后运行 `python3 scripts/verify_rulesets.py` 校验格式一致性
 3. **提交前检查**：
    ```bash
    python3 scripts/verify_configs.py        # 配置校验
    python3 scripts/verify_rulesets.py       # ruleset 一致性校验
    python3 scripts/generate_config.py       # 配置生成测试
+   python3 scripts/readme_stats.py --check  # README 统计口径
+   python3 -m unittest discover -s scripts/tests
    ```
 
 > 日更由 `scripts/batch_update.py` 或 CI `daily-sync.yml` 全量管线处理。新增品牌不能只改 `ownership_map.py`，还要补目录、上游映射、显示名映射，并重新生成配置。

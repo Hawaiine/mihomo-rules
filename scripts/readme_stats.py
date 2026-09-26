@@ -147,6 +147,23 @@ def print_stats(stats: dict) -> None:
         print(f'  {cat} | {n} | {rules:,}')
 
 
+def _scan_brand_ruleset_occurrences(readme: str, b: int, rs: int) -> list[str]:
+    """「N 品牌 · M 规则集」可能出现在多处（简介行 + 概述段）：逐处校验
+
+    只做 substring 存在性检查时，其中一处漂移会被另一处掩盖 —— 这是
+    `--check` 与 `--check-structure` 都必须共用的唯一实现。
+    """
+    errs = []
+    occ = re.findall(r'(\d+) 品牌 · (\d+) 规则集', readme)
+    if not occ:
+        errs.append('README 未找到「N 品牌 · M 规则集」口径')
+    stale = [o for o in occ if (int(o[0]), int(o[1])) != (b, rs)]
+    if stale:
+        errs.append(f'README 有 {len(stale)} 处品牌/规则集口径与实测不一致: {stale}'
+                    f'（实测 {b} 品牌 · {rs} 规则集）')
+    return errs
+
+
 def check_readme(stats: dict) -> list[str]:
     """校验 README.md 中所有可机读的统计口径与实测一致"""
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -185,6 +202,9 @@ def check_readme(stats: dict) -> list[str]:
                 errs.append(
                     f'{cfg_readme.relative_to(ROOT)} 品牌策略组数量 {m.group(1)} ≠ 实测 {b}')
 
+    # 所有「N 品牌 · M 规则集」出现处逐一校验（与 --check-structure 共用实现）
+    errs.extend(_scan_brand_ruleset_occurrences(readme, b, rs))
+
     return errs
 
 
@@ -199,7 +219,6 @@ def check_readme_structure(stats: dict) -> list[str]:
     errs = []
     b, rs = stats['brand_count'], stats['ruleset_count']
     for needle, what in [
-        (f'{b} 品牌 · {rs} 规则集', 'README <em> 简介行'),
         (f'（{b} 品牌，emoji 前缀组不配图标）', 'README 图标注入行'),
         (f'等 {b} 品牌', 'README 规则匹配顺序品牌数'),
         (f'badge/rulesets-{rs}-blue', 'README rulesets 徽章'),
@@ -209,6 +228,9 @@ def check_readme_structure(stats: dict) -> list[str]:
     ]:
         if needle not in readme:
             errs.append(f'{what} 未与实测一致，期望包含: {needle!r}')
+
+    # 所有「N 品牌 · M 规则集」出现处逐一校验（与 --check 共用实现）
+    errs.extend(_scan_brand_ruleset_occurrences(readme, b, rs))
 
     for cat, n, _rules in stats['category_stats']:
         if not re.search(rf'^\|\s*{re.escape(cat)}\s*\|\s*{n}\s*\|', readme, re.M):
@@ -220,6 +242,42 @@ def check_readme_structure(stats: dict) -> list[str]:
             if int(m.group(1)) != b:
                 errs.append(
                     f'{cfg_readme.relative_to(ROOT)} 品牌策略组数量 {m.group(1)} ≠ 实测 {b}')
+    return errs
+
+
+def check_changelog_arithmetic(stats: dict) -> list[str]:
+    """CHANGELOG 中「新增 N 个…」必须与同行 `A → B` 差值自洽（B − A == N）
+
+    历史漂移无法被 README 检查覆盖：曾出现「新增 29 个品牌」括号里却写
+    `148 → 150`（差值 2）的内部矛盾。规则：
+      1. 同行出现「新增 N 个」时，该行所有 `A → B 品牌/规则集` 必须满足 B − A == N；
+      2. 「含 X 兜底共 Y」的 X / Y 必须等于实测兜底数与规则集总数。
+    """
+    p = ROOT / 'CHANGELOG.md'
+    if not p.exists():
+        return ['CHANGELOG.md 不存在']
+    errs = []
+    lines = p.read_text(encoding='utf-8').splitlines()
+    # 规则 1（新增 N 与 A → B 差值）是时间无关的，对全历史生效；
+    # 规则 2（兜底数 / 共 Y == 实测）只对**最新日期段**生效：
+    # 历史条目记录的是当时的口径（例如旧天的「含 7 兜底」），拿当前实测比会误报。
+    headings = [i for i, l in enumerate(lines) if l.startswith('## ')]
+    latest_end = headings[1] if len(headings) > 1 else len(lines)
+    for ln, line in enumerate(lines, 1):
+        m = re.search(r'新增\s*(\d+)\s*个', line)
+        if m:
+            n = int(m.group(1))
+            for a, b, unit in re.findall(r'(\d+)\s*→\s*(\d+)\s*(品牌|规则集)', line):
+                if int(b) - int(a) != n:
+                    errs.append(f'CHANGELOG:{ln} 「新增 {n} 个」与 `{a} → {b} {unit}` 不自洽'
+                                f'（差值 {int(b) - int(a)}）')
+        if '兜底' in line and ln - 1 < latest_end:
+            mb = re.search(r'(\d+)\s*兜底', line)
+            if mb and int(mb.group(1)) != stats['base_count']:
+                errs.append(f'CHANGELOG:{ln} 兜底数 {mb.group(1)} ≠ 实测 {stats["base_count"]}')
+            mt = re.search(r'共\s*(\d+)', line)
+            if mt and int(mt.group(1)) != stats['ruleset_count']:
+                errs.append(f'CHANGELOG:{ln} 「共 {mt.group(1)}」规则集 ≠ 实测 {stats["ruleset_count"]}')
     return errs
 
 
@@ -274,14 +332,23 @@ def update_readme(stats: dict) -> list[str]:
 
 def main() -> int:
     stats = compute_stats()
+    if '--check-changelog' in sys.argv:
+        errs = check_changelog_arithmetic(stats)
+        if errs:
+            print('❌ CHANGELOG 数字不自洽：')
+            for e in errs:
+                print(f'  - {e}')
+            return 1
+        print('✅ CHANGELOG 数字自洽')
+        return 0
     if '--check' in sys.argv:
-        errs = check_readme(stats)
+        errs = check_readme(stats) + check_changelog_arithmetic(stats)
         if errs:
             print('❌ README 统计口径与实测不一致：')
             for e in errs:
                 print(f'  - {e}')
             return 1
-        print('✅ README 统计口径与实测一致')
+        print('✅ README 统计口径与实测一致；CHANGELOG 数字自洽')
         return 0
     if '--check-structure' in sys.argv:
         errs = check_readme_structure(stats)

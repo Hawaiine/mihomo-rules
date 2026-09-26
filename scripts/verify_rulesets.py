@@ -198,17 +198,25 @@ def check_brand(brand):
             errors.append(f'  {brand}: payload 完全重复 (第 {i} 行)')
         seen_exact.add(s)
         rule = parse_rule_line(ln)
-        if rule is not None:
-            payload_rules.append(rule)
-            if rule.rule_type in ('DOMAIN', 'DOMAIN-SUFFIX') and is_single_char(rule.value):
-                errors.append(f'  {brand}: 单字符 (第 {i} 行) {rule.value}')
-            elif (
-                rule.rule_type == 'DOMAIN-SUFFIX'
-                and is_bare(rule.value)
-                and brand != 'Private'
-                and not is_allowed_bare_suffix(brand, rule.value)
-            ):
-                errors.append(f'  {brand}: 无点品牌词不在白名单 (第 {i} 行) {rule.value}')
+        if rule is None:
+            # 解析不了就报错，绝不允许「不计数 → 恰好数字对上 → PASS」
+            errors.append(
+                f'  {brand}: INVALID_PAYLOAD_LINE (第 {i} 行) 无法按 TYPE,VALUE[,PARAM] 解析: {s!r}')
+            continue
+        if rule.rule_type not in TYPES_ORDER:
+            errors.append(
+                f'  {brand}: UNSUPPORTED_RULE_TYPE (第 {i} 行) {rule.rule_type} 不在 8 种规则类型内')
+            continue
+        payload_rules.append(rule)
+        if rule.rule_type in ('DOMAIN', 'DOMAIN-SUFFIX') and is_single_char(rule.value):
+            errors.append(f'  {brand}: 单字符 (第 {i} 行) {rule.value}')
+        elif (
+            rule.rule_type == 'DOMAIN-SUFFIX'
+            and is_bare(rule.value)
+            and brand != 'Private'
+            and not is_allowed_bare_suffix(brand, rule.value)
+        ):
+            errors.append(f'  {brand}: 无点品牌词不在白名单 (第 {i} 行) {rule.value}')
     if not updated_ok:
         errors.append(f'  {brand}: # Updated 格式应为 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS')
     if payload_rules != sort_rules(payload_rules):
@@ -229,6 +237,30 @@ def check_brand(brand):
         if shadowed:
             sample = ', '.join(r.value for r in shadowed[:3]) + (' …' if len(shadowed) > 3 else '')
             errors.append(f'  {brand}: DOMAIN 被同集更宽后缀覆盖 {len(shadowed)} 条: {sample}')
+
+    # 同 TYPE+VALUE 出现多个 param 值：一律 FAIL，不允许静默丢弃
+    # - 多个**非空** param：语义歧义，必须人工裁决；
+    # - 空参 + 单个带参：冗余重复（写入路径 dedup_rules 会归一为带参版本），需清理。
+    param_groups: dict[tuple, set] = {}
+    for r in payload_rules:
+        param_groups.setdefault((r.rule_type, r.value.lower()), set()).add(r.param)
+    ambiguous, redundant = [], []
+    for key, params in sorted(param_groups.items()):
+        if len(params) < 2:
+            continue
+        non_empty = {p for p in params if p}
+        if len(non_empty) > 1:
+            ambiguous.append((key, sorted(params)))
+        else:
+            redundant.append((key, sorted(params)))
+    if ambiguous:
+        sample = '; '.join(f'{t},{v} → {ps}' for (t, v), ps in ambiguous[:3])
+        errors.append(
+            f'  {brand}: 同 TYPE+VALUE 多 param 歧义 {len(ambiguous)} 处（写入路径不静默丢弃）: {sample}')
+    if redundant:
+        sample = '; '.join(f'{t},{v} → {ps}' for (t, v), ps in redundant[:3])
+        errors.append(
+            f'  {brand}: 同 TYPE+VALUE 带参/无参重复 {len(redundant)} 处（写入路径会归一为带参版本）: {sample}')
 
     return len(errors) == 0, errors
 
