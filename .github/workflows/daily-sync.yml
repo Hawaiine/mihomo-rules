@@ -50,11 +50,17 @@ jobs:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
 
+      - name: 📊 刷新 README 统计口径
+        run: python3 scripts/readme_stats.py --update
+
       - name: 🔍 verify_configs
         run: python3 scripts/verify_configs.py
 
       - name: 🔍 verify_rulesets
         run: python3 scripts/verify_rulesets.py
+
+      - name: 🔍 校验 README 统计口径
+        run: python3 scripts/readme_stats.py --check
 
       - name: 🧪 单元测试 (scripts/tests 全量)
         run: python3 -m unittest discover -s scripts/tests -q
@@ -85,8 +91,8 @@ jobs:
         id: check
         run: |
           set -euo pipefail
-          # 白名单 porcelain：只检查 ruleset/ configs/ scripts/
-          if [ -n "$(git status --porcelain -- ruleset/ configs/ scripts/)" ]; then
+          # 白名单 porcelain：检查 ruleset/ configs/ scripts/ README.md
+          if [ -n "$(git status --porcelain -- ruleset/ configs/ scripts/ README.md)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "🔄 检测到变更"
           else
@@ -100,7 +106,7 @@ jobs:
           set -euo pipefail
           git config user.name "mihomo-bot"
           git config user.email "bot@mihomo-rules"
-          git add ruleset/ configs/ scripts/
+          git add ruleset/ configs/ scripts/ README.md
           # 暂存区为空则跳过 commit/push（防御性：防止 commit 失败后仍 rebase+push）
           if [ -z "$(git diff --cached --name-only)" ]; then
             echo "⏸️ 暂存区为空，跳过 commit/push"
