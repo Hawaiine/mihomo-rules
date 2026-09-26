@@ -345,11 +345,11 @@ python3 -m unittest discover -s scripts/tests
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 339,270 |
-| 品牌 | — | 150 | 150 | 13,829 |
-| **合计** | **9** | **150** | **159** | **353,099** |
+| 基础 | 9 | — | 9 | 339,597 |
+| 品牌 | — | 150 | 150 | 13,830 |
+| **合计** | **9** | **150** | **159** | **353,427** |
 
-规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(148) · DOMAIN(1,032) · DOMAIN-SUFFIX(341,838) · IP-CIDR(6,412) · IP-CIDR6(3,475) · IP-ASN(10) · PROCESS-NAME(147)
+规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(148) · DOMAIN(1,033) · DOMAIN-SUFFIX(342,165) · IP-CIDR(6,412) · IP-CIDR6(3,475) · IP-ASN(10) · PROCESS-NAME(147)
 
 ### 品牌分类统计
 
@@ -358,7 +358,7 @@ python3 -m unittest discover -s scripts/tests
 | 🎬 流媒体 | 54 | 1,250 | AbemaTV · Bahamut · Bangumi · Bilibili · CATCHPLAY · Crunchyroll · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · Hotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · PeacockTV · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNews · friDayVideo · iQIYI · karaokeDAM · myTVSUPER |
 | 🤖 AI | 14 | 236 | Anthropic · Copilot · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Grok · Manus · NousResearch · OpenAI · Perplexity · Poe · SiriAI |
 | 📱 社交 | 21 | 1,023 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 22 | 1,734 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
+| ☁️ 云服务 | 22 | 1,735 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
 | 🎮 游戏 | 4 | 247 | Nintendo · PlayStation · Steam · Xbox |
 | 🛍️ 电商 | 7 | 726 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
 | 🎵 音乐 | 12 | 109 | AppleMusic · Deezer · Mora · Musixmatch · NetEaseCloudMusic · Pandora · QQMusic · Qobuz · SoundCloud · Spotify · TIDAL · YouTubeMusic |
