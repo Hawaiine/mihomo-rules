@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 150 品牌 · 159 规则集 · 35.3 万规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 150 品牌 · 159 规则集 · 35.4 万规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -345,11 +345,11 @@ python3 -m unittest discover -s scripts/tests
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 339,597 |
+| 基础 | 9 | — | 9 | 339,853 |
 | 品牌 | — | 150 | 150 | 13,830 |
-| **合计** | **9** | **150** | **159** | **353,427** |
+| **合计** | **9** | **150** | **159** | **353,683** |
 
-规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(148) · DOMAIN(1,033) · DOMAIN-SUFFIX(342,165) · IP-CIDR(6,412) · IP-CIDR6(3,475) · IP-ASN(10) · PROCESS-NAME(147)
+规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(148) · DOMAIN(1,033) · DOMAIN-SUFFIX(342,421) · IP-CIDR(6,412) · IP-CIDR6(3,475) · IP-ASN(10) · PROCESS-NAME(147)
 
 ### 品牌分类统计
 
