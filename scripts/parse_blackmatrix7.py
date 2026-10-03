@@ -69,7 +69,7 @@ ALLOWED_TYPES: set[str] = {
 # WeChat / Weibo / TencentVideo 虽有上游文件，仍按项目约定手工维护。
 # Twitter 是上游名称，目标技术 ID 为 X；不要把上游名称当成本仓库 ID。
 BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
-    "AbemaTV": "AbemaTV",
+    "AbemaTV": "ABEMA",
     "AliPay": "AliPay",
     "Amazon": "Amazon",
     "Anthropic": "Anthropic",
@@ -131,7 +131,7 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "myTVSUPER": "myTVSUPER",
     # ── 2026-09-25 新增品牌 ──
     "AppleMusic": "AppleMusic",
-    "AppleNews": "AppleNews",
+    "AppleNews": "AppleNewsPlus",
     "AppStore": "AppStore",
     "FitnessPlus": "AppleFitnessPlus",
     "GoogleDrive": "GoogleDrive",
@@ -144,7 +144,7 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "KakaoTalk": "KakaoTalk",
     "Oracle": "Oracle",
     "PlayStation": "PlayStation",
-    "Peacock": "PeacockTV",
+    "Peacock": "Peacock",
     "ParamountPlus": "ParamountPlus",
     "HunanTV": "MangoTV",
 }

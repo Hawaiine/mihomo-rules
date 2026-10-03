@@ -14,7 +14,7 @@ SUB_PARENT: dict[str, str] = {
     'YouTubeMusic': 'YouTube',
     'AWS': 'Amazon',
     'PrimeVideo': 'Amazon',
-    'Hotstar': 'Disney',
+    'Peacock': 'NBCUniversal',
     'Hulu': 'Disney',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
@@ -27,7 +27,7 @@ SUB_PARENT: dict[str, str] = {
     # ── 2026-09-25 新增品牌 ──
     'AppleFitnessPlus': 'Apple',
     'AppleMusic': 'Apple',
-    'AppleNews': 'Apple',
+    'AppleNewsPlus': 'Apple',
     'AppStore': 'Apple',
     'Azure': 'Microsoft',
     'Outlook': 'Microsoft',

@@ -998,7 +998,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleMusic/AppleMusic.png"
 
-  - name: "Apple News"
+  - name: "Apple News+"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1029,7 +1029,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleNews/AppleNews.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleNewsPlus/AppleNewsPlus.png"
 
   - name: "Apple TV"
     type: select
@@ -1493,39 +1493,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Grok/Grok.png"
 
-  - name: "Hotstar"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Hotstar/Hotstar.png"
-
   - name: "Hulu"
     type: select
     proxies:
@@ -1690,6 +1657,39 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Outlook/Outlook.png"
+
+  - name: "Peacock"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/NBCUniversal/Peacock/Peacock.png"
 
   - name: "Prime Video"
     type: select
@@ -1922,7 +1922,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud/iCloud.png"
 
-  - name: "AbemaTV"
+  - name: "ABEMA"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1953,7 +1953,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/AbemaTV/AbemaTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ABEMA/ABEMA.png"
 
   - name: "支付宝"
     type: select
@@ -3041,6 +3041,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/JD/JD.png"
 
+  - name: "JioHotstar"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/JioHotstar/JioHotstar.png"
+
   - name: "KKTV"
     type: select
     proxies:
@@ -4060,39 +4093,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/PayPal/PayPal.png"
-
-  - name: "Peacock TV"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/PeacockTV/PeacockTV.png"
 
   - name: "Perplexity"
     type: select
@@ -5848,12 +5848,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/AppleMusic.yaml
 
-  AppleNews:
+  AppleNewsPlus:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleNews/AppleNews.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AppleNewsPlus/AppleNewsPlus.yaml"
     interval: 86400
-    path: ./ruleset/AppleNews.yaml
+    path: ./ruleset/AppleNewsPlus.yaml
 
   AppleTV:
     type: http
@@ -5953,13 +5953,6 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Grok.yaml
 
-  Hotstar:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Hotstar/Hotstar.yaml"
-    interval: 86400
-    path: ./ruleset/Hotstar.yaml
-
   Hulu:
     type: http
     behavior: classical
@@ -5994,6 +5987,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Outlook/Outlook.yaml"
     interval: 86400
     path: ./ruleset/Outlook.yaml
+
+  Peacock:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Peacock/Peacock.yaml"
+    interval: 86400
+    path: ./ruleset/Peacock.yaml
 
   PrimeVideo:
     type: http
@@ -6044,12 +6044,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/iCloud.yaml
 
-  AbemaTV:
+  ABEMA:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AbemaTV/AbemaTV.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ABEMA/ABEMA.yaml"
     interval: 86400
-    path: ./ruleset/AbemaTV.yaml
+    path: ./ruleset/ABEMA.yaml
 
   AliPay:
     type: http
@@ -6282,6 +6282,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/JD.yaml
 
+  JioHotstar:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/JioHotstar/JioHotstar.yaml"
+    interval: 86400
+    path: ./ruleset/JioHotstar.yaml
+
   KKTV:
     type: http
     behavior: classical
@@ -6498,13 +6505,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PayPal/PayPal.yaml"
     interval: 86400
     path: ./ruleset/PayPal.yaml
-
-  PeacockTV:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/PeacockTV/PeacockTV.yaml"
-    interval: 86400
-    path: ./ruleset/PeacockTV.yaml
 
   Perplexity:
     type: http
@@ -6873,7 +6873,7 @@ rules:
                                                     # - RULE-SET,AppStore,App Store
                                                     # - RULE-SET,AppleFitnessPlus,Apple Fitness+
                                                     # - RULE-SET,AppleMusic,Apple Music
-                                                    # - RULE-SET,AppleNews,Apple News
+                                                    # - RULE-SET,AppleNewsPlus,Apple News+
                                                     # - RULE-SET,AppleTV,Apple TV
                                                     # - RULE-SET,Azure,Microsoft Azure
                                                     # - RULE-SET,Bing,Microsoft Bing
@@ -6888,12 +6888,12 @@ rules:
                                                     # - RULE-SET,GooglePlay,Google Play
                                                     # - RULE-SET,GoogleVoice,Google Voice
                                                     # - RULE-SET,Grok,Grok
-                                                    # - RULE-SET,Hotstar,Hotstar
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,OneDrive,OneDrive
                                                     # - RULE-SET,Outlook,Microsoft Outlook
+                                                    # - RULE-SET,Peacock,Peacock
                                                     # - RULE-SET,PrimeVideo,Prime Video
                                                     # - RULE-SET,SiriAI,Siri AI
                                                     # - RULE-SET,Threads,Threads
@@ -6901,7 +6901,7 @@ rules:
                                                     # - RULE-SET,Xbox,Xbox
                                                     # - RULE-SET,YouTube,YouTube
                                                     # - RULE-SET,iCloud,iCloud
-                                                    # - RULE-SET,AbemaTV,AbemaTV
+                                                    # - RULE-SET,ABEMA,ABEMA
                                                     # - RULE-SET,AliPay,支付宝
                                                     # - RULE-SET,Amazon,Amazon
                                                     # - RULE-SET,Anthropic,Anthropic
@@ -6935,6 +6935,7 @@ rules:
                                                     # - RULE-SET,HOYTV,HOY TV
                                                     # - RULE-SET,HamiVideo,Hami Video
                                                     # - RULE-SET,JD,京东
+                                                    # - RULE-SET,JioHotstar,JioHotstar
                                                     # - RULE-SET,KKTV,KKTV
                                                     # - RULE-SET,KakaoTalk,KakaoTalk
                                                     # - RULE-SET,LINETV,LINE TV
@@ -6966,7 +6967,6 @@ rules:
                                                     # - RULE-SET,Pandora,Pandora
                                                     # - RULE-SET,ParamountPlus,Paramount+
                                                     # - RULE-SET,PayPal,PayPal
-                                                    # - RULE-SET,PeacockTV,Peacock TV
                                                     # - RULE-SET,Perplexity,Perplexity
                                                     # - RULE-SET,Pinduoduo,拼多多
                                                     # - RULE-SET,Pinterest,Pinterest

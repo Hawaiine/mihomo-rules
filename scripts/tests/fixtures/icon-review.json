@@ -1,16 +1,4 @@
 {
-  "AbemaTV": {
-    "reason": "ABEMA differs from the existing Technical ID; continuity requires review."
-  },
-  "AppleNews": {
-    "reason": "AppleNewsPlus is the current icon identity; continuity requires review."
-  },
-  "Hotstar": {
-    "reason": "JioHotstar is the current icon identity; continuity requires review."
-  },
-  "PeacockTV": {
-    "reason": "Peacock is the current icon identity; continuity requires review."
-  },
   "Podcast": {
     "reason": "Generic podcasts must not be assumed to mean Apple Podcasts."
   }

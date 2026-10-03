@@ -5,6 +5,17 @@
 
 ---
 
+## 2026-10-03
+
+### Changed
+- **品牌命名迁移（Phase 6）** — `AbemaTV` → `ABEMA`、`AppleNews` → `AppleNewsPlus`（显示名 `Apple News+`）、`Hotstar` → `JioHotstar`、`PeacockTV` → `Peacock` 四品牌正式身份迁移：ruleset 目录/文件名（`git mv`）· `# Rule Name` · ruleset README 标题与策略组 · `STRATEGY_GROUP_MAP` · RULE-SET 注释 · provider key/url/path · 四份 config（full/min × Android/Nikki）· `SUB_PARENT`（移除 `Hotstar → Disney`，新增 `Peacock → NBCUniversal`）· upstream 映射目标 ID（upstream 原始名称不变）· 根 README 与 `readme_stats` 分类清单
+- **`icon_mapping.TECHNICAL_TO_CANONICAL` 首次写入 4 条正式 production mapping** — `ABEMA` / `AppleNewsPlus` / `JioHotstar` / `Peacock` → Oasisic canonical；四个 icon 引用切换至 canonical 路径
+- **测试与夹具同步** — `icon-review` 夹具收缩为 `Podcast`；integration matcher snapshot 更新为 141 命中 / 1 缺失（原 137 / 5，digest 有意识更新）
+
+规则 payload 不变：四规则集 DOMAIN / DOMAIN-SUFFIX / IP-CIDR 等条数与内容与迁移前一致；规则集与兜底数不变（含 9 兜底共 159）。Podcast、stale overrides 与其他 404 icon 不在本阶段处理。
+
+---
+
 ## 2026-09-26
 
 ### Added

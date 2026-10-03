@@ -78,7 +78,7 @@ V2FLY_BRAND_MAP: dict[str, str] = {
     "google-play": "GooglePlay",
     "hamivideo": "HamiVideo",
     "hbo": "HBO",
-    "hotstar": "Hotstar",
+    "hotstar": "JioHotstar",
     "hulu": "Hulu",
     "icloud": "iCloud",
     "icloudprivaterelay": "iCloudPrivateRelay",

@@ -150,9 +150,9 @@ class TestResolutionContracts(unittest.TestCase):
         # A legacy override is migration debt, not a decision: never a coverage input.
         self.assertEqual(mapping.find_uncovered(["A"]), ["A"])
 
-    def test_contract_five_pending_brands_stay_in_review_queue(self):
+    def test_contract_pending_brands_stay_in_review_queue(self):
         manifest = json.loads((Path(__file__).parent / "fixtures" / "icon-review.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(manifest), {"AbemaTV", "AppleNews", "Hotstar", "PeacockTV", "Podcast"})
+        self.assertEqual(set(manifest), {"Podcast"})
         self.assertFalse(set(manifest) & set(mapping.TECHNICAL_TO_CANONICAL))
         for technical_id, entry in manifest.items():
             result = mapping.resolve_icon(technical_id, technical_id, self.catalog, self.tree, review=manifest)

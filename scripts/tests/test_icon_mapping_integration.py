@@ -65,11 +65,11 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (137, 5))
+        self.assertEqual((len(icon_map), len(missing)), (141, 1))
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "4e65190b89dc167f43dd6829f5542d7e87c1c3f40ae13aa7a802e2aaa59fd53b")
+        self.assertEqual(digest, "b01e767a82e290b0c9da32d4daec7db24796dbb8ea72c2cdc8acfe4d807187ac")
 
 
 if __name__ == "__main__":
