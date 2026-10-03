@@ -7,7 +7,7 @@ Podcast 是 generic routing container，不代表 Apple Podcasts 或任何单一
 |------|------|
 | DOMAIN-KEYWORD | 0 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 3 |
+| DOMAIN | 2 |
 | DOMAIN-SUFFIX | 2 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
