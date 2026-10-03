@@ -36,13 +36,14 @@ class TestIconMappingIntegration(unittest.TestCase):
         # Asset paths are relative to the icons/ directory, matching match_icons conventions.
         paths = {str(p.relative_to(repo / "icons")) for p in (repo / "icons").rglob("*.png")}
         catalog = mapping.load_catalog(repo / "config" / "brands.json", paths)
-        root = Path(__file__).resolve().parents[2]
-        technical_ids = [p.parent.name for p in (root / "ruleset").glob("*/*.yaml")]
         from commit_writer import STRATEGY_GROUP_MAP
-        from match_icons import ICON_OVERRIDES
-        strategy_groups = sorted({STRATEGY_GROUP_MAP.get(brand, brand) for brand in technical_ids})
+        from match_icons import ICON_OVERRIDES, brand_dirs, emoji_skipped_brands
+
+        technical_ids = sorted(brand_dirs())
+        group_of = {brand: (STRATEGY_GROUP_MAP.get(brand) or brand) for brand in technical_ids}
         errors = mapping.validate_mapping(
-            technical_ids, strategy_groups, catalog, paths, overrides=ICON_OVERRIDES,
+            technical_ids, group_of, emoji_skipped_brands(), catalog, paths,
+            overrides=ICON_OVERRIDES,
         )
         # Only stale-override findings are expected today; new findings must be reviewed here.
         self.assertEqual(
