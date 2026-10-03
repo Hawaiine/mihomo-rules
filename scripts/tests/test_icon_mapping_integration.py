@@ -65,11 +65,14 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (141, 1))
+        # Representative resolution is intentionally separate from canonical identity mapping.
+        self.assertEqual(icon_map.get("Podcast"), "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png")
+        self.assertNotIn("Podcast", mapping.TECHNICAL_TO_CANONICAL)
+        self.assertEqual((len(icon_map), len(missing)), (143, 0))
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "b01e767a82e290b0c9da32d4daec7db24796dbb8ea72c2cdc8acfe4d807187ac")
+        self.assertEqual(digest, "1d1356c11fc4084790026442855106929e9e5656fe5c792b9633ec58882f40a1")
 
 
 if __name__ == "__main__":

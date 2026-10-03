@@ -1,5 +1,7 @@
 # 📦 Podcast 规则集
 
+Podcast 是 generic routing container，不代表 Apple Podcasts 或任何单一品牌。Xiaoyuzhou 图标仅作为 representative icon；Podcast canonical identity 仍为 none。
+
 ## 📊 统计
 | 类型 | 数量 |
 |------|------|

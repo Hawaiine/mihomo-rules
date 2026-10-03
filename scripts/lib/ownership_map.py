@@ -28,6 +28,7 @@ SUB_PARENT: dict[str, str] = {
     'AppleFitnessPlus': 'Apple',
     'AppleMusic': 'Apple',
     'AppleNewsPlus': 'Apple',
+    'ApplePodcasts': 'Apple',
     'AppStore': 'Apple',
     'Azure': 'Microsoft',
     'Outlook': 'Microsoft',
