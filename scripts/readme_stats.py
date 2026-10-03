@@ -34,14 +34,14 @@ TYPES_ORDER = [
 # 品牌分类（编辑口径）。键为分类标题，值为技术 ID 列表。
 BRAND_CATEGORIES: dict[str, list[str]] = {
     '🎬 流媒体': [
-        'AbemaTV', 'Bahamut', 'Bangumi', 'Bilibili', 'CATCHPLAY', 'Crunchyroll',
+        'ABEMA', 'Bahamut', 'Bangumi', 'Bilibili', 'CATCHPLAY', 'Crunchyroll',
         'DAZN', 'DAnimeStore', 'DMMTV', 'Disney', 'Douyin', 'F1TV', 'FujiTV',
-        'GameJapan', 'HBO', 'HOYTV', 'HamiVideo', 'Hotstar', 'Hulu', 'KKTV',
+        'GameJapan', 'HBO', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
         'LINETV', 'Lemino', 'LiTV', 'MangoTV', 'MusicJapan', 'MyVideo', 'NHK',
-        'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'PeacockTV', 'Podcast',
+        'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'Podcast',
         'PrimeVideo', 'Radiko', 'RakutenTV', 'ReadJapan', 'RedNote', 'TVer',
         'Telasa', 'TencentVideo', 'Tubi', 'Twitch', 'UNext', 'VideoMarket',
-        'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNews', 'friDayVideo',
+        'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'friDayVideo',
         'iQIYI', 'karaokeDAM', 'myTVSUPER',
     ],
     '🤖 AI': [

@@ -57,8 +57,13 @@ class IconResolution:
 
 # Primary key: stable mihomo Technical ID — never display name, strategy group, or icon filename.
 # Values: Oasisic canonical IDs; icon_path is resolved from the Oasisic SSOT, not stored here.
-# An empty registry is the intended initial state: only explicitly reviewed decisions may be added.
-TECHNICAL_TO_CANONICAL: dict[str, str] = {}
+# The registry holds only human-approved mappings (Phase 6 decision, PR #11 merged).
+TECHNICAL_TO_CANONICAL: dict[str, str] = {
+    'ABEMA': 'ABEMA',
+    'AppleNewsPlus': 'AppleNewsPlus',
+    'JioHotstar': 'JioHotstar',
+    'Peacock': 'Peacock',
+}
 
 
 def load_catalog(path: Path, tree_paths: set[str] | None = None) -> dict[str, dict]:
