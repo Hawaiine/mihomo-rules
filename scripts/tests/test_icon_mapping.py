@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -18,106 +17,154 @@ class TestIconMapping(unittest.TestCase):
             "NoAsset": {"id": "NoAsset", "display_name": "No asset"},
         }
         self.tree = {"Media/A/A.png", "Media/Legacy/Legacy.png"}
-        self.overrides = {"Legacy Group": "Media/Legacy/Legacy.png"}
 
-    def test_technical_id_resolves_to_current_canonical_icon(self):
+    def test_explicit_mapping_uses_technical_id(self):
         with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "CanonicalA"}, clear=True):
-            result = mapping.resolve_icon("TechA", "Renamed display", self.catalog, self.tree, {})
-        self.assertEqual(result.status, mapping.IconStatus.FOUND)
-        self.assertEqual(result.canonical_id, "CanonicalA")
-        self.assertEqual(result.icon_path, "icons/Media/A/A.png")
-        self.assertEqual(result.source, "canonical-map")
+            result = mapping.resolve_icon("TechA", "Changed display", self.catalog, self.tree)
+        self.assertEqual((result.status, result.technical_id, result.canonical_id, result.icon_path),
+                         (mapping.IconStatus.FOUND, "TechA", "CanonicalA", "icons/Media/A/A.png"))
 
-    def test_missing_canonical_id_requires_review(self):
+    def test_unknown_canonical_id_requires_review(self):
         with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "Absent"}, clear=True):
-            result = mapping.resolve_icon("TechA", "A", self.catalog, self.tree, {})
+            result = mapping.resolve_icon("TechA", "A", self.catalog, self.tree)
         self.assertEqual(result.status, mapping.IconStatus.REQUIRES_REVIEW)
+        self.assertEqual(result.reason, "canonical ID is absent")
 
-    def test_missing_canonical_path_is_not_found(self):
+    def test_missing_path_or_asset_not_found(self):
         with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "NoAsset"}, clear=True):
-            result = mapping.resolve_icon("TechA", "A", self.catalog, self.tree, {})
+            result = mapping.resolve_icon("TechA", "A", self.catalog, self.tree)
+        self.assertEqual(result.status, mapping.IconStatus.NOT_FOUND)
+        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "CanonicalA"}, clear=True):
+            result = mapping.resolve_icon("TechA", "A", self.catalog, set())
         self.assertEqual(result.status, mapping.IconStatus.NOT_FOUND)
 
-    def test_valid_legacy_override_is_identified(self):
-        result = mapping.resolve_icon("TechLegacy", "Legacy Group", self.catalog, self.tree, self.overrides)
+    def test_missing_asset_tree_is_unverified(self):
+        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "CanonicalA"}, clear=True):
+            result = mapping.resolve_icon("TechA", "A", self.catalog, None)
+        self.assertEqual(result.status, mapping.IconStatus.UNVERIFIED)
+        self.assertEqual(result.icon_path, "icons/Media/A/A.png")
+
+    def test_mapping_review_conflict_fails_resolution_and_validation(self):
+        review = {"TechA": {"reason": "pending"}}
+        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"TechA": "CanonicalA"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "Conflicting mapping and review"):
+                mapping.resolve_icon("TechA", "A", self.catalog, self.tree, review=review)
+        errors = mapping.validate_mapping(["TechA"], ["A"], self.catalog, self.tree,
+                                          mapping={"TechA": "CanonicalA"}, review=review)
+        self.assertIn("MAPPING_REVIEW_CONFLICT: TechA", errors)
+
+    def test_override_path_and_key_are_validated(self):
+        errors = mapping.validate_mapping(["TechA"], ["Current Group"], self.catalog, self.tree,
+                                          mapping={}, overrides={"Old Group": "missing.png"}, review={})
+        self.assertIn("STALE_OVERRIDE_KEY: Old Group", errors)
+        self.assertIn("STALE_OVERRIDE: Old Group -> missing.png", errors)
+        good = mapping.resolve_icon("TechA", "Current Group", self.catalog, self.tree,
+                                    overrides={"Current Group": "Media/Legacy/Legacy.png"})
+        self.assertEqual(good.status, mapping.IconStatus.FOUND)
+        self.assertEqual(good.source, "legacy-override")
+        stale = mapping.resolve_icon("TechA", "Current Group", self.catalog, set(),
+                                     overrides={"Current Group": "Media/Old/Old.png"})
+        self.assertEqual(stale.status, mapping.IconStatus.STALE_OVERRIDE)
+        unavailable = mapping.resolve_icon("TechA", "Current Group", self.catalog, None,
+                                           overrides={"Current Group": "Media/Legacy/Legacy.png"})
+        self.assertEqual(unavailable.status, mapping.IconStatus.UNVERIFIED)
+
+    def test_emoji_and_explicit_no_icon_are_skipped(self):
+        emoji = mapping.resolve_icon("AI", "🤖 AI", self.catalog, self.tree, emoji_group=True)
+        no_icon = mapping.resolve_icon("NoIcon", "No Icon", self.catalog, self.tree, no_icon=("NoIcon",))
+        self.assertEqual(emoji.status, mapping.IconStatus.SKIPPED)
+        self.assertEqual(no_icon.status, mapping.IconStatus.SKIPPED)
+        missing = mapping.resolve_icon("NeedsIcon", "Needs Icon", self.catalog, self.tree)
+        self.assertEqual(missing.status, mapping.IconStatus.REQUIRES_REVIEW)
+
+    def test_five_migration_candidates_live_in_data_manifest(self):
+        manifest = json.loads((Path(__file__).parent / "fixtures" / "icon-review.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(manifest), {"AbemaTV", "AppleNews", "Hotstar", "PeacockTV", "Podcast"})
+        self.assertFalse(set(manifest) & set(mapping.TECHNICAL_TO_CANONICAL))
+        for technical_id, entry in manifest.items():
+            result = mapping.resolve_icon(technical_id, technical_id, self.catalog, self.tree, review=manifest)
+            self.assertEqual(result.status, mapping.IconStatus.REQUIRES_REVIEW)
+            self.assertEqual(result.reason, entry["reason"])
+
+    def test_unapproved_many_to_one_fails_and_review_approval_is_explicit(self):
+        shared = {"TechA": "CanonicalA", "TechB": "CanonicalA"}
+        unapproved = mapping.validate_mapping(["TechA", "TechB"], ["A", "B"], self.catalog, self.tree,
+                                              mapping=shared, review={})
+        self.assertIn("SHARED_CANONICAL_NOT_APPROVED: CanonicalA <- TechA, TechB", unapproved)
+        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, shared, clear=True):
+            with self.assertRaisesRegex(ValueError, "Unapproved shared canonical mapping"):
+                mapping.resolve_icon("TechA", "A", self.catalog, self.tree)
+        allowed = mapping.validate_mapping(["TechA", "TechB"], ["A", "B"], self.catalog, self.tree,
+                                           mapping=shared, review={}, allow_shared=("CanonicalA",))
+        self.assertNotIn("SHARED_CANONICAL_NOT_APPROVED: CanonicalA <- TechA, TechB", allowed)
+        self.assertFalse(any(error.startswith("MAPPING_REVIEW_CONFLICT") for error in allowed))
+
+    def test_review_manifest_entries_are_validated(self):
+        errors = mapping.validate_mapping(["TechA"], ["A"], self.catalog, self.tree,
+                                          mapping={}, review={"Unknown": {}, "TechA": "bad"})
+        self.assertIn("REVIEW_TECHNICAL_ID_UNKNOWN: Unknown", errors)
+        self.assertIn("REVIEW_REASON_MISSING: Unknown", errors)
+        self.assertIn("REVIEW_ENTRY_INVALID: TechA", errors)
+
+    def test_validator_covers_unknown_ids_assets_and_policy_conflicts(self):
+        errors = mapping.validate_mapping(
+            ["Known"], ["Known Group"], self.catalog, set(),
+            mapping={"Unknown": "Absent", "Known": "CanonicalA"},
+            review={"Known": {"reason": "pending"}}, no_icon=("Known",),
+        )
+        self.assertIn("TECHNICAL_ID_UNKNOWN: Unknown", errors)
+        self.assertIn("CANONICAL_ID_UNKNOWN: Unknown -> Absent", errors)
+        self.assertIn("CANONICAL_ICON_FILE_MISSING: Known -> icons/Media/A/A.png", errors)
+        self.assertIn("MAPPING_REVIEW_CONFLICT: Known", errors)
+        self.assertIn("NO_ICON_POLICY_CONFLICT: Known", errors)
+
+    def test_validator_reports_unverified_without_asset_tree(self):
+        errors = mapping.validate_mapping(["TechA"], ["A"], self.catalog, None,
+                                          mapping={"TechA": "CanonicalA"},
+                                          overrides={"A": "Media/Legacy/Legacy.png"})
+        self.assertIn("CANONICAL_ICON_UNVERIFIED: TechA -> icons/Media/A/A.png", errors)
+        self.assertIn("OVERRIDE_ICON_UNVERIFIED: A -> Media/Legacy/Legacy.png", errors)
+
+    def test_find_uncovered_reports_brands_without_explicit_decisions(self):
+        uncovered = mapping.find_uncovered(
+            ["A", "B", "C", "D"],
+            mapping={"A": "CanonicalA"},
+            review={"B": {"reason": "pending"}},
+            no_icon=("C",),
+        )
+        self.assertEqual(uncovered, ["D"])
+
+    def test_catalog_loader_uses_portable_fixture(self):
+        fixture = Path(__file__).parent / "fixtures" / "icon-brands.json"
+        catalog = mapping.load_catalog(fixture, self.tree)
+        self.assertEqual(set(catalog), {"CanonicalA", "NoAsset"})
+        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, {"Netflix": "CanonicalA"}, clear=True):
+            result = mapping.resolve_icon("Netflix", "Netflix", catalog, self.tree)
         self.assertEqual(result.status, mapping.IconStatus.FOUND)
-        self.assertEqual(result.source, "legacy-override")
-        self.assertEqual(result.icon_path, "icons/Media/Legacy/Legacy.png")
+        self.assertEqual(result.icon_path, "icons/Media/A/A.png")
 
-    def test_stale_legacy_override_is_not_found(self):
-        result = mapping.resolve_icon("TechLegacy", "Legacy Group", self.catalog, set(), self.overrides)
-        self.assertEqual(result.status, mapping.IconStatus.STALE_OVERRIDE)
-
-    def test_emoji_policy_is_explicitly_skipped(self):
-        result = mapping.resolve_icon("GeneralAI", "🤖 General AI", self.catalog, self.tree, {}, emoji_group=True)
-        self.assertEqual(result.status, mapping.IconStatus.SKIPPED)
-
-    def test_five_unresolved_brands_require_review(self):
-        for technical_id in ("AbemaTV", "AppleNews", "Hotstar", "PeacockTV", "Podcast"):
-            with self.subTest(technical_id=technical_id):
-                result = mapping.resolve_icon(technical_id, technical_id, self.catalog, self.tree, {})
-                self.assertEqual(result.status, mapping.IconStatus.REQUIRES_REVIEW)
-
-    def test_catalog_rejects_duplicate_ids_and_stale_paths(self):
+    def test_catalog_loader_rejects_bad_entries(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "brands.json"
-            path.write_text(json.dumps({"brands": [
-                {"id": "A", "icon_path": "icons/Media/A/A.png"},
-                {"id": "A", "icon_path": "icons/Media/A/A.png"},
-            ]}), encoding="utf-8")
+
+            def write(payload):
+                path.write_text(json.dumps(payload), encoding="utf-8")
+
+            write({"brands": [
+                {"id": "A", "icon_path": "icons/a.png"}, {"id": "A", "icon_path": "icons/a.png"},
+            ]})
             with self.assertRaisesRegex(ValueError, "Duplicate Oasisic canonical ID"):
                 mapping.load_catalog(path)
-            path.write_text(json.dumps({"brands": [{"id": "A", "icon_path": "icons/Old/A.png"}]}), encoding="utf-8")
+            write({"brands": [{"id": "A", "icon_path": "Media/a.png"}]})
+            with self.assertRaisesRegex(ValueError, "Invalid icon_path"):
+                mapping.load_catalog(path)
+            write({"brands": [{"id": "A", "icon_path": "icons/Old/A.png"}]})
             with self.assertRaisesRegex(ValueError, "Stale icon_path"):
                 mapping.load_catalog(path, set())
+            write({"oops": True})
+            with self.assertRaisesRegex(ValueError, "brands list"):
+                mapping.load_catalog(path)
 
-    def test_validator_reports_bad_ids_missing_assets_duplicates_and_stale_overrides(self):
-        errors = mapping.validate_mapping(
-            ["Known"],
-            {"CanonicalA": self.catalog["CanonicalA"], "NoAsset": self.catalog["NoAsset"]},
-            set(),
-            mapping={"Unknown": "Absent", "Known": "CanonicalA", "Alias": "CanonicalA", "Missing": "NoAsset"},
-            overrides={"Legacy Group": "old/path.png"},
-            review={},
-        )
-        self.assertTrue(any(item.startswith("TECHNICAL_ID_UNKNOWN") for item in errors))
-        self.assertTrue(any(item.startswith("CANONICAL_ID_UNKNOWN") for item in errors))
-        self.assertTrue(any(item.startswith("DUPLICATE_MAPPING") for item in errors))
-        self.assertTrue(any(item.startswith("CANONICAL_ICON_FILE_MISSING") for item in errors))
-        self.assertTrue(any(item.startswith("CANONICAL_ICON_PATH_MISSING") for item in errors))
-        self.assertTrue(any(item.startswith("STALE_OVERRIDE") for item in errors))
 
-    def test_current_registry_validates_known_seed_mappings_and_finds_three_stale_overrides(self):
-        root = Path(__file__).resolve().parents[2]
-        icons_repo = Path(os.environ.get("MIHOMO_ICON_REPO", "/opt/data/cache/scratch/Oasisic-Icons-readonly"))
-        registry = mapping.load_catalog(icons_repo / "config" / "brands.json")
-        paths = set()
-        for dirpath, _, files in os.walk(icons_repo / "icons"):
-            for filename in files:
-                if filename.endswith(".png"):
-                    paths.add(os.path.relpath(os.path.join(dirpath, filename), icons_repo / "icons"))
-        technical_ids = [p.parent.name for p in (root / "ruleset").glob("*/*.yaml")]
-        actual_mapping = {"Netflix": "Netflix"}
-        with patch.dict(mapping.TECHNICAL_TO_CANONICAL, actual_mapping, clear=True):
-            errors = mapping.validate_mapping(
-                technical_ids, registry, paths, mapping=actual_mapping, review={},
-                overrides={
-                    "Disney": "Media/DisneyPlus/DisneyPlus.png",
-                    "HBO": "Media/HBOMAX/HBOMAX.png",
-                    "网易云音乐": "Music/NetEaseCloudMusic/NetEaseCloudMusic.png",
-                },
-            )
-        self.assertEqual(errors, [
-            "STALE_OVERRIDE: Disney -> Media/DisneyPlus/DisneyPlus.png",
-            "STALE_OVERRIDE: HBO -> Media/HBOMAX/HBOMAX.png",
-            "STALE_OVERRIDE: 网易云音乐 -> Music/NetEaseCloudMusic/NetEaseCloudMusic.png",
-        ])
-
-    def test_current_stable_output_snapshot_is_known(self):
-        import hashlib
-        import match_icons
-        match_icons.ICON_REPO = Path("/opt/data/cache/scratch/Oasisic-Icons-readonly")
-        icon_map, missing = match_icons.build_icon_map()
-        self.assertEqual((len(icon_map), len(missing)), (137, 5))
-        digest = hashlib.sha256(json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
-        self.assertEqual(digest, "4e65190b89dc167f43dd6829f5542d7e87c1c3f40ae13aa7a802e2aaa59fd53b")
+if __name__ == "__main__":
+    unittest.main()
