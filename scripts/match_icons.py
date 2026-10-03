@@ -128,8 +128,8 @@ def match_icon(brand, sg, icons):
     candidates.append(sg.replace(' ', ''))
     candidates.append(sg.replace(' ', '').replace('@', '-'))
 
-    # 3. 特殊映射：仅 Podcast → Podcasts
-    special = {'Podcast': 'Podcasts'}
+    # 3. 特殊图标解析：Podcast 是 generic routing container；Xiaoyuzhou 仅作 representative icon，不是 canonical identity。
+    special = {'Podcast': 'Xiaoyuzhou'}
     key = brand.replace(' ', '')
     if key in special:
         candidates.insert(0, special[key])

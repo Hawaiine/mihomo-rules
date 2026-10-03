@@ -1,23 +1,21 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 159 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 160 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
 
 ---
 
 ## 2026-10-03
 
 ### Changed
-- **品牌命名迁移（Phase 6）** — `AbemaTV` → `ABEMA`、`AppleNews` → `AppleNewsPlus`（显示名 `Apple News+`）、`Hotstar` → `JioHotstar`、`PeacockTV` → `Peacock` 四品牌正式身份迁移：ruleset 目录/文件名（`git mv`）· `# Rule Name` · ruleset README 标题与策略组 · `STRATEGY_GROUP_MAP` · RULE-SET 注释 · provider key/url/path · 四份 config（full/min × Android/Nikki）· `SUB_PARENT`（移除 `Hotstar → Disney`，新增 `Peacock → NBCUniversal`）· upstream 映射目标 ID（upstream 原始名称不变）· 根 README 与 `readme_stats` 分类清单
-- **`icon_mapping.TECHNICAL_TO_CANONICAL` 首次写入 4 条正式 production mapping** — `ABEMA` / `AppleNewsPlus` / `JioHotstar` / `Peacock` → Oasisic canonical；四个 icon 引用切换至 canonical 路径
-- **测试与夹具同步** — `icon-review` 夹具收缩为 `Podcast`；integration matcher snapshot 更新为 141 命中 / 1 缺失（原 137 / 5，digest 有意识更新）
+- **Phase 7A Apple Podcasts / generic Podcast 分层** — ApplePodcasts 含 `podcasts.apple.com`、`amp-api.podcasts.apple.com`、`applehosted.podcasts.apple.com` 三条精确 DOMAIN；Podcast 保留 Last.fm/Audioscrobbler/Himalaya 四条原规则，作为 generic routing container。
+- **Podcast representative icon** — `Podcast` 使用 Xiaoyuzhou 图标作为 representative icon，canonical identity 仍为 none；`Podcast` 未加入 `TECHNICAL_TO_CANONICAL`。
 
-规则 payload 不变：四规则集 DOMAIN / DOMAIN-SUFFIX / IP-CIDR 等条数与内容与迁移前一致；规则集与兜底数不变（含 9 兜底共 159）。Podcast、stale overrides 与其他 404 icon 不在本阶段处理。
+本阶段规则集与兜底数为含 9 兜底共 160。
 
 ---
 
 ## 2026-09-26
-
 ### Added
 - **新增 29 个品牌规则集**（130 → 159 规则集，121 → 150 品牌；含 9 兜底共 159）— Apple 子品牌（App Store / Apple Fitness+ / Apple Music / Apple News）· Microsoft 子品牌（Microsoft Azure / Microsoft Outlook / Microsoft Bing / Microsoft Copilot / Xbox）· Google 子品牌（Gmail / Google Drive / Google Maps / Google News / Google Photos / Google Voice）· X 子品牌（Grok）· 流媒体与社区品牌（Crunchyroll / MangoTV / Paramount+ / Peacock TV / Pandora / SoundCloud / PlayStation / Snapchat / 钉钉 / 飞书 / KakaoTalk / Oracle / Nous Research）
 - **`scripts/lib/upstream_coverage.py` `MANUAL_BRANDS`** — 显式登记「无上游、手工维护」的品牌。单测断言每个品牌要么是上游映射目标、要么在本清单内，新增品牌漏接线或映射被误删都会直接 CI 失败
