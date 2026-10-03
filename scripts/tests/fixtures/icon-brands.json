@@ -1,0 +1,13 @@
+{
+  "brands": [
+    {
+      "id": "CanonicalA",
+      "display_name": "A",
+      "icon_path": "icons/Media/A/A.png"
+    },
+    {
+      "id": "NoAsset",
+      "display_name": "No asset"
+    }
+  ]
+}

@@ -27,6 +27,8 @@ from commit_writer import STRATEGY_GROUP_MAP
 BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 
 # 显式覆盖（优先级高于自动匹配）
+# 临时兼容层：key 为策略组显示名（非 Technical ID），待 canonical mapping 迁移完成后逐条移除。
+# key 失效（STALE_OVERRIDE_KEY）与路径失效（STALE_OVERRIDE）都会被 icon_mapping 校验器检出。
 ICON_OVERRIDES = {
     # 图标仓库改过名 / 改过分类，自动匹配不到或需固定指向（对齐 Oasisic-Icons 2026-09 最新结构）
     'friDay影音': 'Media/friDayVideo/friDayVideo.png',
