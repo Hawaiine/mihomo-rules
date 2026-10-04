@@ -32,6 +32,7 @@ jobs:
         with:
           repository: Hawaiine/Oasisic-Icons
           path: Oasisic-Icons
+          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🐍 配置 Python 环境

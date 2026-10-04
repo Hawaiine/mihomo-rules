@@ -69,7 +69,7 @@ class TestIconMappingIntegration(unittest.TestCase):
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "b01e767a82e290b0c9da32d4daec7db24796dbb8ea72c2cdc8acfe4d807187ac")
+        self.assertEqual(digest, "fd2297e8822c89a933a2a64515a4e049a586143d96c7c9d50ee5f0b1d383abd5")
 
 
 if __name__ == "__main__":
