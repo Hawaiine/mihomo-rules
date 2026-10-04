@@ -45,16 +45,7 @@ class TestIconMappingIntegration(unittest.TestCase):
             technical_ids, group_of, emoji_skipped_brands(), catalog, paths,
             overrides=ICON_OVERRIDES,
         )
-        # Only stale-override findings are expected today; new findings must be reviewed here.
-        self.assertEqual(
-            [error for error in errors if not error.startswith("STALE_OVERRIDE")], [],
-            f"unexpected validation findings: {errors}",
-        )
-        stale_labels = {
-            error.split(": ", 1)[1].split(" -> ", 1)[0]
-            for error in errors if error.startswith("STALE_OVERRIDE")
-        }
-        self.assertEqual(stale_labels, {"Disney", "HBO", "网易云音乐", "Cloudflare"})
+        self.assertEqual(errors, [], f"unexpected mapping findings: {errors}")
 
     def test_matcher_output_snapshot_against_current_icon_head(self):
         repo = _icon_repo()
@@ -65,11 +56,39 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (141, 1))
+        self.assertEqual((len(icon_map), len(missing)), (142, 0))
+        self.assertEqual(missing, [])
+        pinned_revision = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
+        self.assertEqual(
+            icon_map["Podcast"],
+            f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{pinned_revision}/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png",
+        )
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "fd2297e8822c89a933a2a64515a4e049a586143d96c7c9d50ee5f0b1d383abd5")
+        pinned_revision = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
+        self.assertEqual(match_icons._OASIC_REVISION, pinned_revision)
+        scan_source = match_icons.scan_source()
+        self.assertIsNotNone(scan_source)
+        self.assertIn(pinned_revision, scan_source or "")
+        expected_paths = {
+            "Cloudflare": "Infrastructure/Cloudflare/Cloudflare.png",
+            "Disney": "Disney/DisneyPlus/DisneyPlus.png",
+            "HBO": "WarnerBrosDiscovery/HBOMax/HBOMax.png",
+            "网易云音乐": "NetEase/NetEaseCloudMusic/NetEaseCloudMusic.png",
+            "Podcast": "Media/Xiaoyuzhou/Xiaoyuzhou.png",
+        }
+        for strategy_group, relative_path in expected_paths.items():
+            with self.subTest(strategy_group=strategy_group):
+                self.assertEqual(
+                    icon_map[strategy_group],
+                    f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{pinned_revision}/icons/{relative_path}",
+                )
+        digest = hashlib.sha256(
+            json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        ).hexdigest()
+        self.assertEqual(digest, "a8aaa5612182c0840ee6998ce4265cdb670e647afd853646e8ee0123946de482")
+
 
 
 if __name__ == "__main__":
