@@ -10,7 +10,7 @@ Guards:
                                Android min / Nikki full / Nikki min: byte-identical
   * find-process-mode guard  — Contract is the policy source (Android strict / Nikki off baselines)
   * Oasisic authority guard  — manifest, matcher, daily-sync and checkout all use the pinned SHA
-  * icon baseline guard      — 142/142 matched, 0 missing, Podcast vs ApplePodcasts distinct
+  * icon baseline guard      — 143/143 matched, 0 missing, Podcast vs ApplePodcasts distinct
   * Oracle independence guard— oracle.py imports no contract/generator/matcher/ownership code
 
 Every failure is reported with check name, base SHA, head SHA, file, expected and
@@ -40,7 +40,7 @@ BYTE_IDENTICAL_CONFIGS = (
 )
 PRODUCTION_CONFIGS = (ANDROID_FULL, *BYTE_IDENTICAL_CONFIGS)
 EXPECTED_MODES = {"android": "strict", "nikki": "off"}
-EXPECTED_ICON_TOTAL = 142
+EXPECTED_ICON_TOTAL = 143
 PODCAST_MATCHER_SUFFIX = "Media/Xiaoyuzhou/Xiaoyuzhou.png"
 APPLE_PODCASTS_ICON_SUFFIX = "Apple/ApplePodcasts/ApplePodcasts.png"
 ORACLE_FIXTURES_PATH = "scripts/tests/oracle_fixtures.py"

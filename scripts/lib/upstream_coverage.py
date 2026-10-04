@@ -26,6 +26,8 @@ MANUAL_BRANDS = frozenset({
     # 子品牌：从父品牌手工提取服务域名
     'Gmail', 'GoogleMaps', 'GoogleNews', 'GooglePhotos', 'GoogleVoice',
     'Outlook', 'SiriAI',
+    # Apple Podcasts 专属域名手工维护（Podcast 保持 generic container）
+    'ApplePodcasts',
     # 手工维护的国内 / 社区品牌（三源均无独立类别）
     'Crunchyroll', 'NetEaseCloudMusic', 'NetEaseMail', 'NousResearch',
     'QQ', 'QQMail', 'QQMusic', 'RedNote', 'Taobao', 'TencentVideo',

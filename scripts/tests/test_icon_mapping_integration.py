@@ -56,7 +56,7 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (142, 0))
+        self.assertEqual((len(icon_map), len(missing)), (143, 0))
         self.assertEqual(missing, [])
         pinned_revision = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
         self.assertEqual(
@@ -87,7 +87,7 @@ class TestIconMappingIntegration(unittest.TestCase):
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "a8aaa5612182c0840ee6998ce4265cdb670e647afd853646e8ee0123946de482")
+        self.assertEqual(digest, "1be86c0c7d51aa7bad3d732ac292ee8b65f3f7ed4652c836c9f5a7eba8f26613")
 
 
 

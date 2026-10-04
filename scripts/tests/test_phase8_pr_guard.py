@@ -169,9 +169,9 @@ class IconBaselineGuardTest(unittest.TestCase):
         self.assertTrue(any("independent" in problem for problem in problems), problems)
 
     def test_icon_total_and_missing(self):
-        self.assertEqual(guard.icon_baseline_problems({f"g{i}": "url" for i in range(142)}, []), [])
+        self.assertEqual(guard.icon_baseline_problems({f"g{i}": "url" for i in range(143)}, []), [])
         self.assertTrue(guard.icon_baseline_problems({"a": "url"}, ["x"]))
-        self.assertTrue(guard.icon_baseline_problems({f"g{i}": "url" for i in range(141)}, []))
+        self.assertTrue(guard.icon_baseline_problems({f"g{i}": "url" for i in range(142)}, []))
 
 
 class OracleIndependenceGuardTest(unittest.TestCase):

@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-10-04
+
+### Added
+- **新增 Apple Podcasts 品牌规则集**（151 品牌 · 160 规则集，含 9 兜底共 160）— 从 generic `Podcast` 集移出 `podcasts.apple.com`，连同 `amp-api.podcasts.apple.com`、`applehosted.podcasts.apple.com` 独立为 `Apple` 子品牌规则集（`SUB_PARENT: ApplePodcasts → Apple`，显示名 `Apple Podcasts`，pinned Oasisic 图标 `Apple/ApplePodcasts/ApplePodcasts.png`）
+- **`Podcast` 保持 generic routing container** — 继续集中保留 `lastfm.freetls.fastly.net` / `ws.audioscrobbler.com` / `himalaya.com` / `last.fm`，不拆 Last.fm / Audioscrobbler / Himalaya
+- **四份 production config 接入** — Android/Nikki full/min 各新增 `Apple Podcasts` 策略组、`ApplePodcasts` provider 与 RULE-SET 引用；matcher 图标快照 142 → 143 / 0 缺失（digest 有意识更新）
+
+---
+
 ## 2026-10-03
 
 ### Changed

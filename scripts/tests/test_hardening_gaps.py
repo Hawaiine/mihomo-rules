@@ -189,14 +189,14 @@ class TestChangelogArithmetic(unittest.TestCase):
 
     def test_base_count_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 159', '含 8 兜底共 159', 1)
+        bad = text.replace('含 9 兜底共 160', '含 8 兜底共 160', 1)
         self.assertNotEqual(bad, text)
         errs = self._with(bad)
         self.assertTrue(any('兜底数' in e for e in errs), errs)
 
     def test_total_ruleset_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 159', '含 9 兜底共 158', 1)
+        bad = text.replace('含 9 兜底共 160', '含 9 兜底共 158', 1)
         errs = self._with(bad)
         self.assertTrue(any('规则集' in e for e in errs), errs)
 
