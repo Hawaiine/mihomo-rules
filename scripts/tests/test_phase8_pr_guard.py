@@ -238,5 +238,32 @@ class RevisionsTest(unittest.TestCase):
         )
 
 
+class IconRepoPathResolverTest(unittest.TestCase):
+    """C6 portability: the guard must follow the caller's icon checkout and never
+    embed or guess a machine-specific absolute path."""
+
+    def test_caller_supplied_path_is_honored(self):
+        self.assertEqual(
+            guard.icon_repo_path({"MIHOMO_ICON_REPO": "/tmp/any/icons"}),
+            Path("/tmp/any/icons"),
+        )
+
+    def test_never_guesses_an_absolute_machine_path(self):
+        resolved = guard.icon_repo_path({})
+        self.assertTrue(
+            resolved is None or resolved == ROOT / "Oasisic-Icons",
+            f"invented a machine path: {resolved!r}",
+        )
+
+    def test_helper_source_has_no_machine_specific_default(self):
+        source = Path(guard.__file__ or "").read_text(encoding="utf-8")
+        for marker in ("/opt/" "data", "/home/" "runner"):
+            self.assertNotIn(marker, source)
+
+    def test_missing_checkout_is_surfaced_as_unavailable(self):
+        problems = guard.pinned_checkout_problems(Path("/definitely/missing"))
+        self.assertTrue(any("not available" in problem for problem in problems), problems)
+
+
 if __name__ == "__main__":
     unittest.main()

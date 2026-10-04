@@ -21,7 +21,6 @@ class IconRevisionAuthorityTest(unittest.TestCase):
             env = {
                 **os.environ,
                 "OASIC_REVISION": "f0f3bc2a44616885682ee5f0e5921540b964e2d8",
-                "MIHOMO_ICON_REPO": "/opt/data/Oasisic-Icons",
             }
             result = subprocess.run(
                 [sys.executable, str(scripts / "match_icons.py")],

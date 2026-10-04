@@ -230,6 +230,21 @@ def pinned_checkout_problems(repo: Path | None, expected: str = PINNED_OASIC) ->
     return []
 
 
+def icon_repo_path(environ: Mapping[str, str]) -> Path | None:
+    """Resolve the pinned Oasisic checkout from the environment that owns it.
+
+    The caller (local shell or the Phase 8 PR workflow) declares the checkout via
+    ``MIHOMO_ICON_REPO``; when it is absent, only the repository-relative layout
+    used by the workflows is considered. No machine-specific absolute path is
+    embedded, and an unresolved checkout is reported instead of silently guessed.
+    """
+    supplied = (environ.get("MIHOMO_ICON_REPO") or "").strip()
+    if supplied:
+        return Path(supplied)
+    candidate = ROOT / "Oasisic-Icons"
+    return candidate if candidate.is_dir() else None
+
+
 # --------------------------------------------------------------------------- #
 # icon baseline / Podcast guard
 # --------------------------------------------------------------------------- #
@@ -405,7 +420,7 @@ def main() -> int:
         )
     except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
         problems.append(f"{MANIFEST_PATH}: cannot load from PR head: {exc}")
-    icon_repo = Path(os.environ.get("MIHOMO_ICON_REPO", "/opt/data/Oasisic-Icons"))
+    icon_repo = icon_repo_path(os.environ)
     problems += pinned_checkout_problems(icon_repo)
     results.append(("oasisic-authority-guard", expected, problems))
 
