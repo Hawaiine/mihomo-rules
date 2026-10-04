@@ -32,11 +32,12 @@ BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCI
 ICON_OVERRIDES = {
     # 图标仓库改过名 / 改过分类，自动匹配不到或需固定指向（对齐 Oasisic-Icons 2026-09 最新结构）
     'friDay影音': 'Media/friDayVideo/friDayVideo.png',
-    'Disney': 'Media/DisneyPlus/DisneyPlus.png',
-    'HBO': 'Media/HBOMAX/HBOMAX.png',
-    '网易云音乐': 'Music/NetEaseCloudMusic/NetEaseCloudMusic.png',
-    # 下列品牌在图标仓库中存在多个分类目录，固定指向避免扫描顺序变化导致路径漂移
-    'Cloudflare': 'DevOps/Cloudflare/Cloudflare.png',
+    # Oasisic canonical path changes (fixes the invalid historical overrides)
+    'Cloudflare': 'Infrastructure/Cloudflare/Cloudflare.png',
+    'Disney': 'Disney/DisneyPlus/DisneyPlus.png',
+    'HBO': 'WarnerBrosDiscovery/HBOMax/HBOMax.png',
+    '网易云音乐': 'NetEase/NetEaseCloudMusic/NetEaseCloudMusic.png',
+    'Podcast': 'Media/Xiaoyuzhou/Xiaoyuzhou.png',
     'OneDrive': 'Microsoft/OneDrive/OneDrive.png',
 }
 
