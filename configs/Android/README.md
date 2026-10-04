@@ -21,7 +21,7 @@
 |------|-----|------|
 | `mixed-port` | 7890 | HTTP/SOCKS5 混合代理端口 |
 | `port` / `socks-port` | 7891 / 7892 | 纯 HTTP / SOCKS5 端口（兼容旧客户端） |
-| `find-process-mode` | off | Android 端不匹配进程（VPN 模式） |
+| `find-process-mode` | strict | 默认进程匹配模式，由 Mihomo 判断是否启用进程匹配 |
 | `tun.enable` | false | Android 端关闭 TUN，仅在 VPN 模式下运行 |
 | `tcp-concurrent` | true | 并发连接所有 IP 取最快握手 |
 | `unified-delay` | true | 统一延迟测试 |

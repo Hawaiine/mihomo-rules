@@ -1,0 +1,92 @@
+{
+  "contract_version": "8F-1",
+  "owner": "Hawaiine/mihomo-rules maintainers",
+  "status": "foundation",
+  "unknown_policy": {
+    "preserved_template_user_input": "preserve",
+    "generated": "fail_closed",
+    "unclassified": "stop"
+  },
+  "canonical_business_model": {
+    "sources": ["ruleset", "strategy_group_mapping", "ownership_mapping", "icon_catalog", "reviewed_overrides"],
+    "managed_regions": ["brand_proxy_groups", "rule_providers", "generated_rules", "brand_icons"],
+    "identity_keys": ["technical_id", "strategy_group", "parent_chain", "icon_canonical_id"],
+    "order_sensitive": ["brand_order", "rules", "provider_order", "proxy_group_order"]
+  },
+  "platforms": {
+    "shared": {
+      "mixed-port": 7890,
+      "keep-alive-interval": 15
+    },
+    "android": {
+      "port": 7891,
+      "socks-port": 7892,
+      "keep-alive-idle": 15,
+      "find-process-mode": {
+        "value": "strict",
+        "status": "APPROVED_CURRENT_BASELINE",
+        "source": "origin/main production config",
+        "official_semantics": "default; Mihomo determines whether to enable process matching"
+      },
+      "external-controller": "127.0.0.1:9090",
+      "tun": {"enable": false},
+      "dns.listen": "127.0.0.1:53",
+      "applications_rule": "present"
+    },
+    "nikki": {
+      "port": 8080,
+      "socks-port": 1080,
+      "keep-alive-idle": 600,
+      "find-process-mode": {
+        "value": "off",
+        "status": "APPROVED_CURRENT_BASELINE",
+        "source": "origin/main production config",
+        "official_semantics": "does not match processes; recommended for routers"
+      },
+      "external-controller": "0.0.0.0:9090",
+      "tun": {"enable": true, "device": "nikki", "stack": "mixed", "auto-route": false, "auto-redirect": false, "auto-detect-interface": false, "disable-icmp-forwarding": true, "dns-hijack": ["tcp://any:53", "udp://any:53"]},
+      "dns.listen": "0.0.0.0:1053",
+      "applications_rule": "absent"
+    }
+  },
+  "full_min": {
+    "full": {"comments": "preserve", "blank_lines": "readable"},
+    "min": {"comments": "suppress", "blank_lines": "compact"},
+    "semantic_projection_must_match": true
+  },
+  "template_policy": {
+    "owner": "Hawaiine/mihomo-rules maintainers",
+    "transition_source": "current production config adapter",
+    "target_source": "explicit contract-owned shared core plus platform profiles",
+    "preserve_unknown_fields": true,
+    "production_config_is_template_ssot": false
+  },
+  "user_local_input_policy": {
+    "regions": ["proxy-providers"],
+    "fields": ["name", "url", "path", "interval", "health-check"],
+    "generator_may_overwrite": false,
+    "sensitive_values_must_not_be_logged": true
+  },
+  "override_policy": {
+    "source": "version-controlled explicit override input",
+    "direct_output_edit": "forbidden",
+    "required_metadata": ["owner", "reason", "scope", "revision"]
+  },
+  "system_group_policy": {
+    "allowed_repairs": ["remove_duplicate_proxy_groups_header", "repair_known_empty_leak_group", "inject_missing_region_groups_into_allowlisted_basic_groups", "compact_min_spacing", "remove_allowlisted_duplicate_provider_comment"],
+    "unknown_repair": "fail_closed"
+  },
+  "icon_policy": {
+    "authority": "pinned_oasisic_snapshot",
+    "manifest": "scripts/config_contract/oasisic_revision.json",
+    "url_mode": "commit_pinned",
+    "reviewed_override_allowed": true
+  },
+  "publication_policy": {
+    "unit": ["configs/Android/config.yaml", "configs/Android/config.min.yaml", "configs/Nikki/config.yaml", "configs/Nikki/config.min.yaml"],
+    "sequence": ["generate", "stage", "validate", "publish", "read_back_verify"],
+    "rollback_on": ["publish_failure", "post_publish_verification_failure"],
+    "rollback_failure": "BLOCKED",
+    "atomic_four_file_rename_claim": false
+  }
+}

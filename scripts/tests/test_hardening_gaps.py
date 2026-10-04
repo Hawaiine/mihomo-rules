@@ -90,24 +90,42 @@ class TestReadmeDuplicateOccurrence(unittest.TestCase):
 
 
 class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
-    """F3：判定依据必须是 configs/ 实际文件，而不是 /tmp 暂存"""
+    """F3：判定依据必须是隔离副本中的 configs/，不能写真实 production。"""
 
-    def test_generate_config_rewrites_hand_edited_config(self):
-        original = CFG.read_text(encoding='utf-8')
-        try:
-            CFG.write_text(original + '\n# 手工插入的脏行\n', encoding='utf-8')
-            sp.run(['python3', str(_SCRIPTS / 'generate_config.py')],
-                   cwd=ROOT, capture_output=True, text=True)
-            after = CFG.read_text(encoding='utf-8')
-            self.assertNotIn('手工插入的脏行', after, 'generate_config 未纠正手工改动')
-            self.assertEqual(after, original, 'generate_config 未还原为生成结果')
-        finally:
-            CFG.write_text(original, encoding='utf-8')
+    def _isolated_repo(self):
+        tmp = Path(tempfile.mkdtemp(prefix='generate-config-test-'))
+        isolated = tmp / 'repo'
+        shutil.copytree(
+            ROOT,
+            isolated,
+            ignore=shutil.ignore_patterns('.git', '__pycache__', '.pytest_cache'),
+        )
+        self.addCleanup(shutil.rmtree, tmp, True)
+        return isolated
 
-    def test_second_run_is_noop(self):
-        r = sp.run(['python3', str(_SCRIPTS / 'generate_config.py')],
-                   cwd=ROOT, capture_output=True, text=True)
-        self.assertIn('无变化', r.stdout)
+    def test_generate_config_removes_manual_noise(self):
+        isolated = self._isolated_repo()
+        cfg = isolated / 'configs' / 'Android' / 'config.yaml'
+        original = cfg.read_text(encoding='utf-8')
+        cfg.write_text(original + '\n# 手工插入的脏行\n', encoding='utf-8')
+        sp.run(['python3', 'scripts/generate_config.py'],
+               cwd=isolated, capture_output=True, text=True)
+        after = cfg.read_text(encoding='utf-8')
+        self.assertNotIn('手工插入的脏行', after, 'generate_config 未纠正手工改动')
+
+    def test_second_run_is_idempotent_after_icon_revision(self):
+        isolated = self._isolated_repo()
+        cfg = isolated / 'configs' / 'Android' / 'config.yaml'
+        first = sp.run(['python3', 'scripts/generate_config.py'],
+                       cwd=isolated, capture_output=True, text=True)
+        revised = cfg.read_text(encoding='utf-8')
+        self.assertNotIn('/main/icons/', revised)
+        self.assertIn('f0f3bc2a44616885682ee5f0e5921540b964e2d8', revised)
+        second = sp.run(['python3', 'scripts/generate_config.py'],
+                        cwd=isolated, capture_output=True, text=True)
+        self.assertEqual(cfg.read_text(encoding='utf-8'), revised)
+        self.assertIn('无变化', second.stdout)
+        self.assertNotIn('无变化', first.stdout)
 
 
 class TestReadmeCheckIsPerOccurrence(unittest.TestCase):

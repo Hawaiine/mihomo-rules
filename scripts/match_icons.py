@@ -5,11 +5,11 @@ match_icons.py — 品牌图标映射的唯一入口
 `build_icon_map()` 返回 {策略组名: icon URL}，供 generate_config.py 使用；
 `python3 scripts/match_icons.py` 直接打印映射与缺失清单。
 
-扫描基准优先 Oasisic-Icons 的 git tree（origin/main → main → HEAD），
-避免读到工作区里已被上游删除或尚未推送的文件而生成 404 链接；
-没有 git 仓库时回退扫描文件系统。
+扫描基准只读取 oasisic_revision.json 固定的 SHA。
+找不到该 tree 时失败，不回退 origin/main、main、HEAD 或工作区文件。
 """
 import os
+import json
 import re
 import subprocess
 import sys
@@ -19,7 +19,15 @@ ROOT = Path(__file__).resolve().parent.parent
 ICON_REPO = Path(os.environ.get('MIHOMO_ICON_REPO', str(ROOT / 'Oasisic-Icons')))
 if not ICON_REPO.exists():
     ICON_REPO = Path('/opt/data/Oasisic-Icons')
-GITHUB_BASE = 'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons'
+_REVISION_MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
+try:
+    with _REVISION_MANIFEST.open(encoding='utf-8') as f:
+        _OASIC_REVISION = json.load(f)['revision']
+except (OSError, KeyError, json.JSONDecodeError) as exc:
+    raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}') from exc
+if not _OASIC_REVISION:
+    raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}')
+GITHUB_BASE = f'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{_OASIC_REVISION}/icons'
 
 sys.path.insert(0, str(ROOT / 'scripts'))
 from commit_writer import STRATEGY_GROUP_MAP
@@ -56,7 +64,7 @@ def is_emoji_group(sg):
 
 def _tree_paths():
     """读取图标仓库 git tree 中的 png 路径，返回 (相对路径列表, 来源) 或 (None, None)"""
-    for ref in ('origin/main', 'main', 'HEAD'):
+    for ref in (_OASIC_REVISION,):
         try:
             r = subprocess.run(
                 ['git', '-C', str(ICON_REPO), 'ls-tree', '-r', '--name-only', ref, '--', 'icons/'],
@@ -87,31 +95,7 @@ def scan_icons():
         _SCAN_SOURCE = src
         return icons
 
-    # 回退：直接扫描文件系统
-    icon_dir = ICON_REPO / 'icons'
-    if not icon_dir.exists():
-        print(f'❌ Oasisic-Icons 不存在: {icon_dir}')
-        _SCAN_SOURCE = f'缺失 ({ICON_REPO})'
-        return icons
-
-    for cat_dir in sorted(icon_dir.iterdir()):
-        if not cat_dir.is_dir():
-            continue
-        category = cat_dir.name
-        for brand_dir in sorted(cat_dir.iterdir()):
-            if not brand_dir.is_dir():
-                continue
-            brand = brand_dir.name
-            rel_path = f'{category}/{brand}/{brand}.png'
-            if (brand_dir / f'{brand}.png').exists():
-                icons[brand.lower()] = (category, rel_path)
-            for png_file in sorted(brand_dir.glob('*.png')):
-                if png_file.name == f'{brand}.png':
-                    continue
-                icons[png_file.stem.lower()] = (category, f'{category}/{brand}/{png_file.name}')
-
-    _SCAN_SOURCE = f'{ICON_REPO} (工作区扫描)'
-    return icons
+    raise RuntimeError(f'固定 Oasisic revision 不存在或无法读取: {ICON_REPO}@{_OASIC_REVISION}')
 
 
 def scan_source():
