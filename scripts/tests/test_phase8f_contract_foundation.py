@@ -36,10 +36,28 @@ def _child_env(environ=None) -> dict:
     return env
 
 
-def _resolved_icon_repo():
-    """Return the icon checkout used by the caller, or None when unavailable."""
-    value = os.environ.get("MIHOMO_ICON_REPO")
-    if value and Path(value).is_dir():
+def _require_icon_repo(environ) -> Path:
+    """Fail closed unless the caller supplied a usable Oasisic checkout."""
+    repo = _resolved_icon_repo(environ)
+    if repo is None:
+        supplied = (environ.get("MIHOMO_ICON_REPO") or "<unset>").strip()
+        raise AssertionError(
+            f"MIHOMO_ICON_REPO={supplied} does not contain config/brands.json"
+        )
+    if not (repo / "config" / "brands.json").is_file():
+        raise AssertionError(
+            f"MIHOMO_ICON_REPO={repo} does not contain config/brands.json"
+        )
+    return repo
+
+
+def _resolved_icon_repo(environ=None):
+    """Return the icon checkout named by the supplied environment or repo layout."""
+    env = os.environ if environ is None else environ
+    value = env.get("MIHOMO_ICON_REPO")
+    if value:
+        # An explicit but unusable caller path is an error, not permission to
+        # silently fall back to a different checkout.
         return Path(value)
     return ICON_REPO_CANDIDATE if ICON_REPO_CANDIDATE.is_dir() else None
 
@@ -182,9 +200,7 @@ class IconRepoPortabilityTest(unittest.TestCase):
 
     def test_child_run_honors_the_caller_supplied_repo_path(self):
         """A temporary, caller-supplied repository location must work unchanged."""
-        repo = _resolved_icon_repo()
-        if repo is None:
-            self.skipTest("no Oasisic checkout available (set MIHOMO_ICON_REPO)")
+        repo = _require_icon_repo(os.environ)
         with tempfile.TemporaryDirectory(prefix="icon-repo-link-") as temp:
             link = Path(temp) / "Oasisic-Icons"
             link.symlink_to(repo, target_is_directory=True)
@@ -198,6 +214,27 @@ class IconRepoPortabilityTest(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("skipped", result.stderr + result.stdout)
+
+    def test_invalid_repo_path_fails_closed_with_explicit_message(self):
+        """A missing path must fail immediately with the requested diagnostic."""
+        with tempfile.TemporaryDirectory(prefix="icon-repo-missing-") as temp:
+            missing = Path(temp) / "absent-Oasisic-Icons"
+            with self.assertRaisesRegex(
+                AssertionError,
+                rf"MIHOMO_ICON_REPO={missing} does not contain config/brands\.json",
+            ):
+                _require_icon_repo({"MIHOMO_ICON_REPO": str(missing)})
+
+    def test_existing_repo_without_brands_manifest_fails_closed(self):
+        """An existing but incomplete checkout is not accepted as a valid fixture."""
+        with tempfile.TemporaryDirectory(prefix="icon-repo-no-manifest-") as temp:
+            incomplete = Path(temp) / "Oasisic-Icons"
+            incomplete.mkdir()
+            with self.assertRaisesRegex(
+                AssertionError,
+                rf"MIHOMO_ICON_REPO={incomplete} does not contain config/brands\.json",
+            ):
+                _require_icon_repo({"MIHOMO_ICON_REPO": str(incomplete)})
 
     def test_child_run_fails_loudly_when_repo_lacks_the_pinned_revision(self):
         """A repository that exists but lacks the pinned revision must fail the
@@ -218,14 +255,28 @@ class IconRepoPortabilityTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_child_run_names_the_caller_supplied_path_for_an_invalid_repo(self):
-        """An unusable MIHOMO_ICON_REPO must be reported, never silently tolerated."""
+        """The child harness must fail (not skip) and name an invalid repo path."""
         with tempfile.TemporaryDirectory(prefix="icon-repo-missing-") as temp:
             missing = Path(temp) / "absent-Oasisic-Icons"
             env = _child_env({"MIHOMO_ICON_REPO": str(missing)})
-            result = _run_child(ROOT, env, "scripts.tests.test_icon_mapping_integration")
-        output = result.stdout + result.stderr
-        self.assertIn(f"MIHOMO_ICON_REPO={missing}", output)
-        self.assertIn("skipped", output)
+            child = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "from scripts.tests.test_phase8f_contract_foundation import _require_icon_repo; import os; _require_icon_repo(os.environ)",
+                ],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        output = child.stdout + child.stderr
+        self.assertNotEqual(child.returncode, 0, output)
+        self.assertIn(
+            f"MIHOMO_ICON_REPO={missing} does not contain config/brands.json",
+            output,
+        )
+        self.assertNotIn("skipped", output)
 
 
 if __name__ == "__main__":
