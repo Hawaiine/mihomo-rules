@@ -31,7 +31,7 @@ keep-alive-interval: 15
 # TCP KeepAlive 空闲时间 (秒), 无数据后开始发送探测包
 keep-alive-idle: 15
 
-# 进程匹配模式: strict (手机端, 匹配所有进程)
+# 进程匹配模式: strict (手机端, 默认模式, 由 Mihomo 判断是否启用进程匹配)
 find-process-mode: strict
 
 # RESTful API 监听地址 (Android: 仅本地 127.0.0.1)

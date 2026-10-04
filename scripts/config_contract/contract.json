@@ -22,7 +22,12 @@
       "port": 7891,
       "socks-port": 7892,
       "keep-alive-idle": 15,
-      "find-process-mode": {"value": "strict", "status": "UNKNOWN", "reason": "config is strict; Android README says off"},
+      "find-process-mode": {
+        "value": "strict",
+        "status": "APPROVED_CURRENT_BASELINE",
+        "source": "origin/main production config",
+        "official_semantics": "default; Mihomo determines whether to enable process matching"
+      },
       "external-controller": "127.0.0.1:9090",
       "tun": {"enable": false},
       "dns.listen": "127.0.0.1:53",
@@ -32,7 +37,12 @@
       "port": 8080,
       "socks-port": 1080,
       "keep-alive-idle": 600,
-      "find-process-mode": false,
+      "find-process-mode": {
+        "value": "off",
+        "status": "APPROVED_CURRENT_BASELINE",
+        "source": "origin/main production config",
+        "official_semantics": "does not match processes; recommended for routers"
+      },
       "external-controller": "0.0.0.0:9090",
       "tun": {"enable": true, "device": "nikki", "stack": "mixed", "auto-route": false, "auto-redirect": false, "auto-detect-interface": false, "disable-icmp-forwarding": true, "dns-hijack": ["tcp://any:53", "udp://any:53"]},
       "dns.listen": "0.0.0.0:1053",

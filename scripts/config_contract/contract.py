@@ -40,6 +40,14 @@ def load_contract(path: Path | None = None) -> dict[str, Any]:
     platforms = data["platforms"]
     if set(platforms) != {"shared", "android", "nikki"}:
         raise ContractError("platforms must contain shared, android, and nikki")
+    for platform in ("android", "nikki"):
+        mode = platforms[platform].get("find-process-mode")
+        if not isinstance(mode, dict) or mode.get("status") != "APPROVED_CURRENT_BASELINE":
+            raise ContractError(f"{platform} find-process-mode must record an approved current baseline")
+        if mode.get("value") not in {"strict", "off", "always"} or not mode.get("official_semantics"):
+            raise ContractError(f"{platform} find-process-mode baseline metadata is invalid")
+    if platforms["android"]["find-process-mode"]["value"] != "strict" or platforms["nikki"]["find-process-mode"]["value"] != "off":
+        raise ContractError("find-process-mode values must match approved production baselines")
     if platforms["android"]["applications_rule"] != "present" or platforms["nikki"]["applications_rule"] != "absent":
         raise ContractError("Applications invariant is not the approved platform policy")
     if data["publication_policy"].get("atomic_four_file_rename_claim") is not False:
@@ -77,8 +85,13 @@ def check_platform(config: dict[str, Any], platform: str, contract: dict[str, An
             errors.append(f"{platform} {key}: {config.get(key)!r} != {profile[key]!r}")
     mode = profile["find-process-mode"]
     expected_mode = mode["value"] if isinstance(mode, dict) else mode
-    if config.get("find-process-mode") != expected_mode:
-        errors.append(f"{platform} find-process-mode mismatch")
+    actual_mode = config.get("find-process-mode")
+    # PyYAML's YAML 1.1 loader parses the unquoted Mihomo scalar `off` as False.
+    # Normalize only that representation so runtime configs compare to the string policy.
+    if actual_mode is False:
+        actual_mode = "off"
+    if actual_mode != expected_mode:
+        errors.append(f"{platform} find-process-mode does not match approved current baseline ({expected_mode!r})")
     if config.get("dns", {}).get("listen") != profile["dns.listen"]:
         errors.append(f"{platform} dns.listen mismatch")
     if config.get("tun", {}).get("enable") != profile["tun"]["enable"]:

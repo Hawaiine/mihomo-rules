@@ -43,7 +43,7 @@ def evaluate(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
         got = actual_platforms.get(platform, {})
         for key in PLATFORM_KEYS:
             if got.get(key) != want.get(key):
-                errors.append(f"platforms.{platform}.{key} mismatch")
+                errors.append(f"platforms.{platform}.{key} does not match approved current baseline")
         applications = [rule for rule in got.get("rules", []) if "RULE-SET,Applications," in str(rule)]
         policy = want.get("applications_rule")
         if policy == "present" and len(applications) != 1:
