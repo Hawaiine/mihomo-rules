@@ -9,10 +9,12 @@ test_verify_hardening.py — 校验强化后的不变量测试
 3. verify_configs：check_full_comment_order 条数不一致必须 FAIL（zip 截断不得掩盖）、
    emoji 前缀组不得带 icon、出站目标引号检查不依赖具体组名白名单。
 """
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -148,6 +150,59 @@ class TestVerifyRulesetsHardening(unittest.TestCase):
 
 class TestVerifyConfigsHardening(unittest.TestCase):
     """verify_configs 的条数断言 / emoji icon / 引号检查"""
+
+    def _make_icon_repo(self, root):
+        repo = Path(root) / "Oasisic-Icons"
+        (repo / "icons" / "Category").mkdir(parents=True)
+        (repo / "icons" / "Category" / "icon.png").write_bytes(b"png")
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.invalid"], check=True)
+        subprocess.run(["git", "-C", str(repo), "add", "icons"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "fixture"], check=True)
+        return repo
+
+    def test_repo_relative_fallback_is_used_without_environment_override(self):
+        """No env override: verifier finds ROOT/Oasisic-Icons, no machine path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = self._make_icon_repo(root)
+            candidates = verify_configs._icon_repo_candidates(root=root, environ={})
+            self.assertEqual(candidates, [None, str(repo)])
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
+                paths, source = verify_configs.load_icon_reference()
+            self.assertEqual(paths, {"Category/icon.png"})
+            self.assertEqual(source, f"{repo}@HEAD")
+
+    def test_explicit_environment_override_has_priority(self):
+        """MIHOMO_ICON_REPO is tried before the project-local fallback."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"
+            root.mkdir()
+            fallback_repo = self._make_icon_repo(root)
+            override_root = Path(tmp) / "override-root"
+            override_repo = self._make_icon_repo(override_root)
+            candidates = verify_configs._icon_repo_candidates(
+                root=root,
+                environ={"MIHOMO_ICON_REPO": str(override_repo)},
+            )
+            self.assertEqual(candidates, [str(override_repo), str(fallback_repo)])
+            with patch.object(verify_configs, "ROOT", root), patch.dict(
+                "os.environ", {"MIHOMO_ICON_REPO": str(override_repo)}, clear=True
+            ):
+                paths, source = verify_configs.load_icon_reference()
+            self.assertEqual(paths, {"Category/icon.png"})
+            self.assertEqual(source, f"{override_repo}@HEAD")
+
+    def test_missing_icon_repositories_still_skip_existence_reference(self):
+        """This narrow path cleanup preserves the existing missing-repo behavior."""
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(verify_configs, "ROOT", Path(tmp)), patch.dict(
+                "os.environ", {}, clear=True
+            ):
+                paths, source = verify_configs.load_icon_reference()
+            self.assertIsNone(paths)
+            self.assertEqual(source, "未找到 Oasisic-Icons")
 
     def test_comment_order_length_mismatch_fails(self):
         """注释 RULE-SET 少于品牌组 → 必须 FAIL（旧实现 zip 截断后 PASS）"""

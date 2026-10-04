@@ -51,11 +51,12 @@ SYSTEM_GROUPS = list(getattr(_GEN, 'SYSTEM_GROUPS', []))
 REGION_GROUPS = list(getattr(_GEN, 'REGION_GROUPS', []))
 
 # Oasisic-Icons 仓库位置（用于校验 icon 引用是否真实存在）
-ICON_REPO_CANDIDATES = [
-    os.environ.get('MIHOMO_ICON_REPO'),
-    str(ROOT / 'Oasisic-Icons'),
-    '/opt/data/Oasisic-Icons',
-]
+def _icon_repo_candidates(root=None, environ=None):
+    """只返回调用方显式指定与项目内相对位置，不猜机器目录。"""
+    env = os.environ if environ is None else environ
+    project_root = ROOT if root is None else Path(root)
+    return [env.get('MIHOMO_ICON_REPO'), str(project_root / 'Oasisic-Icons')]
+
 
 # 从 commit_writer.py 加载
 def load_sg_map():
@@ -701,10 +702,12 @@ def check_icons_exist(lines, variant, icon_ref):
     return True
 
 
-def load_icon_reference():
+def load_icon_reference(root=None, environ=None):
     """返回 ((icon 相对路径集合), 来源描述) 或 (None, 原因)"""
     import subprocess
-    for cand in ICON_REPO_CANDIDATES:
+    env = os.environ if environ is None else environ
+    candidates = _icon_repo_candidates(root=root, environ=env)
+    for cand in candidates:
         if not cand or not os.path.isdir(os.path.join(cand, 'icons')):
             continue
         for ref in ('origin/main', 'main', 'HEAD'):
