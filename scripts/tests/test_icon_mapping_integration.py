@@ -45,16 +45,7 @@ class TestIconMappingIntegration(unittest.TestCase):
             technical_ids, group_of, emoji_skipped_brands(), catalog, paths,
             overrides=ICON_OVERRIDES,
         )
-        # Only stale-override findings are expected today; new findings must be reviewed here.
-        self.assertEqual(
-            [error for error in errors if not error.startswith("STALE_OVERRIDE")], [],
-            f"unexpected validation findings: {errors}",
-        )
-        stale_labels = {
-            error.split(": ", 1)[1].split(" -> ", 1)[0]
-            for error in errors if error.startswith("STALE_OVERRIDE")
-        }
-        self.assertEqual(stale_labels, {"Disney", "HBO", "网易云音乐", "Cloudflare"})
+        self.assertEqual(errors, [], f"unexpected mapping findings: {errors}")
 
     def test_matcher_output_snapshot_against_current_icon_head(self):
         repo = _icon_repo()
@@ -65,11 +56,16 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (141, 1))
+        self.assertEqual((len(icon_map), len(missing)), (142, 0))
+        self.assertEqual(missing, [])
+        self.assertEqual(
+            icon_map["Podcast"],
+            "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png",
+        )
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "b01e767a82e290b0c9da32d4daec7db24796dbb8ea72c2cdc8acfe4d807187ac")
+        self.assertEqual(digest, "146e5b49f262c25a2ece8fac0971be9adf1500ba746344cee6b7709a966b4f68")
 
 
 if __name__ == "__main__":
