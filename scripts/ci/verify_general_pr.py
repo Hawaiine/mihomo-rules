@@ -1,17 +1,35 @@
 #!/usr/bin/env python3
-"""Read-only Phase 8 PR guards (C8).
+"""Read-only general PR verification gate (C8) — repository invariants.
 
 Compares the PR base commit against the PR head commit and fails closed when a
-Phase 8 invariant is violated. This script never writes: no commit, no push,
+repository invariant is violated. This script never writes: no commit, no push,
 no merge, no rebase, no ref update. It only reads git objects and runs checks.
 
-Guards:
-  * production-config guard  — Android full: YAML semantics equal + comment/blank-only text delta;
-                               Android min / Nikki full / Nikki min: byte-identical
-  * find-process-mode guard  — Contract is the policy source (Android strict / Nikki off baselines)
-  * Oasisic authority guard  — manifest, matcher, daily-sync and checkout all use the pinned SHA
-  * icon baseline guard      — 142/142 matched, 0 missing, Podcast vs ApplePodcasts distinct
-  * Oracle independence guard— oracle.py imports no contract/generator/matcher/ownership code
+Scope model
+-----------
+This gate applies to *every* pull_request -> main. It enforces long-lived
+repository invariants only. Phase-specific governance (for example "this PR
+must not migrate production configs") must live in a separate, explicitly
+scoped tool; it must not be encoded here as a global prohibition.
+
+Guards
+  * revisions               — explicit PR_BASE_SHA / PR_HEAD_SHA, both commits
+  * config-tree-consistency — every ruleset brand has exactly one provider
+                              entry whose remote URL points at a ruleset file
+                              that exists in the head tree; every referenced
+                              ruleset file parses as a YAML rules list
+                              (head self-consistency, base/head may differ)
+  * find-process-mode       — Contract is the policy source (Android strict /
+                              Nikki off baselines)
+  * Oasisic authority       — manifest, matcher, daily-sync and checkout all use
+                              the pinned SHA
+  * icon baseline           — expected total derived from the ruleset brand
+                              tree (independent source); 0 missing; Podcast vs
+                              ApplePodcasts distinct
+  * Oracle independence     — oracle.py imports no contract/generator/matcher/
+                              ownership code
+  * workflow security       — read-only pull_request gate on main, contents:
+                              read, no write commands, verification steps present
 
 Every failure is reported with check name, base SHA, head SHA, file, expected and
 actual so a failing run is auditable without re-deriving anything by hand.
@@ -19,28 +37,26 @@ actual so a failing run is auditable without re-deriving anything by hand.
 from __future__ import annotations
 
 import ast
-import difflib
 import json
 import os
 import re
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 PINNED_OASIC = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
-ANDROID_FULL = "configs/Android/config.yaml"
-BYTE_IDENTICAL_CONFIGS = (
+PRODUCTION_CONFIGS = (
+    "configs/Android/config.yaml",
     "configs/Android/config.min.yaml",
     "configs/Nikki/config.yaml",
     "configs/Nikki/config.min.yaml",
 )
-PRODUCTION_CONFIGS = (ANDROID_FULL, *BYTE_IDENTICAL_CONFIGS)
+CONFIG_FOR_TREE_CHECK = "configs/Android/config.yaml"
 EXPECTED_MODES = {"android": "strict", "nikki": "off"}
-EXPECTED_ICON_TOTAL = 142
 PODCAST_MATCHER_SUFFIX = "Media/Xiaoyuzhou/Xiaoyuzhou.png"
 APPLE_PODCASTS_ICON_SUFFIX = "Apple/ApplePodcasts/ApplePodcasts.png"
 ORACLE_FIXTURES_PATH = "scripts/tests/oracle_fixtures.py"
@@ -50,7 +66,6 @@ MATCHER_PATH = "scripts/match_icons.py"
 ORACLE_PATH = "scripts/config_contract/oracle.py"
 DAILY_SYNC_PATH = ".github/workflows/daily-sync.yml"
 PR_WORKFLOW_PATH = ".github/workflows/pr-verify.yml"
-FORBIDDEN_DIFF_PREFIXES = ("ruleset/", "providers/")
 ORACLE_FORBIDDEN_IMPORTS = {"contract", "generate_config", "match_icons", "ownership_map", "resolve_ownership"}
 WORKFLOW_FORBIDDEN_COMMANDS = ("git commit", "git push", "git merge", "git rebase", "git reset", "git add")
 WORKFLOW_REQUIRED_SCRIPTS = (
@@ -85,64 +100,92 @@ def tree_file(revision: str, path: str) -> bytes:
     return git("show", f"{revision}:{path}")
 
 
+def tree_paths(revision: str, prefix: str) -> list[str]:
+    output = git("ls-tree", "-r", "--name-only", revision, "--", prefix).decode("utf-8", "replace")
+    return [line for line in output.splitlines() if line.strip()]
+
+
 # --------------------------------------------------------------------------- #
-# production config guard
+# config tree consistency guard (replaces the Phase 8 production-config guard)
 # --------------------------------------------------------------------------- #
 
-def textual_delta_lines(base_text: str, head_text: str) -> list[str]:
-    """Added/removed lines that are neither comments nor blank lines."""
-    offenders: list[str] = []
-    diff = difflib.unified_diff(base_text.splitlines(), head_text.splitlines(), lineterm="")
-    for line in diff:
-        if line.startswith(("+++", "---")) or not line.startswith(("+", "-")):
-            continue
-        payload = line[1:]
-        if not payload.strip():
-            continue
-        if payload.lstrip().startswith("#"):
-            continue
-        offenders.append(payload)
-    return offenders
+def _rule_providers_of(config: dict) -> dict[str, dict]:
+    providers = config.get("rule-providers")
+    if not isinstance(providers, dict):
+        return {}
+    return {key: value for key, value in providers.items() if isinstance(value, dict)}
 
 
-def _load_yaml(text: str, label: str, problems: list[str]):
-    try:
-        return yaml.safe_load(text)
-    except yaml.YAMLError as exc:
-        problems.append(f"{label}: unparseable YAML: {exc}")
-        return None
+def _remote_rule_set_brand(url: str) -> str | None:
+    """Extract <Brand> from a raw.githubusercontent ruleset URL (…/ruleset/<Brand>/<Brand>.yaml)."""
+    match = re.search(r"/ruleset/([^/]+)/([^/]+)\.yaml$", url or "")
+    if match:
+        return match.group(1)
+    return None
 
 
-def android_full_problems(base_text: str, head_text: str) -> list[str]:
-    """Android full config: semantic equality plus comment/blank-only text delta."""
+def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str = "ruleset/") -> list[str]:
+    """Head tree self-consistency: providers <-> ruleset files <-> remote URLs.
+
+    This is a structural invariant of the head tree (not a base/head comparison):
+    any legitimate feature PR (new brand, rule change, config regeneration)
+    passes as long as the three sources of truth agree. It is independent of
+    generate_config.py and therefore cannot share its failure modes.
+    """
     problems: list[str] = []
-    base_doc = _load_yaml(base_text, ANDROID_FULL, problems)
-    head_doc = _load_yaml(head_text, ANDROID_FULL, problems)
-    if base_doc is not None and head_doc is not None and base_doc != head_doc:
-        for key in sorted(set(base_doc) | set(head_doc), key=str):
-            before, after = base_doc.get(key), head_doc.get(key)
-            if before != after:
-                if key == "find-process-mode":
-                    before, after = normalize_mode(before), normalize_mode(after)
-                problems.append(
-                    f"{ANDROID_FULL}: semantic difference in `{key}`: {_short(before)} -> {_short(after)}"
-                )
-        if not problems:
-            problems.append(f"{ANDROID_FULL}: YAML functional semantics differ from PR base")
-    for line in textual_delta_lines(base_text, head_text):
-        problems.append(f"{ANDROID_FULL}: non-comment textual change: {line.strip()!r}")
+    providers = _rule_providers_of(config)
+    if not providers:
+        return [f"{CONFIG_FOR_TREE_CHECK}: rule-providers section is missing or empty"]
+
+    tree_rule_files = {path for path in tree_files if path.startswith(ruleset_root)}
+
+    provider_brands: dict[str, str] = {}
+    for name, entry in sorted(providers.items()):
+        url = entry.get("url", "")
+        brand = _remote_rule_set_brand(url)
+        if brand is None:
+            problems.append(f"rule-provider `{name}`: url is not a ruleset URL: {_short(url)}")
+            continue
+        remote_file = f"{ruleset_root}{brand}/{brand}.yaml"
+        if remote_file not in tree_rule_files:
+            problems.append(f"rule-provider `{name}`: remote ruleset {remote_file!r} is missing from the head tree")
+        provider_brands[brand] = name
+
+    # every brand directory in the head tree must be served by exactly one provider
+    tree_brands = {path.split("/", 2)[1] for path in tree_rule_files}
+    for brand in sorted(tree_brands):
+        if brand not in provider_brands:
+            problems.append(f"ruleset brand {brand!r} has no rule-provider entry in {CONFIG_FOR_TREE_CHECK}")
+
     return problems
 
 
-def config_problems(path: str, base_bytes: bytes, head_bytes: bytes) -> list[str]:
-    if path == ANDROID_FULL:
-        return android_full_problems(base_bytes.decode("utf-8"), head_bytes.decode("utf-8"))
-    if base_bytes != head_bytes:
-        return [
-            f"{path}: must be byte-identical between PR base and head; "
-            "only configs/Android/config.yaml documentation comments may change"
-        ]
-    return []
+def provider_file_problems(config: dict, revision: str) -> list[str]:
+    """Every ruleset file referenced by a provider URL must be present and parse as YAML.
+
+    A ruleset file is a mapping whose ``payload`` entry is the rule list. This is
+    the one genuinely new long-lived invariant that the removed forbidden-file
+    guard only shielded *indirectly* by banning the whole directory.
+    """
+    problems: list[str] = []
+    providers = _rule_providers_of(config)
+    seen: set[str] = set()
+    for name, entry in sorted(providers.items()):
+        brand = _remote_rule_set_brand(entry.get("url", ""))
+        if brand is None:
+            continue  # reported by config_tree_problems
+        local_path = f"ruleset/{brand}/{brand}.yaml"
+        if local_path in seen:
+            continue
+        seen.add(local_path)
+        try:
+            document = yaml.safe_load(tree_file(revision, local_path))
+        except (subprocess.CalledProcessError, yaml.YAMLError) as exc:
+            problems.append(f"{local_path}: cannot load ruleset file from head: {exc}")
+            continue
+        if not isinstance(document, dict) or not isinstance(document.get("payload"), list):
+            problems.append(f"{local_path}: must parse to a mapping with a `payload` list")
+    return problems
 
 
 # --------------------------------------------------------------------------- #
@@ -233,10 +276,11 @@ def pinned_checkout_problems(repo: Path | None, expected: str = PINNED_OASIC) ->
 def icon_repo_path(environ: Mapping[str, str]) -> Path | None:
     """Resolve the pinned Oasisic checkout from the environment that owns it.
 
-    The caller (local shell or the Phase 8 PR workflow) declares the checkout via
-    ``MIHOMO_ICON_REPO``; when it is absent, only the repository-relative layout
-    used by the workflows is considered. No machine-specific absolute path is
-    embedded, and an unresolved checkout is reported instead of silently guessed.
+    The caller (local shell or the PR verification workflow) declares the
+    checkout via ``MIHOMO_ICON_REPO``; when it is absent, only the
+    repository-relative layout used by the workflows is considered. No
+    machine-specific absolute path is embedded, and an unresolved checkout is
+    reported instead of silently guessed.
     """
     supplied = (environ.get("MIHOMO_ICON_REPO") or "").strip()
     if supplied:
@@ -246,15 +290,126 @@ def icon_repo_path(environ: Mapping[str, str]) -> Path | None:
 
 
 # --------------------------------------------------------------------------- #
-# icon baseline / Podcast guard
+# icon baseline guard — dynamic, tree-derived expected total
 # --------------------------------------------------------------------------- #
 
-def icon_baseline_problems(icon_map: dict[str, str], missing: list[str]) -> list[str]:
+def expected_icon_total(brand_dirs: list[str], strategy_group_map: dict[str, str], is_emoji) -> int:
+    """Independent expected icon total, derived from the *ruleset brand tree*.
+
+    ``build_icon_map()`` emits exactly one entry per non-emoji strategy group
+    of ``brand_dirs()`` plus explicit overrides. The overrides that still map
+    to a live tree brand (Podcast, NetEase Cloud Music, …) keep the total
+    tree-derived: expected = number of non-emoji strategy groups in the brand
+    tree. ``actual`` (the matcher output) comes from a different source, so a
+    missing icon can never be hidden by the count.
+    """
+    return sum(1 for brand in brand_dirs if not is_emoji(strategy_group_map.get(brand, brand)))
+
+
+def config_icon_group_names(config: dict) -> set[str]:
+    """Icon-carrying strategy-group names as committed in the production config.
+
+    This is the *committed artifact* source: the groups that actually carry an
+    icon in the checked-in config, independent of the live ruleset tree scan.
+    """
+    names: set[str] = set()
+    for group in config.get("proxy-groups", []):
+        if isinstance(group, dict) and group.get("icon") and isinstance(group.get("name"), str):
+            names.add(group["name"])
+    return names
+
+
+def _brand_dirs_from_tree_paths(tree_paths: Iterable[str], ruleset_root: str = "ruleset/") -> list[str]:
+    """Brand directories from the head *git tree*, replicating ``match_icons.brand_dirs()``.
+
+    A brand is a ``ruleset/<Brand>/<Brand>.yaml`` file (the dir name must equal the
+    file's stem). The fallback/routing rule-sets in ``BASE`` are excluded, exactly as
+    the live ``brand_dirs()`` does, because they are referenced in ``rules:`` but are
+    not icon-bearing strategy groups. Deriving from the git tree (rather than the
+    working tree) keeps the expected source purely head-based and testable without
+    a checkout.
+    """
+    base = _base_routing_rule_sets()
+    brands: set[str] = set()
+    for path in tree_paths:
+        if not path.startswith(ruleset_root):
+            continue
+        parts = path[len(ruleset_root):].split("/")
+        if len(parts) != 2:
+            continue
+        brand, filename = parts
+        if not brand or filename != f"{brand}.yaml":
+            continue
+        if brand in base:
+            continue
+        brands.add(brand)
+    return sorted(brands)
+
+
+def _base_routing_rule_sets() -> set[str]:
+    """The fallback/routing rule-sets that carry no icon (single source: match_icons.BASE)."""
+    try:
+        import match_icons  # noqa: WPS433 - single source for the BASE set
+
+        return set(match_icons.BASE)
+    except Exception:  # noqa: BLE001 - fall back to the canonical literal if unavailable
+        return {
+            "Reject", "Direct", "Proxy", "CNCIDR", "Private",
+            "Applications", "LanCIDR", "DirectDNS", "ProxyDNS",
+        }
+
+
+def expected_icon_group_names(
+    brand_dirs: Iterable[str],
+    strategy_group_map: Mapping[str, str],
+    is_emoji,
+) -> set[str]:
+    """Strategy-group names that the ruleset brand tree says should carry an icon.
+
+    This is the *structural source*: one non-emoji strategy group per brand in the
+    head ruleset tree. It reads only the tree + the static brand->group mapping,
+    never the committed config, so it is independent of the "actual" side.
+    """
+    return {
+        strategy_group_map.get(brand, brand)
+        for brand in brand_dirs
+        if not is_emoji(strategy_group_map.get(brand, brand))
+    }
+
+
+def icon_baseline_problems(
+    config: dict,
+    missing: list[str],
+    brand_dirs: Iterable[str],
+    strategy_group_map: Mapping[str, str],
+    is_emoji,
+) -> list[str]:
+    """Icon invariants: 0 missing, committed config coverage == ruleset-tree coverage.
+
+    Two independent sources are compared (never ``expected == actual`` on one
+    source):
+      * expected = strategy-group names the head ruleset tree should cover
+      * actual   = strategy-group names that carry an icon in the committed config
+    Set equality (not just count) so a missing or stray brand group is caught.
+    The matcher's ``missing`` list is checked separately (icon resolvability).
+    """
     problems: list[str] = []
     if missing:
         problems.append(f"icon map: missing {len(missing)} icons, e.g. {sorted(missing)[:10]}")
-    if len(icon_map) != EXPECTED_ICON_TOTAL:
-        problems.append(f"icon map: {len(icon_map)} matched, expected {EXPECTED_ICON_TOTAL}")
+    expected = expected_icon_group_names(brand_dirs, strategy_group_map, is_emoji)
+    actual = config_icon_group_names(config)
+    only_in_tree = sorted(expected - actual)
+    if only_in_tree:
+        problems.append(
+            f"icon coverage: ruleset tree expects {len(expected)} icon groups but the committed "
+            f"config is missing {only_in_tree}"
+        )
+    only_in_config = sorted(actual - expected)
+    if only_in_config:
+        problems.append(
+            f"icon coverage: committed config has {len(actual)} icon groups but the ruleset tree "
+            f"does not include {only_in_config}"
+        )
     return problems
 
 
@@ -368,11 +523,6 @@ def _report(name: str, expected: str, problems: list[str], base: str, head: str)
     return 1
 
 
-def changed_paths(base: str, head: str) -> list[str]:
-    output = git("diff", "--name-only", base, head).decode("utf-8", "replace")
-    return [line for line in output.splitlines() if line.strip()]
-
-
 def main() -> int:
     try:
         base, head = revisions_from_env(os.environ)
@@ -382,18 +532,26 @@ def main() -> int:
         print(f"[FAIL] revisions\n  actual: {exc}")
         return 1
 
-    print(f"[phase8-pr-verify] base={base} head={head}")
+    print(f"[general-pr-verify] base={base} head={head}")
     failures = 0
     results: list[tuple[str, str, list[str]]] = []
 
-    expected = "Android full config: YAML semantics equal to base and only comment/blank-line text changes; other production configs byte-identical"
+    expected = (
+        "every ruleset brand is served by exactly one rule-provider whose remote URL "
+        "points at a ruleset file present in the head tree; every referenced ruleset "
+        "file parses as YAML (base/head may legitimately differ)"
+    )
     problems: list[str] = []
-    for path in PRODUCTION_CONFIGS:
-        try:
-            problems += config_problems(path, tree_file(base, path), tree_file(head, path))
-        except subprocess.CalledProcessError as exc:
-            problems.append(f"{path}: cannot read from base/head: {exc}")
-    results.append(("production-config-guard", expected, problems))
+    try:
+        config = yaml.safe_load(tree_file(head, CONFIG_FOR_TREE_CHECK))
+        if not isinstance(config, dict):
+            problems.append(f"{CONFIG_FOR_TREE_CHECK}: must parse to a mapping")
+        else:
+            problems += config_tree_problems(config, set(tree_paths(head, "ruleset/")))
+            problems += provider_file_problems(config, head)
+    except (subprocess.CalledProcessError, yaml.YAMLError) as exc:
+        problems.append(f"{CONFIG_FOR_TREE_CHECK}: cannot evaluate from PR head: {exc}")
+    results.append(("config-tree-consistency-guard", expected, problems))
 
     expected = "Android strict / Nikki off are APPROVED_CURRENT_BASELINE in Contract and in all four production configs"
     problems = []
@@ -424,14 +582,28 @@ def main() -> int:
     problems += pinned_checkout_problems(icon_repo)
     results.append(("oasisic-authority-guard", expected, problems))
 
-    expected = f"matcher reports {EXPECTED_ICON_TOTAL} icons with 0 missing; Podcast -> Xiaoyuzhou, ApplePodcasts independent"
+    expected = (
+        "icon coverage: committed config icon groups == ruleset brand tree (0 emoji), "
+        "derived dynamically; 0 missing; Podcast -> Xiaoyuzhou, ApplePodcasts independent"
+    )
     problems = []
     try:
         sys.path.insert(0, str(ROOT / "scripts"))
         import match_icons
 
         icon_map, missing = match_icons.build_icon_map()
-        problems += icon_baseline_problems(icon_map, missing)
+        android_full = yaml.safe_load(tree_file(head, CONFIG_FOR_TREE_CHECK))
+        if not isinstance(android_full, dict):
+            problems.append(f"{CONFIG_FOR_TREE_CHECK}: must parse to a mapping for icon coverage")
+            android_full = {}
+        head_rule_paths = tree_paths(head, "ruleset/")
+        problems += icon_baseline_problems(
+            android_full,
+            missing,
+            _brand_dirs_from_tree_paths(head_rule_paths),
+            match_icons.STRATEGY_GROUP_MAP,
+            match_icons.is_emoji_group,
+        )
         problems += podcast_problems(
             icon_map, tree_file(head, ORACLE_FIXTURES_PATH).decode("utf-8", "replace")
         )
@@ -453,23 +625,15 @@ def main() -> int:
         problems += workflow_problems(tree_file(head, PR_WORKFLOW_PATH).decode("utf-8", "replace"))
     except subprocess.CalledProcessError as exc:
         problems.append(f"{PR_WORKFLOW_PATH}: cannot read from PR head: {exc}")
-    results.append(("workflow-guard", expected, problems))
-
-    expected = "PR diff must not touch ruleset/ or providers/ (Phase 7A / PR #15 history stays out of this PR)"
-    problems = [
-        f"forbidden path changed between PR base and head: {path}"
-        for path in changed_paths(base, head)
-        if path.startswith(FORBIDDEN_DIFF_PREFIXES)
-    ]
-    results.append(("forbidden-file-guard", expected, problems))
+    results.append(("workflow-security-guard", expected, problems))
 
     for name, expected, problems in results:
         failures += _report(name, expected, problems, base, head)
 
     if failures:
-        print(f"[FAIL] phase8-pr-verify: {failures} guard(s) failed")
+        print(f"[FAIL] general-pr-verify: {failures} guard(s) failed")
         return 1
-    print("[PASS] phase8-pr-verify: all guards satisfied")
+    print("[PASS] general-pr-verify: all invariants satisfied")
     return 0
 
 

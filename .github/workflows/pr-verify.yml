@@ -1,4 +1,4 @@
-name: Phase 8 PR verification
+name: General PR verification
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase8-pr-verify-${{ github.event.pull_request.number }}
+  group: general-pr-verify-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 env:
@@ -18,13 +18,13 @@ env:
   PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
-  phase8-pr-verify:
-    name: phase8-pr-verify
+  general-pr-verify:
+    name: general-pr-verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: 📥 检出 PR head（完整历史，用于 base/head 对比）
+      - name: 📥 检出 PR head（完整历史，用于 head 树自洽校验）
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -47,10 +47,10 @@ jobs:
           path: Oasisic-Icons
           persist-credentials: false
 
-      - name: 🛡️ Phase 8 只读 guard（production / pin / Oracle / 图标基线）
+      - name: 🛡️ 通用只读 guard（config/ruleset 树自洽 / pin / Oracle / 图标基线 / workflow 安全）
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
-        run: python3 scripts/ci/verify_phase8_pr.py
+        run: python3 scripts/ci/verify_general_pr.py
 
       - name: 🔍 verify_configs
         env:
