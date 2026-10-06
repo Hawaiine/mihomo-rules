@@ -5,6 +5,7 @@ F1  use: 只解析裸键块式 → 引号/行内 flow 写法的幽灵 provider �
 F2  README 口径只做 substring 存在性 → 重复出现处其一漂移被另一处掩盖
 F3  generate_config 只比 /tmp 暂存文件 → 手工改动过的 configs/ 永不被纠正
 """
+import json
 import shutil
 import subprocess as sp
 import sys
@@ -115,6 +116,18 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
 
     def test_second_run_is_idempotent_after_icon_revision(self):
         isolated = self._isolated_repo()
+        # Phase 10K-B 后 committed config 已是 canonical pinned 形态；
+        # 注入 pre-migration 的 /main/icons/ legacy drift，保持本测试原语义
+        # （首跑修复 → 二跑幂等），不再依赖 committed 基线恰好带漂移。
+        revision = json.loads(
+            (isolated / 'scripts' / 'config_contract' / 'oasisic_revision.json')
+            .read_text(encoding='utf-8'))
+        pinned_sha = revision['revision']
+        for cfg in (isolated / 'configs').rglob('config*.yaml'):
+            text = cfg.read_text(encoding='utf-8')
+            cfg.write_text(
+                text.replace(f'/{pinned_sha}/icons/', '/main/icons/'),
+                encoding='utf-8')
         cfg = isolated / 'configs' / 'Android' / 'config.yaml'
         first = sp.run(['python3', 'scripts/generate_config.py'],
                        cwd=isolated, capture_output=True, text=True)

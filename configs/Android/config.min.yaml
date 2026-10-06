@@ -708,7 +708,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTube/YouTubeMusic/YouTubeMusic.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/YouTube/YouTubeMusic/YouTubeMusic.png"
   - name: "iCloud Private Relay"
     type: select
     proxies:
@@ -740,7 +740,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud/iCloudPrivateRelay/iCloudPrivateRelay.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/iCloud/iCloudPrivateRelay/iCloudPrivateRelay.png"
   - name: "AWS"
     type: select
     proxies:
@@ -772,7 +772,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Amazon/AWS/AWS.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Amazon/AWS/AWS.png"
   - name: "App Store"
     type: select
     proxies:
@@ -804,7 +804,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppStore/AppStore.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/AppStore/AppStore.png"
   - name: "Apple Fitness+"
     type: select
     proxies:
@@ -836,7 +836,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleFitnessPlus/AppleFitnessPlus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/AppleFitnessPlus/AppleFitnessPlus.png"
   - name: "Apple Music"
     type: select
     proxies:
@@ -868,7 +868,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleMusic/AppleMusic.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/AppleMusic/AppleMusic.png"
   - name: "Apple News+"
     type: select
     proxies:
@@ -900,7 +900,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleNewsPlus/AppleNewsPlus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/AppleNewsPlus/AppleNewsPlus.png"
   - name: "Apple TV"
     type: select
     proxies:
@@ -932,7 +932,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV/AppleTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/AppleTV/AppleTV.png"
   - name: "Microsoft Azure"
     type: select
     proxies:
@@ -964,7 +964,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Azure/Azure.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Azure/Azure.png"
   - name: "Microsoft Bing"
     type: select
     proxies:
@@ -996,7 +996,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Bing/Bing.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Bing/Bing.png"
   - name: "Microsoft Copilot"
     type: select
     proxies:
@@ -1028,7 +1028,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Copilot/Copilot.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Copilot/Copilot.png"
   - name: "GitHub"
     type: select
     proxies:
@@ -1060,7 +1060,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/GitHub/GitHub.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/GitHub/GitHub.png"
   - name: "Gmail"
     type: select
     proxies:
@@ -1092,7 +1092,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Gmail/Gmail.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/Gmail/Gmail.png"
   - name: "Google AI"
     type: select
     proxies:
@@ -1124,7 +1124,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleAI/GoogleAI.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GoogleAI/GoogleAI.png"
   - name: "Google Drive"
     type: select
     proxies:
@@ -1156,7 +1156,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleDrive/GoogleDrive.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GoogleDrive/GoogleDrive.png"
   - name: "Google Maps"
     type: select
     proxies:
@@ -1188,7 +1188,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleMaps/GoogleMaps.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GoogleMaps/GoogleMaps.png"
   - name: "Google News"
     type: select
     proxies:
@@ -1220,7 +1220,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleNews/GoogleNews.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GoogleNews/GoogleNews.png"
   - name: "Google Photos"
     type: select
     proxies:
@@ -1252,7 +1252,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePhotos/GooglePhotos.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GooglePhotos/GooglePhotos.png"
   - name: "Google Play"
     type: select
     proxies:
@@ -1284,7 +1284,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GooglePlay/GooglePlay.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GooglePlay/GooglePlay.png"
   - name: "Google Voice"
     type: select
     proxies:
@@ -1316,7 +1316,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/GoogleVoice/GoogleVoice.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/GoogleVoice/GoogleVoice.png"
   - name: "Grok"
     type: select
     proxies:
@@ -1348,7 +1348,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SpaceXAI/xAI/Grok/Grok.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/SpaceXAI/xAI/Grok/Grok.png"
   - name: "Hulu"
     type: select
     proxies:
@@ -1380,7 +1380,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Disney/Hulu/Hulu.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Disney/Hulu/Hulu.png"
   - name: "Instagram"
     type: select
     proxies:
@@ -1412,7 +1412,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Meta/Facebook/Instagram/Instagram.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Meta/Facebook/Instagram/Instagram.png"
   - name: "Messenger"
     type: select
     proxies:
@@ -1444,7 +1444,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Meta/Facebook/Messenger/Messenger.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Meta/Facebook/Messenger/Messenger.png"
   - name: "OneDrive"
     type: select
     proxies:
@@ -1476,7 +1476,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/OneDrive/OneDrive.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/OneDrive/OneDrive.png"
   - name: "Microsoft Outlook"
     type: select
     proxies:
@@ -1508,7 +1508,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Outlook/Outlook.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Outlook/Outlook.png"
   - name: "Peacock"
     type: select
     proxies:
@@ -1540,7 +1540,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/NBCUniversal/Peacock/Peacock.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/NBCUniversal/Peacock/Peacock.png"
   - name: "Prime Video"
     type: select
     proxies:
@@ -1572,7 +1572,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Amazon/PrimeVideo/PrimeVideo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Amazon/PrimeVideo/PrimeVideo.png"
   - name: "Siri AI"
     type: select
     proxies:
@@ -1604,7 +1604,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI/SiriAI.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/SiriAI/SiriAI.png"
   - name: "Threads"
     type: select
     proxies:
@@ -1636,7 +1636,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Meta/Facebook/Threads/Threads.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Meta/Facebook/Threads/Threads.png"
   - name: "WhatsApp"
     type: select
     proxies:
@@ -1668,7 +1668,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Meta/Facebook/WhatsApp/WhatsApp.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Meta/Facebook/WhatsApp/WhatsApp.png"
   - name: "Xbox"
     type: select
     proxies:
@@ -1700,7 +1700,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Xbox/Xbox.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Xbox/Xbox.png"
   - name: "YouTube"
     type: select
     proxies:
@@ -1732,7 +1732,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTube/YouTube.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/YouTube/YouTube.png"
   - name: "iCloud"
     type: select
     proxies:
@@ -1764,7 +1764,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/iCloud/iCloud.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/iCloud/iCloud.png"
   - name: "ABEMA"
     type: select
     proxies:
@@ -1796,7 +1796,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ABEMA/ABEMA.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/ABEMA/ABEMA.png"
   - name: "支付宝"
     type: select
     proxies:
@@ -1828,7 +1828,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/AliPay/AliPay.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Alibaba/AliPay/AliPay.png"
   - name: "Amazon"
     type: select
     proxies:
@@ -1860,7 +1860,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Amazon/Amazon/Amazon.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Amazon/Amazon/Amazon.png"
   - name: "Anthropic"
     type: select
     proxies:
@@ -1892,7 +1892,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Anthropic/Anthropic.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/Anthropic/Anthropic.png"
   - name: "Apple"
     type: select
     proxies:
@@ -1924,7 +1924,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple/Apple.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Apple/Apple/Apple.png"
   - name: "Bahamut"
     type: select
     proxies:
@@ -1956,7 +1956,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bahamut/Bahamut.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Bahamut/Bahamut.png"
   - name: "Bangumi"
     type: select
     proxies:
@@ -1988,7 +1988,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Bangumi/Bangumi.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Bangumi/Bangumi.png"
   - name: "🏦 Bank"
     type: select
     proxies:
@@ -2051,7 +2051,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/bilibili/bilibili.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/bilibili/bilibili.png"
   - name: "Bluesky"
     type: select
     proxies:
@@ -2083,7 +2083,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Bluesky/Bluesky.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/Bluesky/Bluesky.png"
   - name: "CATCHPLAY+"
     type: select
     proxies:
@@ -2115,7 +2115,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/CATCHPLAYPlus/CATCHPLAYPlus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/CATCHPLAYPlus/CATCHPLAYPlus.png"
   - name: "Crunchyroll"
     type: select
     proxies:
@@ -2147,7 +2147,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SONY/Crunchyroll/Crunchyroll.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/SONY/Crunchyroll/Crunchyroll.png"
   - name: "Cursor"
     type: select
     proxies:
@@ -2179,7 +2179,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Development/Cursor/Cursor.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Development/Cursor/Cursor.png"
   - name: "DAZN"
     type: select
     proxies:
@@ -2211,7 +2211,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN/DAZN.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/DAZN/DAZN.png"
   - name: "D Anime Store"
     type: select
     proxies:
@@ -2243,7 +2243,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/dAnimeStore/dAnimeStore.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/dAnimeStore/dAnimeStore.png"
   - name: "DMM TV"
     type: select
     proxies:
@@ -2275,7 +2275,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DMMTV/DMMTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/DMMTV/DMMTV.png"
   - name: "DeepSeek"
     type: select
     proxies:
@@ -2307,7 +2307,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/DeepSeek/DeepSeek.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/DeepSeek/DeepSeek.png"
   - name: "Deezer"
     type: select
     proxies:
@@ -2339,7 +2339,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Deezer/Deezer.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/Deezer/Deezer.png"
   - name: "钉钉"
     type: select
     proxies:
@@ -2371,7 +2371,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/DingTalk/DingTalk.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Alibaba/DingTalk/DingTalk.png"
   - name: "Discord"
     type: select
     proxies:
@@ -2403,7 +2403,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Communication/Discord/Discord.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Communication/Discord/Discord.png"
   - name: "Disney"
     type: select
     proxies:
@@ -2435,7 +2435,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Disney/DisneyPlus/DisneyPlus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Disney/DisneyPlus/DisneyPlus.png"
   - name: "Docker"
     type: select
     proxies:
@@ -2467,7 +2467,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Infrastructure/Docker/Docker.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Infrastructure/Docker/Docker.png"
   - name: "豆包"
     type: select
     proxies:
@@ -2499,7 +2499,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/ByteDance/Doubao/Doubao.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/ByteDance/Doubao/Doubao.png"
   - name: "抖音"
     type: select
     proxies:
@@ -2531,7 +2531,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/ByteDance/Douyin/Douyin.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/ByteDance/Douyin/Douyin.png"
   - name: "F1 TV"
     type: select
     proxies:
@@ -2563,7 +2563,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/F1TV/F1TV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/F1TV/F1TV.png"
   - name: "Facebook"
     type: select
     proxies:
@@ -2595,7 +2595,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Meta/Facebook/Facebook.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Meta/Facebook/Facebook.png"
   - name: "Fuji TV"
     type: select
     proxies:
@@ -2627,7 +2627,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/FujiTV/FujiTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/FujiTV/FujiTV.png"
   - name: "🎮 Game Japan"
     type: select
     proxies:
@@ -2721,7 +2721,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/Google/Google.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Google/Google/Google.png"
   - name: "HBO"
     type: select
     proxies:
@@ -2753,7 +2753,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/WarnerBrosDiscovery/HBOMax/HBOMax.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/WarnerBrosDiscovery/HBOMax/HBOMax.png"
   - name: "HOY TV"
     type: select
     proxies:
@@ -2785,7 +2785,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HOYTV/HOYTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/HOYTV/HOYTV.png"
   - name: "Hami Video"
     type: select
     proxies:
@@ -2817,7 +2817,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/HamiVideo/HamiVideo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/HamiVideo/HamiVideo.png"
   - name: "京东"
     type: select
     proxies:
@@ -2849,7 +2849,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/JD/JD.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Shopping/JD/JD.png"
   - name: "JioHotstar"
     type: select
     proxies:
@@ -2881,7 +2881,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/JioHotstar/JioHotstar.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/JioHotstar/JioHotstar.png"
   - name: "KKTV"
     type: select
     proxies:
@@ -2913,7 +2913,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KKTV/KKTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/KKTV/KKTV.png"
   - name: "KakaoTalk"
     type: select
     proxies:
@@ -2945,7 +2945,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Communication/KakaoTalk/KakaoTalk.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Communication/KakaoTalk/KakaoTalk.png"
   - name: "LINE TV"
     type: select
     proxies:
@@ -2977,7 +2977,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LINETV/LINETV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/LINETV/LINETV.png"
   - name: "飞书"
     type: select
     proxies:
@@ -3009,7 +3009,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/ByteDance/Lark/Lark.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/ByteDance/Lark/Lark.png"
   - name: "Lemino"
     type: select
     proxies:
@@ -3041,7 +3041,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Lemino/Lemino.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Lemino/Lemino.png"
   - name: "LiTV"
     type: select
     proxies:
@@ -3073,7 +3073,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/LiTV/LiTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/LiTV/LiTV.png"
   - name: "芒果TV"
     type: select
     proxies:
@@ -3105,7 +3105,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MangoTV/MangoTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/MangoTV/MangoTV.png"
   - name: "Manus"
     type: select
     proxies:
@@ -3137,7 +3137,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Manus/Manus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/Manus/Manus.png"
   - name: "美团"
     type: select
     proxies:
@@ -3169,7 +3169,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Meituan/Meituan.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Shopping/Meituan/Meituan.png"
   - name: "MetaBrainz"
     type: select
     proxies:
@@ -3201,7 +3201,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Utilities/MetaBrainz/MetaBrainz.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Utilities/MetaBrainz/MetaBrainz.png"
   - name: "Microsoft"
     type: select
     proxies:
@@ -3233,7 +3233,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Microsoft/Microsoft.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Microsoft/Microsoft/Microsoft.png"
   - name: "Mora"
     type: select
     proxies:
@@ -3265,7 +3265,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SONY/mora/mora.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/SONY/mora/mora.png"
   - name: "Music Japan"
     type: select
     proxies:
@@ -3297,7 +3297,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/MusicJapan/MusicJapan.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/MusicJapan/MusicJapan.png"
   - name: "Musixmatch"
     type: select
     proxies:
@@ -3329,7 +3329,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Musixmatch/Musixmatch.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/Musixmatch/Musixmatch.png"
   - name: "MyVideo"
     type: select
     proxies:
@@ -3361,7 +3361,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MyVideo/MyVideo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/MyVideo/MyVideo.png"
   - name: "NHK"
     type: select
     proxies:
@@ -3393,7 +3393,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/NHK/NHK.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/NHK/NHK.png"
   - name: "网易云音乐"
     type: select
     proxies:
@@ -3425,7 +3425,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/NetEase/NetEaseCloudMusic/NetEaseCloudMusic.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/NetEase/NetEaseCloudMusic/NetEaseCloudMusic.png"
   - name: "网易邮箱"
     type: select
     proxies:
@@ -3457,7 +3457,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/NetEase/NetEaseMail/NetEaseMail.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/NetEase/NetEaseMail/NetEaseMail.png"
   - name: "Netflix"
     type: select
     proxies:
@@ -3489,7 +3489,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Netflix/Netflix.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Netflix/Netflix.png"
   - name: "Niconico"
     type: select
     proxies:
@@ -3521,7 +3521,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Niconico/Niconico.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Niconico/Niconico.png"
   - name: "Nintendo"
     type: select
     proxies:
@@ -3553,7 +3553,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Nintendo/Nintendo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Game/Nintendo/Nintendo.png"
   - name: "Nous Research"
     type: select
     proxies:
@@ -3585,7 +3585,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/NousResearch/NousResearch.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/NousResearch/NousResearch.png"
   - name: "Now E"
     type: select
     proxies:
@@ -3617,7 +3617,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/PCCW/NowE/NowE.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/PCCW/NowE/NowE.png"
   - name: "🏠 Oasisic Self"
     type: select
     proxies:
@@ -3680,7 +3680,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/OpenAI/OpenAI.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/OpenAI/OpenAI.png"
   - name: "Oracle"
     type: select
     proxies:
@@ -3712,7 +3712,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Infrastructure/Oracle/Oracle.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Infrastructure/Oracle/Oracle.png"
   - name: "💊 PT"
     type: select
     proxies:
@@ -3806,7 +3806,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Pandora/Pandora.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/Pandora/Pandora.png"
   - name: "Paramount+"
     type: select
     proxies:
@@ -3838,7 +3838,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ParamountPlus/ParamountPlus.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/ParamountPlus/ParamountPlus.png"
   - name: "PayPal"
     type: select
     proxies:
@@ -3870,7 +3870,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Payment/PayPal/PayPal.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Payment/PayPal/PayPal.png"
   - name: "Perplexity"
     type: select
     proxies:
@@ -3902,7 +3902,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Perplexity/Perplexity.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/Perplexity/Perplexity.png"
   - name: "拼多多"
     type: select
     proxies:
@@ -3934,7 +3934,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Shopping/Pinduoduo/Pinduoduo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Shopping/Pinduoduo/Pinduoduo.png"
   - name: "Pinterest"
     type: select
     proxies:
@@ -3966,7 +3966,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Pinterest/Pinterest.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/Pinterest/Pinterest.png"
   - name: "Pixiv"
     type: select
     proxies:
@@ -3998,7 +3998,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/pixiv/pixiv.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/pixiv/pixiv.png"
   - name: "PlayStation"
     type: select
     proxies:
@@ -4030,7 +4030,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SONY/PlayStation/PlayStation.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/SONY/PlayStation/PlayStation.png"
   - name: "Podcast"
     type: select
     proxies:
@@ -4062,7 +4062,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png"
   - name: "Poe"
     type: select
     proxies:
@@ -4094,7 +4094,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/AI/Poe/Poe.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/AI/Poe/Poe.png"
   - name: "🔞 Porn"
     type: select
     proxies:
@@ -4188,7 +4188,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tencent/QQ/QQ.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Tencent/QQ/QQ.png"
   - name: "QQ邮箱"
     type: select
     proxies:
@@ -4220,7 +4220,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tencent/QQMail/QQMail.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Tencent/QQMail/QQMail.png"
   - name: "QQ音乐"
     type: select
     proxies:
@@ -4252,7 +4252,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tencent/QQMusic/QQMusic.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Tencent/QQMusic/QQMusic.png"
   - name: "Qobuz"
     type: select
     proxies:
@@ -4284,7 +4284,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Qobuz/Qobuz.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/Qobuz/Qobuz.png"
   - name: "Radiko"
     type: select
     proxies:
@@ -4316,7 +4316,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Radiko/Radiko.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Radiko/Radiko.png"
   - name: "Rakuten TV"
     type: select
     proxies:
@@ -4348,7 +4348,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/RakutenTV/RakutenTV.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/RakutenTV/RakutenTV.png"
   - name: "Read Japan"
     type: select
     proxies:
@@ -4380,7 +4380,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ReadJapan/ReadJapan.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/ReadJapan/ReadJapan.png"
   - name: "小红书"
     type: select
     proxies:
@@ -4412,7 +4412,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/rednote/rednote.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/rednote/rednote.png"
   - name: "Reddit"
     type: select
     proxies:
@@ -4444,7 +4444,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Reddit/Reddit.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/Reddit/Reddit.png"
   - name: "Snapchat"
     type: select
     proxies:
@@ -4476,7 +4476,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Communication/Snapchat/Snapchat.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Communication/Snapchat/Snapchat.png"
   - name: "SoundCloud"
     type: select
     proxies:
@@ -4508,7 +4508,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/SoundCloud/SoundCloud.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/SoundCloud/SoundCloud.png"
   - name: "Spotify"
     type: select
     proxies:
@@ -4540,7 +4540,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Spotify/Spotify.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/Spotify/Spotify.png"
   - name: "Steam"
     type: select
     proxies:
@@ -4572,7 +4572,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Game/Steam/Steam.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Game/Steam/Steam.png"
   - name: "Synology"
     type: select
     proxies:
@@ -4604,7 +4604,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Infrastructure/Synology/Synology.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Infrastructure/Synology/Synology.png"
   - name: "TIDAL"
     type: select
     proxies:
@@ -4636,7 +4636,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/TIDAL/TIDAL.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Music/TIDAL/TIDAL.png"
   - name: "TMDB"
     type: select
     proxies:
@@ -4668,7 +4668,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TMDB/TMDB.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/TMDB/TMDB.png"
   - name: "TVer"
     type: select
     proxies:
@@ -4700,7 +4700,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TVer/TVer.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/TVer/TVer.png"
   - name: "淘宝"
     type: select
     proxies:
@@ -4732,7 +4732,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Taobao/Taobao.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Alibaba/Taobao/Taobao.png"
   - name: "Telasa"
     type: select
     proxies:
@@ -4764,7 +4764,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TELASA/TELASA.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/TELASA/TELASA.png"
   - name: "Telegram"
     type: select
     proxies:
@@ -4796,7 +4796,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Communication/Telegram/Telegram.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Communication/Telegram/Telegram.png"
   - name: "腾讯视频"
     type: select
     proxies:
@@ -4828,7 +4828,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tencent/TencentVideo/TencentVideo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Tencent/TencentVideo/TencentVideo.png"
   - name: "TikTok"
     type: select
     proxies:
@@ -4860,7 +4860,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/ByteDance/TikTok/TikTok.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/ByteDance/TikTok/TikTok.png"
   - name: "Tubi"
     type: select
     proxies:
@@ -4892,7 +4892,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Tubi/Tubi.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Tubi/Tubi.png"
   - name: "Twitch"
     type: select
     proxies:
@@ -4924,7 +4924,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Amazon/Twitch/Twitch.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Amazon/Twitch/Twitch.png"
   - name: "U-NEXT"
     type: select
     proxies:
@@ -4956,7 +4956,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/UNEXT/UNEXT.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/UNEXT/UNEXT.png"
   - name: "Video Market"
     type: select
     proxies:
@@ -4988,7 +4988,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/VideoMarket/VideoMarket.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/VideoMarket/VideoMarket.png"
   - name: "Viu"
     type: select
     proxies:
@@ -5020,7 +5020,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/PCCW/Viu/Viu.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/PCCW/Viu/Viu.png"
   - name: "WOWOW"
     type: select
     proxies:
@@ -5052,7 +5052,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/WOWOW/WOWOW.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/WOWOW/WOWOW.png"
   - name: "WSJ"
     type: select
     proxies:
@@ -5084,7 +5084,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/News/WSJ/WSJ.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/News/WSJ/WSJ.png"
   - name: "Wallpaper"
     type: select
     proxies:
@@ -5116,7 +5116,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Wallpaper/Wallpaper.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/Wallpaper/Wallpaper.png"
   - name: "微信"
     type: select
     proxies:
@@ -5148,7 +5148,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Tencent/WeChat/WeChat.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Tencent/WeChat/WeChat.png"
   - name: "微博"
     type: select
     proxies:
@@ -5180,7 +5180,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Weibo/Weibo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/Weibo/Weibo.png"
   - name: "X"
     type: select
     proxies:
@@ -5212,7 +5212,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SpaceXAI/X/X.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/SpaceXAI/X/X.png"
   - name: "优酷"
     type: select
     proxies:
@@ -5244,7 +5244,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Youku/Youku.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Alibaba/Youku/Youku.png"
   - name: "Z-Library"
     type: select
     proxies:
@@ -5276,7 +5276,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Education/Z-Library/Z-Library.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Education/Z-Library/Z-Library.png"
   - name: "知乎"
     type: select
     proxies:
@@ -5308,7 +5308,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/Zhihu/Zhihu.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Social/Zhihu/Zhihu.png"
   - name: "friDay影音"
     type: select
     proxies:
@@ -5340,7 +5340,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/friDayVideo/friDayVideo.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/friDayVideo/friDayVideo.png"
   - name: "爱奇艺"
     type: select
     proxies:
@@ -5372,7 +5372,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Baidu/iQIYI/iQIYI.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Baidu/iQIYI/iQIYI.png"
   - name: "Karaoke@DAM"
     type: select
     proxies:
@@ -5404,7 +5404,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/KaraokeDAM/KaraokeDAM.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/KaraokeDAM/KaraokeDAM.png"
   - name: "myTV SUPER"
     type: select
     proxies:
@@ -5436,7 +5436,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/myTVSUPER/myTVSUPER.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Media/myTVSUPER/myTVSUPER.png"
   - name: "Cloudflare"
     type: select
     proxies:
@@ -5468,7 +5468,7 @@ proxy-groups:
       - "🇮🇩 印尼节点"
     use:
       - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Infrastructure/Cloudflare/Cloudflare.png"
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/f0f3bc2a44616885682ee5f0e5921540b964e2d8/icons/Infrastructure/Cloudflare/Cloudflare.png"
 rule-providers:
   DirectDNS:
     type: http

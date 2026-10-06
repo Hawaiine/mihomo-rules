@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-10-07
+
+### Changed
+- **生产图标 URL 固定到 Oasisic revision（icon contract migration）** — 四份 production config（Android/Nikki × full/min）中 568 条 icon URL（每份 142 条）的 ref 由 `/main/icons/` 统一迁移到 `oasisic_revision.json` 固定的 SHA `f0f3bc2a44616885682ee5f0e5921540b964e2d8`。icon 身份与相对路径逐条不变；规则、provider、排序与全部其他生成内容不变；迁移由 `generate_config.py` 直接生成，未手改生成结果。README 新增「图标 URL 契约」说明（commit-pinned 为唯一生产 URL 模式）
+
+规则 payload 不变：规则集与兜底数不变（含 9 兜底共 159）；四份 config 仅 icon URL ref 变化（每份 142 条），其余行逐字一致。
+
+---
+
 ## 2026-10-03
 
 ### Changed

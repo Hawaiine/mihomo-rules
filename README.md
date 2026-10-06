@@ -282,6 +282,10 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 | **full**（`config.yaml`） | 空行（与 `rule-providers` 段分隔） | 直接跟注释，无多余空行 |
 | **min**（`config.min.yaml`） | 无空行（紧接 `rule-providers` 段） | 直接跟规则，无多余空行 |
 
+### 图标 URL 契约
+
+生产配置中的 icon URL 采用 **commit-pinned** 模式：ref 固定为 `scripts/config_contract/oasisic_revision.json` 声明的 Oasisic revision SHA（当前 `f0f3bc2a44616885682ee5f0e5921540b964e2d8`），由 `generate_config.py` / `match_icons.py` 统一生成，不手写 `/main/icons/` 路径。升级 pin 只走该 manifest 的显式审核流程。
+
 ### 地区组位置
 
 品牌组与 5 个基础功能组（🔧 手动切换 / 🔯 故障转移 / 🔀 负载均衡 / 🐟 漏网之鱼 / 🌍 代理DNS）的 `proxies:` 列表中，21 个地区节点统一放在 `🔀 负载均衡` 后面。地区组仅出现在 `proxies:`，不泄漏到 `use:` 块。
