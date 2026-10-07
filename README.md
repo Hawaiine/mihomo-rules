@@ -242,7 +242,7 @@ fake-ip-filter:           geosite:private, +.lan, +.local, +.corp
 
 ```
 1️⃣ 拦截    RULE-SET,Reject + GEOSITE 广告
-2️⃣ 品牌    Netflix/Bilibili 等 151 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
+2️⃣ 品牌    Netflix/bilibili 等 151 品牌（按需取消注释，放在国内前避免被GEOIP截胡）
 3️⃣ 直连    Applications(DIRECT) + LanCIDR/Private(DIRECT, 硬直连不可改)
 4️⃣ 国内IP  CNCIDR + GEOIP,CN → DIRECT
 5️⃣ 代理    RULE-SET,Proxy → 🔧 手动切换
@@ -355,14 +355,14 @@ python3 -m unittest discover -s scripts/tests
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
-| 🎬 流媒体 | 55 | 1,252 | ABEMA · Bahamut · Bangumi · Bilibili · CATCHPLAY · Crunchyroll · DAZN · DAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · JioHotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · Peacock · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · RedNote · TVer · Telasa · TencentVideo · Tubi · Twitch · UNext · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNewsPlus · ApplePodcasts · friDayVideo · iQIYI · karaokeDAM · myTVSUPER |
+| 🎬 流媒体 | 55 | 1,252 | ABEMA · Bahamut · Bangumi · bilibili · CATCHPLAYPlus · Crunchyroll · DAZN · dAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HOYTV · HamiVideo · JioHotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · Peacock · Podcast · PrimeVideo · Radiko · RakutenTV · ReadJapan · rednote · TVer · TELASA · TencentVideo · Tubi · Twitch · UNEXT · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNewsPlus · ApplePodcasts · friDayVideo · iQIYI · KaraokeDAM · myTVSUPER |
 | 🤖 AI | 14 | 236 | Anthropic · Copilot · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Grok · Manus · NousResearch · OpenAI · Perplexity · Poe · SiriAI |
-| 📱 社交 | 21 | 1,023 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · Pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
+| 📱 社交 | 21 | 1,023 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
 | ☁️ 云服务 | 22 | 1,735 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
 | 🎮 游戏 | 4 | 247 | Nintendo · PlayStation · Steam · Xbox |
 | 🛍️ 电商 | 7 | 726 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
-| 🎵 音乐 | 12 | 109 | AppleMusic · Deezer · Mora · Musixmatch · NetEaseCloudMusic · Pandora · QQMusic · Qobuz · SoundCloud · Spotify · TIDAL · YouTubeMusic |
-| 🏢 企业 | 16 | 8,504 | Apple · AppleFitnessPlus · AppleTV · Bank · DingTalk · Lark · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · ZLibrary |
+| 🎵 音乐 | 12 | 109 | AppleMusic · Deezer · mora · Musixmatch · NetEaseCloudMusic · Pandora · QQMusic · Qobuz · SoundCloud · Spotify · TIDAL · YouTubeMusic |
+| 🏢 企业 | 16 | 8,504 | Apple · AppleFitnessPlus · AppleTV · Bank · DingTalk · Lark · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · Z-Library |
 
 ## 🤝 贡献指南
 

@@ -5,6 +5,7 @@ F1  use: 只解析裸键块式 → 引号/行内 flow 写法的幽灵 provider �
 F2  README 口径只做 substring 存在性 → 重复出现处其一漂移被另一处掩盖
 F3  generate_config 只比 /tmp 暂存文件 → 手工改动过的 configs/ 永不被纠正
 """
+import json
 import shutil
 import subprocess as sp
 import sys
@@ -21,6 +22,12 @@ import verify_configs as vc
 
 ROOT = _SCRIPTS.parent
 CFG = ROOT / 'configs' / 'Android' / 'config.yaml'
+_MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
+
+
+def _manifest_revision() -> str:
+    """pin 的单一来源：config_contract/oasisic_revision.json（discovery/validation）。"""
+    return json.loads(_MANIFEST.read_text(encoding='utf-8'))['revision']
 
 
 def _lines(p):
@@ -116,7 +123,7 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
     def test_second_run_is_idempotent_after_icon_revision(self):
         isolated = self._isolated_repo()
         # 注入漂移：把四份生产配置的 icon URL 改回旧契约的 pinned SHA 形式
-        pinned = 'f0f3bc2a44616885682ee5f0e5921540b964e2d8'
+        pinned = _manifest_revision()
         for path in sorted((isolated / 'configs').glob('*/config*.yaml')):
             path.write_text(
                 path.read_text(encoding='utf-8').replace('/main/icons/', f'/{pinned}/icons/'),

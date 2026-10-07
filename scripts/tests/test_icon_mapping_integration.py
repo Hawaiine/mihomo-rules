@@ -30,6 +30,14 @@ def _icon_repo() -> Path:
     return repo
 
 
+_MANIFEST = Path(__file__).resolve().parents[2] / "scripts" / "config_contract" / "oasisic_revision.json"
+
+
+def _manifest_revision() -> str:
+    """pin 的单一来源：config_contract/oasisic_revision.json（discovery/validation）。"""
+    return json.loads(_MANIFEST.read_text(encoding="utf-8"))["revision"]
+
+
 class TestIconMappingIntegration(unittest.TestCase):
     def test_legacy_overrides_against_current_icon_head(self):
         repo = _icon_repo()
@@ -70,7 +78,7 @@ class TestIconMappingIntegration(unittest.TestCase):
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        pinned_revision = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
+        pinned_revision = _manifest_revision()
         self.assertEqual(match_icons._OASIC_REVISION, pinned_revision)
         scan_source = match_icons.scan_source()
         self.assertIsNotNone(scan_source)
@@ -92,7 +100,10 @@ class TestIconMappingIntegration(unittest.TestCase):
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "1ff07f684f93129310dc55b6da55cb32a86fbdd0722d884585b12d02473bfa4f")
+        # Phase 1 品牌身份对齐后更新：仅 5 个显示名键变化（Bilibili→bilibili、Mora→mora、
+        # Pixiv→pixiv、Telasa→TELASA、D Anime Store→d Anime Store），icon 相对路径未变；
+        # 已用「还原显示名后摘要 == 旧值 1ff07f68…」验证无其它漂移。
+        self.assertEqual(digest, "a0d8f1b741ac25c85f1e2a7175848a5e581fc7dab9c3620e31ca7751a182083e")
 
 
 

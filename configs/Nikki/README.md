@@ -41,7 +41,7 @@ logread -e nikki
 
 ### 4. 品牌分流（可选）
 
-按需取消注释 `rules:` 中的品牌 RULE-SET（如 `Netflix`、`Bilibili`），或通过 Nikki LuCI 面板的「mixin」功能添加。
+按需取消注释 `rules:` 中的品牌 RULE-SET（如 `Netflix`、`bilibili`），或通过 Nikki LuCI 面板的「mixin」功能添加。
 
 ## ⚙️ 配置要点
 
@@ -87,7 +87,7 @@ fallback-filter:            geoip:cn + ipcidr           ← CN 结果可信时�
 
 ```
 1. 拦截    RULE-SET,Reject + GEOSITE 广告
-2. 品牌    Netflix/Bilibili 等（按需取消注释）
+2. 品牌    Netflix/bilibili 等（按需取消注释）
 3. 局域网   LanCIDR + Private + Direct
 4. 国内IP  CNCIDR + GEOIP,CN
 5. 代理    RULE-SET,Proxy

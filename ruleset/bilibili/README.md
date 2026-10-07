@@ -1,4 +1,4 @@
-# 📦 Bilibili 规则集
+# 📦 bilibili 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 6 |
 
 - **behavior**: classical
-- **策略组**: Bilibili
+- **策略组**: bilibili

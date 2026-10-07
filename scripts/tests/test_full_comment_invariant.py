@@ -79,5 +79,43 @@ class TestFullCommentInvariant(unittest.TestCase):
         self.assertTrue(vc.check_full_comment_order(lines, 'nikki_full'))
 
 
+class TestHyphenatedProviderKey(unittest.TestCase):
+    """锁死历史 bug：provider key 含 '-' 时 `\\w+` 正则静默跳过/截断。
+
+    真实案例：ZLibrary → Z-Library 之后
+      - _comment_rule_set_lines 漏掉该注释行 → 误报「品牌组 151 ≠ 注释 150」
+      - extract_rule_provider_keys 把 'Z-Library' 截断成 'Z' → naming consistency 误报
+    """
+
+    def test_comment_rule_set_lines_keeps_hyphenated_key(self):
+        lines = [
+            'rules:\n',
+            '                    # - RULE-SET,Z-Library,Z-Library\n',
+            '                    # - RULE-SET,AWS,AWS\n',
+        ]
+        got = vc._comment_rule_set_lines(lines)
+        self.assertEqual(len(got), 2, got)
+        self.assertIn('Z-Library', got[0])
+
+    def test_extract_rule_provider_keys_keeps_hyphenated_key(self):
+        lines = [
+            'rule-providers:\n',
+            '  Z-Library:\n',
+            '    type: http\n',
+            '  AWS:\n',
+            '    type: http\n',
+        ]
+        keys = vc.extract_rule_provider_keys(lines)
+        self.assertIn('Z-Library', keys)
+        self.assertNotIn('Z', keys, '旧 bug：连字符 key 被截断成 Z')
+
+    def test_real_config_hyphenated_key_not_skipped(self):
+        """真实 config：Z-Library 注释行必须被计入，且整段不变量成立"""
+        lines = _lines(ANDROID_FULL)
+        got = vc._comment_rule_set_lines(lines)
+        self.assertTrue(any('Z-Library' in l for l in got), 'Z-Library 注释行被静默跳过')
+        self.assertTrue(vc.check_full_comment_order(lines, 'android_full'))
+
+
 if __name__ == '__main__':
     unittest.main()
