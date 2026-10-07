@@ -105,6 +105,7 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "AppleFitnessPlus": "Apple Fitness+",
     "AppleMusic": "Apple Music",
     "AppleNewsPlus": "Apple News+",
+    "ApplePodcasts": "Apple Podcasts",
     "AppStore": "App Store",
     "Azure": "Microsoft Azure",
     "Outlook": "Microsoft Outlook",

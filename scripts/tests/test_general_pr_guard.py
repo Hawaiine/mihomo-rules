@@ -331,7 +331,7 @@ class IconBaselineRealTreeTest(unittest.TestCase):
 class PodcastIndependenceGuardTest(unittest.TestCase):
     PODCAST_URL = "https://example.test/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png"
     APPLE_ICON_URL = (
-        f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{guard.PINNED_OASIC}/icons/Apple/ApplePodcasts/ApplePodcasts.png"
+        "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/ApplePodcasts/ApplePodcasts.png"
     )
 
     def test_podcast_routing_passes(self):
@@ -343,7 +343,7 @@ class PodcastIndependenceGuardTest(unittest.TestCase):
 
     def test_shared_podcast_icon_fails(self):
         shared = self.PODCAST_URL
-        problems = guard.podcast_problems({"Podcast": shared, "ApplePodcasts": shared}, self.APPLE_ICON_URL)
+        problems = guard.podcast_problems({"Podcast": shared, "Apple Podcasts": shared}, self.APPLE_ICON_URL)
         self.assertTrue(any("must not share" in p for p in problems), problems)
 
     def test_missing_podcast_key_fails(self):

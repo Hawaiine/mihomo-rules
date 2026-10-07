@@ -60,8 +60,10 @@ def load_oasisic_revision(path: Path | None = None) -> dict[str, Any]:
     revision = data.get("revision")
     if not isinstance(revision, str) or len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
         raise ContractError("Oasisic revision must be a pinned 40-character lowercase SHA")
-    if data.get("asset_url_mode") != "commit-pinned":
-        raise ContractError("icon URLs must be revision pinned")
+    if data.get("asset_url_mode") != "branch-main":
+        raise ContractError("production icon URLs must be built from the main branch ref")
+    if data.get("production_url_ref") != "main":
+        raise ContractError("production icon URL ref must be the main branch")
     return data
 
 

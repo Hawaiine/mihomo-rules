@@ -32,7 +32,7 @@ class IndependentOracleTest(unittest.TestCase):
 
     def test_icon_url_mutation_rejected(self):
         actual = copy.deepcopy(ACTUAL)
-        actual["icons"][0] = actual["icons"][0].replace("f0f3bc2a", "main")
+        actual["icons"][0] = actual["icons"][0].replace(".png", ".jpg")
         self.assertTrue(oracle.evaluate(EXPECTED, actual))
 
     def test_platform_field_mutation_rejected_with_contract_validators_poisoned(self):
