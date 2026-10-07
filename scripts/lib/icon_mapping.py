@@ -61,6 +61,7 @@ class IconResolution:
 TECHNICAL_TO_CANONICAL: dict[str, str] = {
     'ABEMA': 'ABEMA',
     'AppleNewsPlus': 'AppleNewsPlus',
+    'ApplePodcasts': 'ApplePodcasts',
     'JioHotstar': 'JioHotstar',
     'Peacock': 'Peacock',
 }

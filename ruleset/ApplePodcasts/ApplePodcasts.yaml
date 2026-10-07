@@ -1,18 +1,17 @@
 # ===========================================
-# Rule Name: Podcast
+# Rule Name: Apple Podcasts
 # Author: Hawaiine
 # Updated: 2026-10-07 09:18:43
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
-# DOMAIN: 2
-# DOMAIN-SUFFIX: 2
+# DOMAIN: 3
+# DOMAIN-SUFFIX: 0
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
 # PROCESS-NAME: 0
 # ===========================================
 payload:
-  - DOMAIN,lastfm.freetls.fastly.net
-  - DOMAIN,ws.audioscrobbler.com
-  - DOMAIN-SUFFIX,himalaya.com
-  - DOMAIN-SUFFIX,last.fm
+  - DOMAIN,amp-api.podcasts.apple.com
+  - DOMAIN,applehosted.podcasts.apple.com
+  - DOMAIN,podcasts.apple.com

@@ -5,8 +5,10 @@ match_icons.py — 品牌图标映射的唯一入口
 `build_icon_map()` 返回 {策略组名: icon URL}，供 generate_config.py 使用；
 `python3 scripts/match_icons.py` 直接打印映射与缺失清单。
 
-扫描基准只读取 oasisic_revision.json 固定的 SHA。
+扫描基准（discovery/validation source）只读取 oasisic_revision.json 固定的 pinned SHA。
 找不到该 tree 时失败，不回退 origin/main、main、HEAD 或工作区文件。
+生产消费 icon URL（consumer asset URL）固定使用 main 分支 ref，
+与 discovery/validation 的 pinned SHA 分离——两者不得混用。
 """
 import os
 import json
@@ -27,7 +29,9 @@ except (OSError, KeyError, json.JSONDecodeError) as exc:
     raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}') from exc
 if not _OASIC_REVISION:
     raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}')
-GITHUB_BASE = f'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{_OASIC_REVISION}/icons'
+# 生产消费 URL 固定使用 main 分支 ref；discovery/validation 的 tree 扫描仍只用 pinned SHA
+ASSET_URL_REF = 'main'
+GITHUB_BASE = f'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{ASSET_URL_REF}/icons'
 
 sys.path.insert(0, str(ROOT / 'scripts'))
 from commit_writer import STRATEGY_GROUP_MAP

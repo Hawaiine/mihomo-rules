@@ -41,7 +41,7 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
         'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'Podcast',
         'PrimeVideo', 'Radiko', 'RakutenTV', 'ReadJapan', 'RedNote', 'TVer',
         'Telasa', 'TencentVideo', 'Tubi', 'Twitch', 'UNext', 'VideoMarket',
-        'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'friDayVideo',
+        'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'ApplePodcasts', 'friDayVideo',
         'iQIYI', 'karaokeDAM', 'myTVSUPER',
     ],
     '🤖 AI': [

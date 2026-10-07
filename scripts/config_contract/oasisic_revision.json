@@ -2,12 +2,14 @@
   "repository": "Hawaiine/Oasisic-Icons",
   "revision": "f0f3bc2a44616885682ee5f0e5921540b964e2d8",
   "revision_source": "read-only local checkout HEAD verified against origin/main",
-  "asset_url_mode": "commit-pinned",
+  "revision_role": "discovery-validation-only",
+  "asset_url_mode": "branch-main",
+  "production_url_ref": "main",
   "catalog": "config/brands.json",
   "path_snapshot": {
     "ApplePodcasts": "icons/Apple/ApplePodcasts/ApplePodcasts.png",
     "Xiaoyuzhou": "icons/Media/Xiaoyuzhou/Xiaoyuzhou.png"
   },
   "update_policy": "change revision only through explicit reviewed workflow",
-  "current_implementation_gap": "match_icons scans a pinned SHA and emits commit-pinned icon URLs; daily-sync checks out the same SHA"
+  "current_implementation_gap": "match_icons scans the pinned SHA (discovery/validation source) but emits production icon URLs from the main branch ref; daily-sync checks out the same pinned SHA"
 }

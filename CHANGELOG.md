@@ -1,7 +1,19 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 159 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 160 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+
+---
+
+## 2026-10-07
+
+### Added
+- **`ApplePodcasts` 独立规则集**（150 → 151 品牌，159 → 160 规则集；含 9 兜底共 160）— 从 `Podcast` 抽出 Apple 播客三域名（`podcasts.apple.com` / `amp-api.podcasts.apple.com` / `applehosted.podcasts.apple.com`），`SUB_PARENT` 归 `Apple`，图标 `icons/Apple/ApplePodcasts/ApplePodcasts.png`；`Podcast` 保留 4 条非 Apple 规则（`lastfm.freetls.fastly.net` / `ws.audioscrobbler.com` / `himalaya.com` / `last.fm`），不再拆分 `Last.fm` / `Audioscrobbler` / `Himalaya`
+
+### Changed
+- **图标 URL 生产契约切换为 `/main/icons/`** — 生产配置的 icon URL 引用 Oasisic-Icons `main` 分支（`asset_url_mode: branch-main` / `production_url_ref: main`）；pinned SHA 仅作发现与校验来源（tree-scan 仍锁定 `f0f3bc2a`），`match_icons` 中 `ASSET_URL_REF` 与 `_OASIC_REVISION` 解耦
+- **General Guard 双轨校验** — `verify_general_pr.py` 改为：生产 URL 必须 `/main/icons/`、发现/校验必须 pinned SHA；新增 `production_icon_url_problems` 禁止配置内出现 pinned SHA 引用
+- **README / 分类清单同步** — `readme_stats.BRAND_CATEGORIES` 流媒体类新增 `ApplePodcasts`；README 统计口径按实测刷新（151 品牌 · 160 规则集）
 
 ---
 
@@ -12,7 +24,7 @@
 - **`icon_mapping.TECHNICAL_TO_CANONICAL` 首次写入 4 条正式 production mapping** — `ABEMA` / `AppleNewsPlus` / `JioHotstar` / `Peacock` → Oasisic canonical；四个 icon 引用切换至 canonical 路径
 - **测试与夹具同步** — `icon-review` 夹具收缩为 `Podcast`；integration matcher snapshot 更新为 141 命中 / 1 缺失（原 137 / 5，digest 有意识更新）
 
-规则 payload 不变：四规则集 DOMAIN / DOMAIN-SUFFIX / IP-CIDR 等条数与内容与迁移前一致；规则集与兜底数不变（含 9 兜底共 159）。Podcast、stale overrides 与其他 404 icon 不在本阶段处理。
+规则 payload 不变：四规则集 DOMAIN / DOMAIN-SUFFIX / IP-CIDR 等条数与内容与迁移前一致；规则集与兜底数不变（含 9 兜底共 160）。Podcast、stale overrides 与其他 404 icon 不在本阶段处理。
 
 ---
 

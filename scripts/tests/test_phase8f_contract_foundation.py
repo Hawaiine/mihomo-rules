@@ -89,7 +89,7 @@ class ContractFoundationTest(unittest.TestCase):
         changed["rules"].reverse()
         mutations.append(changed)
         changed = copy.deepcopy(ACTUAL)
-        changed["icons"][0] = changed["icons"][0].replace("f0f3bc2a", "main")
+        changed["icons"][0] = changed["icons"][0].replace(".png", ".jpg")
         mutations.append(changed)
         changed = copy.deepcopy(ACTUAL)
         changed["platforms"]["android"]["port"] += 1

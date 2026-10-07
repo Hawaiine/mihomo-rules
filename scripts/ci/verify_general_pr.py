@@ -246,8 +246,10 @@ def oasisic_problems(manifest: dict, matcher: str, daily_sync: str) -> list[str]
         problems.append(
             f"{MANIFEST_PATH}: revision {manifest.get('revision')!r} != approved pin {PINNED_OASIC}"
         )
-    if manifest.get("asset_url_mode") != "commit-pinned":
-        problems.append(f"{MANIFEST_PATH}: asset_url_mode must be commit-pinned")
+    if manifest.get("asset_url_mode") != "branch-main":
+        problems.append(f"{MANIFEST_PATH}: asset_url_mode must be branch-main")
+    if manifest.get("production_url_ref") != "main":
+        problems.append(f"{MANIFEST_PATH}: production_url_ref must be main")
     if f"ref: {PINNED_OASIC}" not in daily_sync:
         problems.append(f"{DAILY_SYNC_PATH}: Oasisic checkout ref does not use the approved pin")
     for floating in ("ref: main", "ref: latest", "ref: master"):
@@ -259,8 +261,10 @@ def oasisic_problems(manifest: dict, matcher: str, daily_sync: str) -> list[str]
         problems.append(f"{MATCHER_PATH}: matcher must resolve its revision from the manifest")
     if "for ref in (_OASIC_REVISION,)" not in matcher:
         problems.append(f"{MATCHER_PATH}: git tree scan must use the pinned revision only")
-    if "/main/icons" in matcher:
-        problems.append(f"{MATCHER_PATH}: matcher must not fall back to the /main icon path")
+    if "ASSET_URL_REF = 'main'" not in matcher:
+        problems.append(f"{MATCHER_PATH}: production icon URLs must use the main branch ref")
+    if re.search(rf"ASSET_URL_REF\s*=\s*'{PINNED_OASIC}'", matcher):
+        problems.append(f"{MATCHER_PATH}: production icon URLs must not use the pinned SHA ref")
     return problems
 
 
@@ -423,14 +427,25 @@ def podcast_problems(icon_map: dict[str, str], fixture_source: str) -> list[str]
         problems.append(f"icon map: `Podcast` routes to {podcast} (expected .../{PODCAST_MATCHER_SUFFIX})")
     if podcast.endswith(APPLE_PODCASTS_ICON_SUFFIX):
         problems.append("icon map: generic Podcast must not use the ApplePodcasts icon")
-    if icon_map.get("ApplePodcasts") == podcast and podcast:
+    if icon_map.get("Apple Podcasts") == podcast and podcast:
         problems.append("icon map: ApplePodcasts must not share the generic Podcast icon")
-    pinned_apple_icon = f"/{PINNED_OASIC}/icons/{APPLE_PODCASTS_ICON_SUFFIX}"
+    pinned_apple_icon = f"/main/icons/{APPLE_PODCASTS_ICON_SUFFIX}"
     if pinned_apple_icon not in fixture_source:
         problems.append(
-            f"{ORACLE_FIXTURES_PATH}: ApplePodcasts must stay independent on the pinned icon "
+            f"{ORACLE_FIXTURES_PATH}: ApplePodcasts must stay independent on the main-ref icon "
             f"{APPLE_PODCASTS_ICON_SUFFIX}"
         )
+    return problems
+
+
+def production_icon_url_problems(configs: dict[str, str]) -> list[str]:
+    """Production configs must reference icons via /main/icons/ (consumer URL contract)."""
+    problems: list[str] = []
+    for path, text in configs.items():
+        if "/main/icons/" not in text:
+            problems.append(f"{path}: no /main/icons/ production URL found")
+        if PINNED_OASIC in text:
+            problems.append(f"{path}: production config must not reference the pinned SHA {PINNED_OASIC}")
     return problems
 
 
@@ -567,7 +582,10 @@ def main() -> int:
             problems.append(f"{path}: cannot evaluate find-process-mode: {exc}")
     results.append(("find-process-mode-guard", expected, problems))
 
-    expected = f"manifest, matcher, daily-sync and the pinned checkout all use {PINNED_OASIC}"
+    expected = (
+        f"manifest pin {PINNED_OASIC} (discovery/validation), daily-sync pinned checkout, "
+        "and matcher production URLs on the main branch ref"
+    )
     problems = []
     try:
         manifest = json.loads(tree_file(head, MANIFEST_PATH))
@@ -581,6 +599,15 @@ def main() -> int:
     icon_repo = icon_repo_path(os.environ)
     problems += pinned_checkout_problems(icon_repo)
     results.append(("oasisic-authority-guard", expected, problems))
+
+    expected = "production icon URLs use /main/icons/ (consumer ref); discovery/validation stays on the pinned SHA"
+    problems = []
+    for path in PRODUCTION_CONFIGS:
+        try:
+            problems += production_icon_url_problems({path: tree_file(head, path).decode("utf-8", "replace")})
+        except subprocess.CalledProcessError as exc:
+            problems.append(f"{path}: cannot read production icon URLs: {exc}")
+    results.append(("production-icon-url-guard", expected, problems))
 
     expected = (
         "icon coverage: committed config icon groups == ruleset brand tree (0 emoji), "

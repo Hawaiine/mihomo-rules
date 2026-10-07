@@ -56,12 +56,16 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (142, 0))
+        self.assertEqual((len(icon_map), len(missing)), (143, 0))
         self.assertEqual(missing, [])
-        pinned_revision = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
+        production_ref = "main"
         self.assertEqual(
             icon_map["Podcast"],
-            f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{pinned_revision}/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png",
+            f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{production_ref}/icons/Media/Xiaoyuzhou/Xiaoyuzhou.png",
+        )
+        self.assertEqual(
+            icon_map["Apple Podcasts"],
+            f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{production_ref}/icons/Apple/ApplePodcasts/ApplePodcasts.png",
         )
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
@@ -77,17 +81,18 @@ class TestIconMappingIntegration(unittest.TestCase):
             "HBO": "WarnerBrosDiscovery/HBOMax/HBOMax.png",
             "网易云音乐": "NetEase/NetEaseCloudMusic/NetEaseCloudMusic.png",
             "Podcast": "Media/Xiaoyuzhou/Xiaoyuzhou.png",
+            "Apple Podcasts": "Apple/ApplePodcasts/ApplePodcasts.png",
         }
         for strategy_group, relative_path in expected_paths.items():
             with self.subTest(strategy_group=strategy_group):
                 self.assertEqual(
                     icon_map[strategy_group],
-                    f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{pinned_revision}/icons/{relative_path}",
+                    f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{production_ref}/icons/{relative_path}",
                 )
         digest = hashlib.sha256(
             json.dumps(icon_map, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
         ).hexdigest()
-        self.assertEqual(digest, "a8aaa5612182c0840ee6998ce4265cdb670e647afd853646e8ee0123946de482")
+        self.assertEqual(digest, "1ff07f684f93129310dc55b6da55cb32a86fbdd0722d884585b12d02473bfa4f")
 
 
 

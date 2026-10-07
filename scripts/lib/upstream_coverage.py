@@ -22,7 +22,7 @@ MANUAL_BRANDS = frozenset({
     # 手工维护的品牌集（上游无对应，或已确认不应接线）
     'DAnimeStore', 'F1TV', 'FujiTV', 'HOYTV', 'Lemino', 'Mora',
     'MyVideo', 'Podcast', 'Telasa', 'VideoMarket', 'WOWOW',
-    'karaokeDAM', 'friDayVideo',
+    'karaokeDAM', 'friDayVideo', 'ApplePodcasts',
     # 子品牌：从父品牌手工提取服务域名
     'Gmail', 'GoogleMaps', 'GoogleNews', 'GooglePhotos', 'GoogleVoice',
     'Outlook', 'SiriAI',

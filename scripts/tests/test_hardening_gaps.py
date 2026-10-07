@@ -115,17 +115,24 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
 
     def test_second_run_is_idempotent_after_icon_revision(self):
         isolated = self._isolated_repo()
+        # 注入漂移：把四份生产配置的 icon URL 改回旧契约的 pinned SHA 形式
+        pinned = 'f0f3bc2a44616885682ee5f0e5921540b964e2d8'
+        for path in sorted((isolated / 'configs').glob('*/config*.yaml')):
+            path.write_text(
+                path.read_text(encoding='utf-8').replace('/main/icons/', f'/{pinned}/icons/'),
+                encoding='utf-8',
+            )
         cfg = isolated / 'configs' / 'Android' / 'config.yaml'
         first = sp.run(['python3', 'scripts/generate_config.py'],
                        cwd=isolated, capture_output=True, text=True)
         revised = cfg.read_text(encoding='utf-8')
-        self.assertNotIn('/main/icons/', revised)
-        self.assertIn('f0f3bc2a44616885682ee5f0e5921540b964e2d8', revised)
+        self.assertIn('/main/icons/', revised)
+        self.assertNotIn(pinned, revised)
+        self.assertNotIn('无变化', first.stdout)
         second = sp.run(['python3', 'scripts/generate_config.py'],
                         cwd=isolated, capture_output=True, text=True)
         self.assertEqual(cfg.read_text(encoding='utf-8'), revised)
         self.assertIn('无变化', second.stdout)
-        self.assertNotIn('无变化', first.stdout)
 
 
 class TestReadmeCheckIsPerOccurrence(unittest.TestCase):
@@ -189,14 +196,14 @@ class TestChangelogArithmetic(unittest.TestCase):
 
     def test_base_count_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 159', '含 8 兜底共 159', 1)
+        bad = text.replace('含 9 兜底共 160', '含 8 兜底共 160', 1)
         self.assertNotEqual(bad, text)
         errs = self._with(bad)
         self.assertTrue(any('兜底数' in e for e in errs), errs)
 
     def test_total_ruleset_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 159', '含 9 兜底共 158', 1)
+        bad = text.replace('含 9 兜底共 160', '含 9 兜底共 158', 1)
         errs = self._with(bad)
         self.assertTrue(any('规则集' in e for e in errs), errs)
 
