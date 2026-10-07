@@ -82,6 +82,33 @@ def build_child_rule_set(brands, child_name):
     return {(r.rule_type, r.value) for r in rules}
 
 
+def find_parent_suffix_child_domain_overlaps(brands):
+    """父品牌持 DOMAIN-SUFFIX,x 且子品牌持 DOMAIN,x 的形态。
+
+    该形态**不应自动剥离**：父品牌的 DOMAIN-SUFFIX 同时覆盖 x 的全部子域
+    （如 Apple 的 DOMAIN-SUFFIX,podcasts.apple.com 覆盖 amp-api.podcasts.apple.com），
+    移除父规则会造成子域覆盖丢失。实际归属由 RULE-SET 顺序决定——子品牌规则集
+    必须排在父品牌之前（generate_config.sort_brands），由子品牌的精确 DOMAIN 优先命中。
+
+    本函数只做**报告**，让 "0 对重叠" 不会被误读为 "不存在重叠"。
+    """
+    overlaps = []
+    for child in sorted(SUB_PARENT.keys()):
+        if child not in brands:
+            continue
+        child_rules = build_child_rule_set(brands, child)
+        if not child_rules:
+            continue
+        for parent in resolve_ancestor_chain(child, SUB_PARENT):
+            if parent not in brands:
+                continue
+            parent_rules = build_child_rule_set(brands, parent)
+            for rtype, value in sorted(child_rules):
+                if rtype == 'DOMAIN' and ('DOMAIN-SUFFIX', value) in parent_rules:
+                    overlaps.append((child, parent, value))
+    return overlaps
+
+
 def resolve_ownership(dry_run=True):
     """执行所有权裁决"""
     brands = []
@@ -157,6 +184,15 @@ def resolve_ownership(dry_run=True):
     print(f'\n=== 总结 ===')
     print(f'处理父子关系: {total_pairs} 对')
     print(f'移除重叠规则: {total_removed} 条')
+
+    overlaps = find_parent_suffix_child_domain_overlaps(brands)
+    if overlaps:
+        print(f'\n=== 未覆盖形态（仅报告，不剥离）: 父 DOMAIN-SUFFIX + 子 DOMAIN ===')
+        for child, parent, value in overlaps:
+            print(f'  [{parent}] DOMAIN-SUFFIX,{value}  ↔  [{child}] DOMAIN,{value}')
+        print(f'  共 {len(overlaps)} 条；父后缀仍覆盖其子域，剥离会造成覆盖丢失；'
+              '归属由子品牌 RULE-SET 前置（sort_brands）保证。')
+
     if dry_run:
         print(f'模式: dry-run（未修改文件）')
         print(f'如需实际清理，运行: python3 resolve_ownership.py --apply')

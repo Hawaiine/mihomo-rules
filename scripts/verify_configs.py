@@ -112,7 +112,7 @@ def extract_rule_provider_keys(lines):
                 continue
             if not line.startswith(' ') and not line.startswith('#'):
                 break
-            m = re.match(r'^\s{2}(\w+)', line)
+            m = re.match(r'^\s{2}([\w.-]+)', line)
             if m:
                 keys.append(m.group(1))
     return keys
@@ -226,7 +226,7 @@ def check_naming_consistency(lines, variant):
 
     errors = []
     for line in lines:
-        m = re.match(r'\s*#?\s*-\s*RULE-SET,(\w+),(.+)', line)
+        m = re.match(r'\s*#?\s*-\s*RULE-SET,([\w.-]+),(.+)', line)
         if m:
             pkey = m.group(1)
             sg = m.group(2).strip().strip('"')
@@ -311,7 +311,7 @@ def _comment_rule_set_lines(lines):
         if line.strip().startswith('rules:'):
             in_rules = True
             continue
-        if in_rules and re.match(r'\s*#\s*-\s*RULE-SET,\w+,', line):
+        if in_rules and re.match(r'\s*#\s*-\s*RULE-SET,[\w.-]+,', line):
             out.append(line.strip())
     return out
 
@@ -362,7 +362,7 @@ def check_full_comment_order(lines, variant):
     sg_map = _GEN.load_strategy_group_map()
     brand_info = _GEN.build_brand_info(_GEN.sort_brands(_GEN.scan_brands(), sg_map), sg_map)
     expected = [l.strip() for l in _GEN.gen_rules(brand_info, variant).splitlines()
-                if re.match(r'\s*#\s*-\s*RULE-SET,\w+,', l)]
+                if re.match(r'\s*#\s*-\s*RULE-SET,[\w.-]+,', l)]
     if len(expected) != len(actual):
         print(f'  FAIL: {variant} — 注释 RULE-SET 行数 {len(actual)} ≠ 生成器输出 {len(expected)}')
         print(f'    config 独有: {sorted(set(actual) - set(expected))[:3]}')
@@ -450,7 +450,7 @@ def check_min_proxy_providers_no_blank_lines(lines, variant):
                 continue
             if not line.startswith(' '):
                 break  # 退出 proxy-providers 段
-            m = re.match(r'^  (\w+)', line)
+            m = re.match(r'^  ([\w.-]+)', line)
             if m:
                 if prev_blank:
                     print(f'  FAIL: {variant} — blank line before provider "{m.group(1)}" in proxy-providers')
@@ -550,7 +550,7 @@ def check_use_provider_exists(lines, variant):
                 continue
             if not line.startswith(' ') and not line.startswith('#'):
                 break
-            m = re.match(r'^\s{2}(\w+)', line)
+            m = re.match(r'^\s{2}([\w.-]+)', line)
             if m:
                 providers.add(m.group(1))
 

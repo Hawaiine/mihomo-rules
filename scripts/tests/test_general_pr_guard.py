@@ -438,6 +438,56 @@ class WorkflowSecurityGuardTest(unittest.TestCase):
         problems = guard.workflow_problems(self._workflow().replace("      - main\n", "      - develop\n"))
         self.assertTrue(any("main branch" in p for p in problems), problems)
 
+    def test_floating_oasisic_ref_fails(self):
+        text = self._workflow().replace(f"ref: {guard.PINNED_OASIC}", "ref: main")
+        problems = guard.workflow_problems(text)
+        self.assertTrue(any("approved pin" in p or "floating revision" in p for p in problems), problems)
+
+    def test_unapproved_oasisic_pin_fails(self):
+        text = self._workflow().replace(f"ref: {guard.PINNED_OASIC}", "ref: " + "a" * 40)
+        problems = guard.workflow_problems(text)
+        self.assertTrue(any("approved pin" in p for p in problems), problems)
+
+
+class ProductionIconUrlGuardTest(unittest.TestCase):
+    """production-icon-url-guard：生产 config 必须用 /main/icons/ 消费者 URL，
+    禁止出现 pinned SHA；pinned SHA 只允许存在于 discovery/validation 来源。"""
+
+    _OK = "icon: https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/Apple/Apple.png"
+
+    def test_main_branch_icon_url_passes(self):
+        self.assertEqual(guard.production_icon_url_problems({"configs/Android/config.yaml": self._OK}), [])
+
+    def test_pinned_sha_in_production_config_fails(self):
+        pinned = self._OK.replace("/main/icons/", f"/{guard.PINNED_OASIC}/icons/")
+        problems = guard.production_icon_url_problems({"configs/Android/config.yaml": pinned})
+        self.assertTrue(any("must not reference the pinned SHA" in p for p in problems), problems)
+
+    def test_missing_main_icons_ref_fails(self):
+        problems = guard.production_icon_url_problems({"configs/Nikki/config.yaml": "icon: https://example.com/x.png"})
+        self.assertTrue(any("no /main/icons/" in p for p in problems), problems)
+
+    def test_pinned_sha_is_not_flagged_in_discovery_source(self):
+        """pin 属于 discovery/validation：manifest 保留 pin 是合法的，
+        本 guard 只作用于 production config，不得把两者混为一谈。"""
+        self.assertEqual(guard.production_icon_url_problems({}), [])
+        manifest = json.loads((ROOT / guard.MANIFEST_PATH).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["revision"], guard.PINNED_OASIC)
+        self.assertEqual(manifest["revision_role"], "discovery-validation-only")
+        self.assertEqual(manifest["asset_url_mode"], "branch-main")
+        self.assertEqual(manifest["production_url_ref"], "main")
+
+    def test_real_production_configs_pass(self):
+        configs = {p: (ROOT / p).read_text(encoding="utf-8") for p in guard.PRODUCTION_CONFIGS}
+        self.assertEqual(guard.production_icon_url_problems(configs), [])
+
+    def test_real_production_configs_hold_zero_pinned_sha(self):
+        for path in guard.PRODUCTION_CONFIGS:
+            with self.subTest(config=path):
+                text = (ROOT / path).read_text(encoding="utf-8")
+                self.assertNotIn(guard.PINNED_OASIC, text)
+                self.assertIn("/main/icons/", text)
+
 
 class PhaseSpecificRemovalTest(unittest.TestCase):
     """The two Phase 8-specific prohibitions must no longer exist in the guard."""

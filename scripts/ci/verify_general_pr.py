@@ -503,6 +503,14 @@ def workflow_problems(text: str) -> list[str]:
     for required in WORKFLOW_REQUIRED_SCRIPTS:
         if required not in text:
             problems.append(f"{PR_WORKFLOW_PATH}: missing required verification step {required!r}")
+    # Oasisic 检出必须使用已批准 pin（与 daily-sync 同一权威来源，禁止浮动 ref）
+    if f"ref: {PINNED_OASIC}" not in text:
+        problems.append(
+            f"{PR_WORKFLOW_PATH}: Oasisic checkout ref does not use the approved pin {PINNED_OASIC}"
+        )
+    for floating in ("ref: main", "ref: latest", "ref: master"):
+        if floating in text:
+            problems.append(f"{PR_WORKFLOW_PATH}: floating revision {floating!r} is forbidden")
     return problems
 
 
@@ -646,7 +654,8 @@ def main() -> int:
         problems.append(f"{ORACLE_PATH}: cannot read from PR head: {exc}")
     results.append(("oracle-independence-guard", expected, problems))
 
-    expected = "read-only pull_request gate on main with contents: read; no write commands; verification steps present"
+    expected = ("read-only pull_request gate on main with contents: read; no write commands; "
+                "verification steps present; Oasisic checkout pinned to the approved revision")
     problems = []
     try:
         problems += workflow_problems(tree_file(head, PR_WORKFLOW_PATH).decode("utf-8", "replace"))
