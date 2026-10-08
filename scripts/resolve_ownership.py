@@ -109,6 +109,36 @@ def find_parent_suffix_child_domain_overlaps(brands):
     return overlaps
 
 
+def find_child_contains_parent_rules(brands):
+    """子品牌规则集中出现祖先品牌规则（**child→parent 方向**）。
+
+    §22–§30 要求 ownership 审计必须**双向**：只检查「父是否含子」会结构性漏掉
+    「子是否含父 / 父公司通用域 / 父生态基础设施」。新增或拆分规则集会改变整个
+    ownership 图，因此必须触发对既有规则集的反向重审（§41）。
+
+    该形态**不得机械剥离**：命中项可能是
+      * child-service —— 子品牌专属子域（如 photos.googleapis.com 属 GooglePhotos）
+      * shared —— 父子双方都真实需要
+      * parent-infrastructure —— 子品牌实际依赖的父基础设施
+    删除前必须逐条确认该域是否承担子品牌 routing 所需的真实功能。
+    故本函数只做**报告**，返回 (child, parent, rule_type, value)。
+    """
+    hits = []
+    for child in sorted(SUB_PARENT.keys()):
+        if child not in brands:
+            continue
+        child_rules = build_child_rule_set(brands, child)
+        if not child_rules:
+            continue
+        for parent in resolve_ancestor_chain(child, SUB_PARENT):
+            if parent not in brands:
+                continue
+            shared = child_rules & build_child_rule_set(brands, parent)
+            for rtype, value in sorted(shared):
+                hits.append((child, parent, rtype, value))
+    return hits
+
+
 def resolve_ownership(dry_run=True):
     """执行所有权裁决"""
     brands = []
@@ -198,6 +228,18 @@ def resolve_ownership(dry_run=True):
         print(f'如需实际清理，运行: python3 resolve_ownership.py --apply')
     elif not any_written:
         print(f'所有文件均已为最新（无变化）')
+
+    rev = find_child_contains_parent_rules(brands)
+    print(f'\n=== 反向审计（仅报告，不剥离）: 子品牌含祖先品牌规则（child→parent）===')
+    if rev:
+        for child, parent, rtype, value in rev:
+            print(f'  [{child}] {rtype},{value}  ⊂  [{parent}]  '
+                  f'(ownership_direction=child→parent)')
+        print(f'  共 {len(rev)} 条；可能是 child-service（子品牌专属子域）或 shared / '
+              'parent-infrastructure，**不得机械从子品牌删除**——删除前须逐条确认 '
+              '该域是否承担子品牌 routing 所需的真实功能（§25/§28/§29）。')
+    else:
+        print('  0 条 —— 子品牌规则集中未出现祖先品牌的同名规则。')
 
 
 if __name__ == '__main__':

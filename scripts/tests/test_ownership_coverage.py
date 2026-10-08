@@ -81,5 +81,64 @@ class UncoveredShapeReportTest(unittest.TestCase):
                 self.assertLess(pos[child], pos[parent])
 
 
+class BidirectionalOwnershipTest(unittest.TestCase):
+    """§22–§30 / §41：ownership 审计必须**双向**。
+
+    只做 parent→child 会结构性漏掉 child→parent（子品牌含父 / 通用父域）。
+    新增或拆分规则集会改变整个 ownership 图，必须触发反向重审。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.brands = sorted(
+            d.name for d in (ro.ROOT / "ruleset").iterdir()
+            if d.is_dir() and (d / f"{d.name}.yaml").exists()
+        )
+
+    def test_real_repo_child_to_parent_report_is_a_set(self):
+        """真实仓库：child→parent 方向的同名规则必须为空（集合相等，非仅计数）。"""
+        self.assertEqual(set(ro.find_child_contains_parent_rules(self.brands)), set())
+
+    def test_new_parent_ruleset_triggers_child_to_parent_detection(self):
+        """变异：**新建父规则集**后，既有子规则集中的父规则必须被检出，不得静默忽略。"""
+        import shutil
+        import tempfile
+
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        for name in ("NewParent", "ExistingChild"):
+            (tmp / "ruleset" / name).mkdir(parents=True)
+            (tmp / "ruleset" / name / f"{name}.yaml").write_text(
+                "payload:\n  - DOMAIN,shared.example.com\n", encoding="utf-8")
+        self.addCleanup(setattr, ro, "ROOT", ro.ROOT)
+        self.addCleanup(setattr, ro, "SUB_PARENT", ro.SUB_PARENT)
+        ro.ROOT = tmp
+        ro.SUB_PARENT = {"ExistingChild": "NewParent"}
+        self.assertEqual(
+            ro.find_child_contains_parent_rules(["NewParent", "ExistingChild"]),
+            [("ExistingChild", "NewParent", "DOMAIN", "shared.example.com")],
+        )
+
+    def test_child_to_parent_report_never_strips(self):
+        """反向命中只报告不剥离：子规则集的字节内容不得被改动。"""
+        import shutil
+        import tempfile
+
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        for name in ("NewParent", "ExistingChild"):
+            (tmp / "ruleset" / name).mkdir(parents=True)
+            (tmp / "ruleset" / name / f"{name}.yaml").write_text(
+                "payload:\n  - DOMAIN,shared.example.com\n", encoding="utf-8")
+        self.addCleanup(setattr, ro, "ROOT", ro.ROOT)
+        self.addCleanup(setattr, ro, "SUB_PARENT", ro.SUB_PARENT)
+        ro.ROOT = tmp
+        ro.SUB_PARENT = {"ExistingChild": "NewParent"}
+        child_yaml = tmp / "ruleset" / "ExistingChild" / "ExistingChild.yaml"
+        before = child_yaml.read_bytes()
+        ro.find_child_contains_parent_rules(["NewParent", "ExistingChild"])
+        self.assertEqual(child_yaml.read_bytes(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
