@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -9,6 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MATCHER = ROOT / "scripts" / "match_icons.py"
+_MANIFEST = ROOT / "scripts" / "config_contract" / "oasisic_revision.json"
+
+
+def _manifest_revision() -> str:
+    """pin 的单一来源：config_contract/oasisic_revision.json（discovery/validation）。"""
+    return json.loads(_MANIFEST.read_text(encoding="utf-8"))["revision"]
 
 
 class IconRevisionAuthorityTest(unittest.TestCase):
@@ -20,7 +27,7 @@ class IconRevisionAuthorityTest(unittest.TestCase):
             shutil.copy2(MATCHER, scripts / "match_icons.py")
             env = {
                 **os.environ,
-                "OASIC_REVISION": "f0f3bc2a44616885682ee5f0e5921540b964e2d8",
+                "OASIC_REVISION": _manifest_revision(),
             }
             result = subprocess.run(
                 [sys.executable, str(scripts / "match_icons.py")],

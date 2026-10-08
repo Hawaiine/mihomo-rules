@@ -20,29 +20,27 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+from lib.canonical import TYPES_ORDER  # noqa: E402  单源：类型顺序唯一定义在 lib/canonical.py
 
 BASE_BRANDS = {
     'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications',
     'LanCIDR', 'DirectDNS', 'ProxyDNS',
 }
 
-TYPES_ORDER = [
-    'DOMAIN-KEYWORD', 'DOMAIN-REGEX', 'DOMAIN', 'DOMAIN-SUFFIX',
-    'IP-CIDR', 'IP-CIDR6', 'IP-ASN', 'PROCESS-NAME',
-]
-
 # 品牌分类（编辑口径）。键为分类标题，值为技术 ID 列表。
 BRAND_CATEGORIES: dict[str, list[str]] = {
     '🎬 流媒体': [
-        'ABEMA', 'Bahamut', 'Bangumi', 'Bilibili', 'CATCHPLAY', 'Crunchyroll',
-        'DAZN', 'DAnimeStore', 'DMMTV', 'Disney', 'Douyin', 'F1TV', 'FujiTV',
+        'ABEMA', 'Bahamut', 'Bangumi', 'bilibili', 'CATCHPLAYPlus', 'Crunchyroll',
+        'DAZN', 'dAnimeStore', 'DMMTV', 'Disney', 'Douyin', 'F1TV', 'FujiTV',
         'GameJapan', 'HBO', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
         'LINETV', 'Lemino', 'LiTV', 'MangoTV', 'MusicJapan', 'MyVideo', 'NHK',
         'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'Podcast',
-        'PrimeVideo', 'Radiko', 'RakutenTV', 'ReadJapan', 'RedNote', 'TVer',
-        'Telasa', 'TencentVideo', 'Tubi', 'Twitch', 'UNext', 'VideoMarket',
+        'PrimeVideo', 'Radiko', 'RakutenTV', 'ReadJapan', 'rednote', 'TVer',
+        'TELASA', 'TencentVideo', 'Tubi', 'Twitch', 'UNEXT', 'VideoMarket',
         'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'ApplePodcasts', 'friDayVideo',
-        'iQIYI', 'karaokeDAM', 'myTVSUPER',
+        'iQIYI', 'KaraokeDAM', 'myTVSUPER',
     ],
     '🤖 AI': [
         'Anthropic', 'Copilot', 'Cursor', 'DeepSeek', 'Doubao', 'GeneralAI',
@@ -51,7 +49,7 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
     ],
     '📱 社交': [
         'Bluesky', 'Discord', 'Facebook', 'Instagram', 'KakaoTalk', 'Messenger',
-        'NetEaseMail', 'Pinterest', 'Pixiv', 'QQ', 'QQMail', 'Reddit', 'Snapchat',
+        'NetEaseMail', 'Pinterest', 'pixiv', 'QQ', 'QQMail', 'Reddit', 'Snapchat',
         'Telegram', 'Threads', 'TikTok', 'WeChat', 'Weibo', 'WhatsApp', 'X', 'Zhihu',
     ],
     '☁️ 云服务': [
@@ -61,16 +59,16 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
         'Oracle', 'Outlook', 'Synology', 'iCloud', 'iCloudPrivateRelay',
     ],
     '🎮 游戏': ['Nintendo', 'PlayStation', 'Steam', 'Xbox'],
-    '🛍️ 电商': ['AliPay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao'],
+    '🛍️ 电商': ['Alipay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao'],
     '🎵 音乐': [
-        'AppleMusic', 'Deezer', 'Mora', 'Musixmatch', 'NetEaseCloudMusic',
+        'AppleMusic', 'Deezer', 'mora', 'Musixmatch', 'NetEaseCloudMusic',
         'Pandora', 'QQMusic', 'Qobuz', 'SoundCloud', 'Spotify', 'TIDAL',
         'YouTubeMusic',
     ],
     '🏢 企业': [
         'Apple', 'AppleFitnessPlus', 'AppleTV', 'Bank', 'DingTalk', 'Lark',
         'MetaBrainz', 'OasisicSelf', 'PT', 'PTChina', 'Porn', 'PornChina',
-        'TMDB', 'WSJ', 'Wallpaper', 'ZLibrary',
+        'TMDB', 'WSJ', 'Wallpaper', 'Z-Library',
     ],
 }
 
@@ -197,7 +195,12 @@ def check_readme(stats: dict) -> list[str]:
     # configs/*/README.md 中的「品牌策略组(N个)」口径
     for cfg_readme in sorted((ROOT / 'configs').glob('*/README.md')):
         text = cfg_readme.read_text(encoding='utf-8')
-        for m in re.finditer(r'品牌策略组\((\d+)个\)', text):
+        hits = list(re.finditer(r'品牌策略组\((\d+)个\)', text))
+        if not hits:
+            errs.append(
+                f'{cfg_readme.relative_to(ROOT)} 缺少「品牌策略组(N个)」口径行'
+                '（否则该文件的品牌数不受门禁约束）')
+        for m in hits:
             if int(m.group(1)) != b:
                 errs.append(
                     f'{cfg_readme.relative_to(ROOT)} 品牌策略组数量 {m.group(1)} ≠ 实测 {b}')
@@ -238,7 +241,12 @@ def check_readme_structure(stats: dict) -> list[str]:
 
     for cfg_readme in sorted((ROOT / 'configs').glob('*/README.md')):
         text = cfg_readme.read_text(encoding='utf-8')
-        for m in re.finditer(r'品牌策略组\((\d+)个\)', text):
+        hits = list(re.finditer(r'品牌策略组\((\d+)个\)', text))
+        if not hits:
+            errs.append(
+                f'{cfg_readme.relative_to(ROOT)} 缺少「品牌策略组(N个)」口径行'
+                '（否则该文件的品牌数不受门禁约束）')
+        for m in hits:
             if int(m.group(1)) != b:
                 errs.append(
                     f'{cfg_readme.relative_to(ROOT)} 品牌策略组数量 {m.group(1)} ≠ 实测 {b}')
@@ -303,7 +311,7 @@ def update_readme(stats: dict) -> list[str]:
     sub(r'badge/brands-\d+-orange', f'badge/brands-{b}-orange', 'brands 徽章')
     sub(r'（[^（）]*\d+ 品牌 · \d+ 规则集）', f'（流媒体 / AI / 社交 / 云服务 / 游戏等 {b} 品牌 · {rs} 规则集）', '概述段')
     sub(r'（\d+ 品牌，emoji 前缀组不配图标）', f'（{b} 品牌，emoji 前缀组不配图标）', '图标注入行')
-    sub(r'Netflix/Bilibili 等 \d+ 品牌', f'Netflix/Bilibili 等 {b} 品牌', '匹配顺序')
+    sub(r'Netflix/bilibili 等 \d+ 品牌', f'Netflix/bilibili 等 {b} 品牌', '匹配顺序')
     sub(r'— \d+ 品牌图标库', f'— {b} 品牌图标库', '相关资源图标库')
     sub(r'\| 基础 \| \d+ \| — \| \d+ \| [\d,]+ \|',
         f'| 基础 | {base_n} | — | {base_n} | {base_rules:,} |', '统计表-基础行')
@@ -327,6 +335,15 @@ def update_readme(stats: dict) -> list[str]:
 
     if t != orig:
         path.write_text(t, encoding='utf-8')
+
+    # configs/*/README.md 的「品牌策略组(N个)」口径同步（与 check_readme 同一口径）
+    for cfg_readme in sorted((ROOT / 'configs').glob('*/README.md')):
+        ct = cfg_readme.read_text(encoding='utf-8')
+        new_ct, cnt = re.subn(r'品牌策略组\(\d+个\)', f'品牌策略组({b}个)', ct)
+        if cnt and new_ct != ct:
+            cfg_readme.write_text(new_ct, encoding='utf-8')
+            changed.append(f'{cfg_readme.relative_to(ROOT)} 品牌策略组数量')
+
     return changed
 
 

@@ -1,4 +1,4 @@
-# 📦 Telasa 规则集
+# 📦 TELASA 规则集
 
 ## 📊 统计
 | 类型 | 数量 |
@@ -13,4 +13,4 @@
 | PROCESS-NAME | 0 |
 
 - **behavior**: classical
-- **策略组**: Telasa
+- **策略组**: TELASA

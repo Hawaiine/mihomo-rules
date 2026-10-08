@@ -63,7 +63,7 @@ class TestMappingPolicy(unittest.TestCase):
             self.assertEqual(result, {'main': [], 'ads': [], 'cn': []})
 
     def test_technical_ids_are_exact(self):
-        expected = {'iqiyi': 'iQIYI', 'catchplay': 'CATCHPLAY', 'mytvsuper': 'myTVSUPER'}
+        expected = {'iqiyi': 'iQIYI', 'catchplay': 'CATCHPLAYPlus', 'mytvsuper': 'myTVSUPER'}
         for source, brand in expected.items():
             self.assertEqual(V2FLY_BRAND_MAP[source], brand)
         self.assertEqual(BLACKMATRIX7_BRAND_MAP['LineTV'], 'LINETV')

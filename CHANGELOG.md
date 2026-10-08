@@ -15,6 +15,22 @@
 - **General Guard 双轨校验** — `verify_general_pr.py` 改为：生产 URL 必须 `/main/icons/`、发现/校验必须 pinned SHA；新增 `production_icon_url_problems` 禁止配置内出现 pinned SHA 引用
 - **README / 分类清单同步** — `readme_stats.BRAND_CATEGORIES` 流媒体类新增 `ApplePodcasts`；README 统计口径按实测刷新（151 品牌 · 160 规则集）
 
+### Phase 1 治理加固 + 品牌身份全链路修正
+
+### Changed
+- **品牌身份对齐（10 个 Technical ID 规范化 / 官方证据支持的显示名修正）** — `CATCHPLAY`→`CATCHPLAYPlus`、`Bilibili`→`bilibili`、`Mora`→`mora`、`Pixiv`→`pixiv`、`RedNote`→`rednote`、`Telasa`→`TELASA`、`UNext`→`UNEXT`、`ZLibrary`→`Z-Library`、`DAnimeStore`→`dAnimeStore`、`karaokeDAM`→`KaraokeDAM`。目录/文件名（`git mv`）、yaml `# Rule Name:`、规则集 README、`STRATEGY_GROUP_MAP`、`MANUAL_BRANDS`、`BRAND_CATEGORIES`、三解析器上游映射、4 份 config 全链路同步；**规则 payload 未变，`# Updated:` 保持不变**。依据：官方官网 / App Store / Google Play / Oasisic SSOT（`bilibili` 全小写、`pixiv`、`mora`、`TELASA`、`U-NEXT`、`d Anime Store`、`rednote`、`Z-Library`、`CATCHPLAY+`）
+- **`readme_stats.TYPES_ORDER` 单源化** — 删除本地副本，改为 `from lib.canonical import TYPES_ORDER`，消除类型顺序双份定义
+
+### Fixed
+- **provider key 含 `-` 时校验静默失效** — `verify_configs.py` 三处 `\w+` 正则（注释 RULE-SET 行、`rule-providers` / `proxy-providers` key 提取）无法匹配 `Z-Library`，造成「品牌组 151 ≠ 注释 150」与 naming consistency 误报；改为 `[\w.-]+` 并补回归测试（`test_full_comment_invariant.TestHyphenatedProviderKey`）
+- **config README 品牌数静默漏检** — `configs/Android/README.md` 缺「品牌策略组(N个)」口径行，`readme_stats` 仅校验已存在的行，该文件品牌数不受门禁约束；现要求每个 `configs/*/README.md` 必须含该行，且 `--update` 会同步其数值
+- **`resolve_ownership` 未覆盖形态不报告** — 父 `DOMAIN-SUFFIX,x` + 子 `DOMAIN,x`（4 条：ApplePodcasts/AppStore/PrimeVideo/Xbox）既未剥离也未报告，「0 对重叠」易被误读为「无重叠」；现明确报告并**保持不剥离**（父后缀仍覆盖子域，剥离会丢失覆盖），归属由子品牌 RULE-SET 前置保证
+- **guard 测试缺口** — `production-icon-url-guard` 补齐正/反例单元测试；`pr-verify.yml` 的 Oasisic 检出 ref 原先未被校验，现纳入 `workflow-security-guard`（禁止浮动 ref / 非批准 pin）
+- **测试内 pin 字面量重复** — 3 个测试硬编码 pinned SHA，改为读取单一来源 `scripts/config_contract/oasisic_revision.json`
+
+### Manual Confirmation
+- **`HBO` / `Disney` 未改名** — 经 payload 核验：`ruleset/Disney` 实为 **Disney 集团**（`abc.com` / `20thcenturystudios.com` / `babble.com`…），`ruleset/HBO` 实为 **HBO 品牌族**（`hbo.ba` / `hbo.bg` / `cinemax.com`…），均非单一流媒体服务；改名会造成身份错误，留待人工决定（含 `ICON_OVERRIDES` 中 `Disney` → Disney+ 图标是否应改指 Oasisic 现有 `Disney` 品牌图标）
+
 ---
 
 ## 2026-10-03

@@ -15,7 +15,9 @@ test_readme_consistency.py — README 统计口径必须与 ruleset/ 实测一�
 README 的数字永远由 `scripts/readme_stats.py` 从 `ruleset/` 实测计算，
 不允许手工填数。
 """
+import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -46,6 +48,58 @@ class TestReadmeConsistency(unittest.TestCase):
         """--update 必须幂等：在已同步的 README 上运行不得产生任何改动"""
         changed = readme_stats.update_readme(self.stats)
         self.assertEqual(changed, [], f'--update 非幂等，改动了: {changed}')
+
+    def test_config_readmes_declare_brand_group_count(self):
+        """每个 configs/*/README.md 必须声明「品牌策略组(N个)」且与实测一致。
+
+        否则该文件的品牌数完全不受门禁约束（曾经的静默漏检）。
+        """
+        for cfg_readme in sorted((readme_stats.ROOT / 'configs').glob('*/README.md')):
+            with self.subTest(config=cfg_readme.name):
+                text = cfg_readme.read_text(encoding='utf-8')
+                found = re.findall(r'品牌策略组\((\d+)个\)', text)
+                self.assertTrue(found, f'{cfg_readme} 缺少「品牌策略组(N个)」口径行')
+                for n in found:
+                    self.assertEqual(int(n), self.stats['brand_count'])
+
+    def test_missing_brand_group_line_is_reported(self):
+        """反例（hermetic temp ROOT）：抽掉 config README 的口径行 → check_readme 必须报错。"""
+        with tempfile.TemporaryDirectory(prefix='readme-cfg-') as temp:
+            fake = Path(temp)
+            for name in ('Android', 'Nikki'):
+                (fake / 'configs' / name).mkdir(parents=True)
+                (fake / 'configs' / name / 'README.md').write_text('# x\n', encoding='utf-8')
+            (fake / 'README.md').write_text(
+                (readme_stats.ROOT / 'README.md').read_text(encoding='utf-8'), encoding='utf-8')
+            original = readme_stats.ROOT
+            readme_stats.ROOT = fake
+            try:
+                errs = readme_stats.check_readme(self.stats)
+            finally:
+                readme_stats.ROOT = original
+        self.assertTrue(any('缺少「品牌策略组(N个)」口径行' in e for e in errs), errs)
+
+    def test_update_syncs_config_readme_brand_count(self):
+        """--update 必须能把 config README 的组数改回实测值（反例注入后修复）。"""
+        with tempfile.TemporaryDirectory(prefix='readme-cfg-') as temp:
+            fake = Path(temp)
+            for name in ('Android', 'Nikki'):
+                (fake / 'configs' / name).mkdir(parents=True)
+                (fake / 'configs' / name / 'README.md').write_text(
+                    '| 品牌策略组(1个) | select | x |\n', encoding='utf-8')
+            (fake / 'README.md').write_text(
+                (readme_stats.ROOT / 'README.md').read_text(encoding='utf-8'), encoding='utf-8')
+            original = readme_stats.ROOT
+            readme_stats.ROOT = fake
+            try:
+                changed = readme_stats.update_readme(self.stats)
+                texts = [(fake / 'configs' / n / 'README.md').read_text(encoding='utf-8')
+                         for n in ('Android', 'Nikki')]
+            finally:
+                readme_stats.ROOT = original
+        self.assertEqual(len([c for c in changed if '品牌策略组数量' in c]), 2, changed)
+        for t in texts:
+            self.assertIn(f'品牌策略组({self.stats["brand_count"]}个)', t)
 
 
 if __name__ == '__main__':
