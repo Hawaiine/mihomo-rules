@@ -360,7 +360,7 @@ python3 -m unittest discover -s scripts/tests
 | 📱 社交 | 21 | 1,023 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
 | ☁️ 云服务 | 22 | 1,735 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
 | 🎮 游戏 | 4 | 247 | Nintendo · PlayStation · Steam · Xbox |
-| 🛍️ 电商 | 7 | 726 | AliPay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
+| 🛍️ 电商 | 7 | 726 | Alipay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao |
 | 🎵 音乐 | 12 | 109 | AppleMusic · Deezer · mora · Musixmatch · NetEaseCloudMusic · Pandora · QQMusic · Qobuz · SoundCloud · Spotify · TIDAL · YouTubeMusic |
 | 🏢 企业 | 16 | 8,504 | Apple · AppleFitnessPlus · AppleTV · Bank · DingTalk · Lark · MetaBrainz · OasisicSelf · PT · PTChina · Porn · PornChina · TMDB · WSJ · Wallpaper · Z-Library |
 

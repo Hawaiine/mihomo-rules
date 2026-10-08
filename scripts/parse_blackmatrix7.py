@@ -70,7 +70,7 @@ ALLOWED_TYPES: set[str] = {
 # Twitter 是上游名称，目标技术 ID 为 X；不要把上游名称当成本仓库 ID。
 BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "AbemaTV": "ABEMA",
-    "AliPay": "AliPay",
+    "AliPay": "Alipay",
     "Amazon": "Amazon",
     "Anthropic": "Anthropic",
     "Apple": "Apple",

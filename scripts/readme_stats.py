@@ -59,7 +59,7 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
         'Oracle', 'Outlook', 'Synology', 'iCloud', 'iCloudPrivateRelay',
     ],
     '🎮 游戏': ['Nintendo', 'PlayStation', 'Steam', 'Xbox'],
-    '🛍️ 电商': ['AliPay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao'],
+    '🛍️ 电商': ['Alipay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao'],
     '🎵 音乐': [
         'AppleMusic', 'Deezer', 'mora', 'Musixmatch', 'NetEaseCloudMusic',
         'Pandora', 'QQMusic', 'Qobuz', 'SoundCloud', 'Spotify', 'TIDAL',

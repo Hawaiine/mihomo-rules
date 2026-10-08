@@ -6102,12 +6102,12 @@ rule-providers:
     interval: 86400
     path: ./ruleset/ABEMA.yaml
 
-  AliPay:
+  Alipay:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AliPay/AliPay.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Alipay/Alipay.yaml"
     interval: 86400
-    path: ./ruleset/AliPay.yaml
+    path: ./ruleset/Alipay.yaml
 
   Amazon:
     type: http
@@ -6954,7 +6954,7 @@ rules:
                                                     # - RULE-SET,YouTube,YouTube
                                                     # - RULE-SET,iCloud,iCloud
                                                     # - RULE-SET,ABEMA,ABEMA
-                                                    # - RULE-SET,AliPay,支付宝
+                                                    # - RULE-SET,Alipay,支付宝
                                                     # - RULE-SET,Amazon,Amazon
                                                     # - RULE-SET,Anthropic,Anthropic
                                                     # - RULE-SET,Apple,Apple

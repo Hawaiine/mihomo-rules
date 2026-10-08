@@ -5781,12 +5781,12 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ABEMA/ABEMA.yaml"
     interval: 86400
     path: ./ruleset/ABEMA.yaml
-  AliPay:
+  Alipay:
     type: http
     behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AliPay/AliPay.yaml"
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Alipay/Alipay.yaml"
     interval: 86400
-    path: ./ruleset/AliPay.yaml
+    path: ./ruleset/Alipay.yaml
   Amazon:
     type: http
     behavior: classical
