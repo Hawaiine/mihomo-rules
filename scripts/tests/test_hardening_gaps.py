@@ -6,6 +6,7 @@ F2  README 口径只做 substring 存在性 → 重复出现处其一漂移被�
 F3  generate_config 只比 /tmp 暂存文件 → 手工改动过的 configs/ 永不被纠正
 """
 import json
+import os
 import shutil
 import subprocess as sp
 import sys
@@ -105,10 +106,26 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
         shutil.copytree(
             ROOT,
             isolated,
-            ignore=shutil.ignore_patterns('.git', '__pycache__', '.pytest_cache'),
+            # 必须排除 Oasisic-Icons：copytree 同时剥离了它的 .git，
+            # 而 match_icons.scan_icons() 需要 `git ls-tree <固定 revision>`，
+            # 无 .git 的副本会让 generate_config 在图标步骤 RuntimeError 退出。
+            ignore=shutil.ignore_patterns('.git', '__pycache__', '.pytest_cache', 'Oasisic-Icons'),
         )
         self.addCleanup(shutil.rmtree, tmp, True)
         return isolated
+
+    def _icon_env(self):
+        """子进程必须拿到**绝对路径**且含 .git 的图标仓库。
+
+        隔离副本的 cwd 在 /tmp，match_icons 的相对默认值（<repo>/Oasisic-Icons）
+        在那里指向一个被剥离 .git 的副本 → 固定 revision 不可读。
+        """
+        env = dict(os.environ)
+        if not env.get('MIHOMO_ICON_REPO'):
+            candidate = ROOT / 'Oasisic-Icons'
+            if (candidate / '.git').exists():
+                env['MIHOMO_ICON_REPO'] = str(candidate)
+        return env
 
     def test_generate_config_removes_manual_noise(self):
         isolated = self._isolated_repo()
@@ -116,7 +133,7 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
         original = cfg.read_text(encoding='utf-8')
         cfg.write_text(original + '\n# 手工插入的脏行\n', encoding='utf-8')
         sp.run(['python3', 'scripts/generate_config.py'],
-               cwd=isolated, capture_output=True, text=True)
+               cwd=isolated, capture_output=True, text=True, env=self._icon_env())
         after = cfg.read_text(encoding='utf-8')
         self.assertNotIn('手工插入的脏行', after, 'generate_config 未纠正手工改动')
 
@@ -131,15 +148,33 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
             )
         cfg = isolated / 'configs' / 'Android' / 'config.yaml'
         first = sp.run(['python3', 'scripts/generate_config.py'],
-                       cwd=isolated, capture_output=True, text=True)
+                       cwd=isolated, capture_output=True, text=True, env=self._icon_env())
         revised = cfg.read_text(encoding='utf-8')
         self.assertIn('/main/icons/', revised)
         self.assertNotIn(pinned, revised)
         self.assertNotIn('无变化', first.stdout)
         second = sp.run(['python3', 'scripts/generate_config.py'],
-                        cwd=isolated, capture_output=True, text=True)
+                        cwd=isolated, capture_output=True, text=True, env=self._icon_env())
         self.assertEqual(cfg.read_text(encoding='utf-8'), revised)
         self.assertIn('无变化', second.stdout)
+
+    def test_isolated_copy_excludes_icon_repo(self):
+        """回归（daily-sync #479–#481 根因）：隔离副本不得携带被剥离 .git 的图标仓库。"""
+        isolated = self._isolated_repo()
+        self.assertFalse(
+            (isolated / 'Oasisic-Icons').exists(),
+            '隔离副本包含 Oasisic-Icons（.git 已被剥离）→ generate_config 将无法读取固定 revision',
+        )
+
+    def test_child_env_supplies_git_backed_icon_repo(self):
+        """子进程的图标仓库必须是绝对路径且含 .git，否则固定 revision 不可读。"""
+        env = self._icon_env()
+        repo = env.get('MIHOMO_ICON_REPO')
+        if not repo:
+            self.skipTest('本机无 Oasisic-Icons 检出（CI 由 checkout 提供）')
+        self.assertTrue(Path(repo).is_absolute(), repo)
+        self.assertTrue((Path(repo) / '.git').exists(),
+                        f'{repo} 缺少 .git，无法 git ls-tree 固定 revision')
 
 
 class TestReadmeCheckIsPerOccurrence(unittest.TestCase):
