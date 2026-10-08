@@ -7,6 +7,8 @@ lib/ownership.py — 域名归属查询/认领/迁移
 import json
 from typing import NamedTuple
 
+from lib.ownership_map import CROSS_BRAND_OWNERSHIP
+
 
 # ── 迁移建议数据结构 ──────────────────────────────────────────
 
@@ -196,3 +198,36 @@ class OwnershipRegistry:
         """
         for domain in domains:
             self.claim_domain(domain, brand)
+
+
+# ── 跨品牌归属过滤（非父子关系）───────────────────────────────
+
+def strip_cross_brand_owned(
+    rules: list,
+    brand_name: str,
+) -> tuple[list, list]:
+    """从 brand_name 的候选规则中剥离 canonical owner 为他品牌的域名。
+
+    与 SUB_PARENT 父子裁决互补：父子关系用 resolve_ownership 从祖先剥离，
+    非父子关系的跨品牌归属（如 Copilot 里的 OpenAI 自有域）用本表裁决。
+
+    只作用于 DOMAIN / DOMAIN-SUFFIX；owner 自身不受影响（owner == brand_name
+    时保留），因此目标规则集仍是这些域名的 canonical 单表示。
+
+    Args:
+        rules:      候选规则列表（CanonicalRule）
+        brand_name: 当前正在生成的品牌
+
+    Returns:
+        (保留的规则列表, 被剥离的规则列表)
+    """
+    kept: list = []
+    dropped: list = []
+    for r in rules:
+        if getattr(r, 'rule_type', None) in ('DOMAIN', 'DOMAIN-SUFFIX'):
+            owner = CROSS_BRAND_OWNERSHIP.get(str(r.value).lower())
+            if owner is not None and owner != brand_name:
+                dropped.append(r)
+                continue
+        kept.append(r)
+    return kept, dropped
