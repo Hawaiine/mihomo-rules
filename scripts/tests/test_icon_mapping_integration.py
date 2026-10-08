@@ -64,7 +64,7 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (143, 0))
+        self.assertEqual((len(icon_map), len(missing)), (148, 0))
         self.assertEqual(missing, [])
         production_ref = "main"
         self.assertEqual(
@@ -103,7 +103,13 @@ class TestIconMappingIntegration(unittest.TestCase):
         # Phase 1 品牌身份对齐后更新：仅 5 个显示名键变化（Bilibili→bilibili、Mora→mora、
         # Pixiv→pixiv、Telasa→TELASA、D Anime Store→d Anime Store），icon 相对路径未变；
         # 已用「还原显示名后摘要 == 旧值 1ff07f68…」验证无其它漂移。
-        self.assertEqual(digest, "a0d8f1b741ac25c85f1e2a7175848a5e581fc7dab9c3620e31ca7751a182083e")
+        #
+        # Phase 2 显示名规范化 + HBOMax 新增后再次更新（a0d8f1b7… → 0678792b…）：
+        # 仅 5 个显示名键变化（Microsoft Azure→Azure、Microsoft Bing→Bing、
+        # Microsoft Copilot→Copilot、Microsoft Outlook→Outlook、Radiko→radiko）
+        # + 1 个新增键（HBO Max → WarnerBrosDiscovery/HBOMax/HBOMax.png，由 HBOMax 独立规则集引入）；
+        # 已用「还原这 6 项后摘要 == a0d8f1b7…」验证无其它漂移。
+        self.assertEqual(digest, "62d47e2250b9b693e13915bab5212fef1787e3a8e9fe1187fcb7850a3ac69795")
 
 
 

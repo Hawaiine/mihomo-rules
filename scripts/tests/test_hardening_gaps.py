@@ -166,10 +166,18 @@ class TestGenerateConfigDetectsConfigDrift(unittest.TestCase):
             '隔离副本包含 Oasisic-Icons（.git 已被剥离）→ generate_config 将无法读取固定 revision',
         )
 
-    def test_child_env_supplies_git_backed_icon_repo(self):
-        """子进程的图标仓库必须是绝对路径且含 .git，否则固定 revision 不可读。"""
+    def test_child_env_supplies_absolute_icon_repo(self):
+        """子进程必须拿到**绝对路径**的图标仓库；自动解析的那条路径还必须是 git 仓库。
+
+        调用方显式传入的 MIHOMO_ICON_REPO 一律原样透传（portability 测试会传
+        非 git 的临时假仓库），只有自动解析（<repo>/Oasisic-Icons）才要求 .git。
+        """
+        inherited = os.environ.get('MIHOMO_ICON_REPO')
         env = self._icon_env()
         repo = env.get('MIHOMO_ICON_REPO')
+        if inherited:
+            self.assertEqual(repo, inherited, '调用方显式传入的图标仓库必须原样透传')
+            return
         if not repo:
             self.skipTest('本机无 Oasisic-Icons 检出（CI 由 checkout 提供）')
         self.assertTrue(Path(repo).is_absolute(), repo)
@@ -238,14 +246,15 @@ class TestChangelogArithmetic(unittest.TestCase):
 
     def test_base_count_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 160', '含 8 兜底共 160', 1)
-        self.assertNotEqual(bad, text)
+        bad = text.replace('含 9 兜底共 165', '含 8 兜底共 161', 1)
+        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 165」——变异目标已随 CHANGELOG 更新而漂移')
         errs = self._with(bad)
         self.assertTrue(any('兜底数' in e for e in errs), errs)
 
     def test_total_ruleset_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 160', '含 9 兜底共 158', 1)
+        bad = text.replace('含 9 兜底共 165', '含 9 兜底共 158', 1)
+        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 165」——变异目标已随 CHANGELOG 更新而漂移')
         errs = self._with(bad)
         self.assertTrue(any('规则集' in e for e in errs), errs)
 

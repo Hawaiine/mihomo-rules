@@ -1,0 +1,24 @@
+# ===========================================
+# Rule Name: 大疆创新
+# Author: Hawaiine
+# Updated: 2026-10-08 13:00:41
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 10
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,dji.com
+  - DOMAIN-SUFFIX,dji.ink
+  - DOMAIN-SUFFIX,dji.net
+  - DOMAIN-SUFFIX,djicdn.com
+  - DOMAIN-SUFFIX,djigate.com
+  - DOMAIN-SUFFIX,djiits.com
+  - DOMAIN-SUFFIX,djiops.com
+  - DOMAIN-SUFFIX,djiservice.org
+  - DOMAIN-SUFFIX,robomaster.com
+  - DOMAIN-SUFFIX,skypixel.com

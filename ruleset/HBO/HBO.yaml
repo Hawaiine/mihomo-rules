@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: HBO
 # Author: Hawaiine
-# Updated: 2026-09-24 14:50:19
+# Updated: 2026-10-08 13:00:45
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 0
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 89
+# DOMAIN-SUFFIX: 82
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -72,11 +72,6 @@ payload:
   - DOMAIN-SUFFIX,hbolaunchpad.com
   - DOMAIN-SUFFIX,hbolb.onwardsmg.com
   - DOMAIN-SUFFIX,hbomailman.com
-  - DOMAIN-SUFFIX,hbomax-images.warnermediacdn.com
-  - DOMAIN-SUFFIX,hbomax.com
-  - DOMAIN-SUFFIX,hbomax.eu
-  - DOMAIN-SUFFIX,hbomaxcdn.com
-  - DOMAIN-SUFFIX,hbomaxdash.s.llnwi.net
   - DOMAIN-SUFFIX,hbomediarelations.com
   - DOMAIN-SUFFIX,hbonordic.com
   - DOMAIN-SUFFIX,hbonordic.tv
@@ -89,8 +84,6 @@ payload:
   - DOMAIN-SUFFIX,homebox.com
   - DOMAIN-SUFFIX,homeboxoffice.com
   - DOMAIN-SUFFIX,manifest.prod.boltdns.net
-  - DOMAIN-SUFFIX,max.com
-  - DOMAIN-SUFFIX,maxgo.com
   - DOMAIN-SUFFIX,now-ashare.com
   - DOMAIN-SUFFIX,now-tv.com
   - DOMAIN-SUFFIX,now.com

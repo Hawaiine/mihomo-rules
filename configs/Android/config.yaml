@@ -1097,7 +1097,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV/AppleTV.png"
 
-  - name: "Microsoft Azure"
+  - name: "Azure"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1130,7 +1130,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Azure/Azure.png"
 
-  - name: "Microsoft Bing"
+  - name: "Bing"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1163,7 +1163,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Bing/Bing.png"
 
-  - name: "Microsoft Copilot"
+  - name: "Copilot"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1195,6 +1195,72 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Copilot/Copilot.png"
+
+  - name: "钉钉"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/DingTalk/DingTalk.png"
+
+  - name: "Disney+"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Disney/DisneyPlus/DisneyPlus.png"
 
   - name: "GitHub"
     type: select
@@ -1526,6 +1592,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SpaceXAI/xAI/Grok/Grok.png"
 
+  - name: "HBO Max"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/WarnerBrosDiscovery/HBOMax/HBOMax.png"
+
   - name: "Hulu"
     type: select
     proxies:
@@ -1658,7 +1757,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/OneDrive/OneDrive.png"
 
-  - name: "Microsoft Outlook"
+  - name: "Outlook"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1789,6 +1888,39 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/SiriAI/SiriAI.png"
+
+  - name: "淘宝"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Taobao/Taobao.png"
 
   - name: "Threads"
     type: select
@@ -1922,6 +2054,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Google/YouTube/YouTube.png"
 
+  - name: "优酷"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Youku/Youku.png"
+
   - name: "iCloud"
     type: select
     proxies:
@@ -1987,6 +2152,39 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/ABEMA/ABEMA.png"
+
+  - name: "阿里巴巴"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Alibaba/Alibaba.png"
 
   - name: "支付宝"
     type: select
@@ -2383,6 +2581,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/DAZN/DAZN.png"
 
+  - name: "大疆创新"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Hardware/DJI/DJI.png"
+
   - name: "DMM TV"
     type: select
     proxies:
@@ -2481,39 +2712,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Deezer/Deezer.png"
-
-  - name: "钉钉"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/DingTalk/DingTalk.png"
 
   - name: "Discord"
     type: select
@@ -3536,6 +3734,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/MyVideo/MyVideo.png"
 
+  - name: "NBCUniversal"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/NBCUniversal/NBCUniversal/NBCUniversal.png"
+
   - name: "NHK"
     type: select
     proxies:
@@ -4455,39 +4686,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Qobuz/Qobuz.png"
 
-  - name: "Radiko"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Radiko/Radiko.png"
-
   - name: "Rakuten TV"
     type: select
     proxies:
@@ -4883,39 +5081,6 @@ proxy-groups:
     use:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/TVer/TVer.png"
-
-  - name: "淘宝"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Taobao/Taobao.png"
 
   - name: "Telegram"
     type: select
@@ -5379,39 +5544,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SpaceXAI/X/X.png"
 
-  - name: "优酷"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Alibaba/Youku/Youku.png"
-
   - name: "Z-Library"
     type: select
     proxies:
@@ -5709,6 +5841,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/pixiv/pixiv.png"
 
+  - name: "radiko"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Radiko/Radiko.png"
+
   - name: "小红书"
     type: select
     proxies:
@@ -5923,6 +6088,20 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Copilot.yaml
 
+  DingTalk:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DingTalk/DingTalk.yaml"
+    interval: 86400
+    path: ./ruleset/DingTalk.yaml
+
+  DisneyPlus:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DisneyPlus/DisneyPlus.yaml"
+    interval: 86400
+    path: ./ruleset/DisneyPlus.yaml
+
   GitHub:
     type: http
     behavior: classical
@@ -5993,6 +6172,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Grok.yaml
 
+  HBOMax:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HBOMax/HBOMax.yaml"
+    interval: 86400
+    path: ./ruleset/HBOMax.yaml
+
   Hulu:
     type: http
     behavior: classical
@@ -6049,6 +6235,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/SiriAI.yaml
 
+  Taobao:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Taobao/Taobao.yaml"
+    interval: 86400
+    path: ./ruleset/Taobao.yaml
+
   Threads:
     type: http
     behavior: classical
@@ -6077,6 +6270,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/YouTube.yaml
 
+  Youku:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Youku/Youku.yaml"
+    interval: 86400
+    path: ./ruleset/Youku.yaml
+
   iCloud:
     type: http
     behavior: classical
@@ -6090,6 +6290,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ABEMA/ABEMA.yaml"
     interval: 86400
     path: ./ruleset/ABEMA.yaml
+
+  Alibaba:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Alibaba/Alibaba.yaml"
+    interval: 86400
+    path: ./ruleset/Alibaba.yaml
 
   Alipay:
     type: http
@@ -6175,6 +6382,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/DAZN.yaml
 
+  DJI:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DJI/DJI.yaml"
+    interval: 86400
+    path: ./ruleset/DJI.yaml
+
   DMMTV:
     type: http
     behavior: classical
@@ -6195,13 +6409,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Deezer/Deezer.yaml"
     interval: 86400
     path: ./ruleset/Deezer.yaml
-
-  DingTalk:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/DingTalk/DingTalk.yaml"
-    interval: 86400
-    path: ./ruleset/DingTalk.yaml
 
   Discord:
     type: http
@@ -6420,6 +6627,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/MyVideo.yaml
 
+  NBCUniversal:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/NBCUniversal/NBCUniversal.yaml"
+    interval: 86400
+    path: ./ruleset/NBCUniversal.yaml
+
   NHK:
     type: http
     behavior: classical
@@ -6616,13 +6830,6 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Qobuz.yaml
 
-  Radiko:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Radiko/Radiko.yaml"
-    interval: 86400
-    path: ./ruleset/Radiko.yaml
-
   RakutenTV:
     type: http
     behavior: classical
@@ -6706,13 +6913,6 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/TVer/TVer.yaml"
     interval: 86400
     path: ./ruleset/TVer.yaml
-
-  Taobao:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Taobao/Taobao.yaml"
-    interval: 86400
-    path: ./ruleset/Taobao.yaml
 
   Telegram:
     type: http
@@ -6812,13 +7012,6 @@ rule-providers:
     interval: 86400
     path: ./ruleset/X.yaml
 
-  Youku:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Youku/Youku.yaml"
-    interval: 86400
-    path: ./ruleset/Youku.yaml
-
   Z-Library:
     type: http
     behavior: classical
@@ -6882,6 +7075,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/pixiv.yaml
 
+  radiko:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/radiko/radiko.yaml"
+    interval: 86400
+    path: ./ruleset/radiko.yaml
+
   rednote:
     type: http
     behavior: classical
@@ -6916,9 +7116,11 @@ rules:
                                                     # - RULE-SET,AppleNewsPlus,Apple News+
                                                     # - RULE-SET,ApplePodcasts,Apple Podcasts
                                                     # - RULE-SET,AppleTV,Apple TV
-                                                    # - RULE-SET,Azure,Microsoft Azure
-                                                    # - RULE-SET,Bing,Microsoft Bing
-                                                    # - RULE-SET,Copilot,Microsoft Copilot
+                                                    # - RULE-SET,Azure,Azure
+                                                    # - RULE-SET,Bing,Bing
+                                                    # - RULE-SET,Copilot,Copilot
+                                                    # - RULE-SET,DingTalk,钉钉
+                                                    # - RULE-SET,DisneyPlus,Disney+
                                                     # - RULE-SET,GitHub,GitHub
                                                     # - RULE-SET,Gmail,Gmail
                                                     # - RULE-SET,GoogleAI,Google AI
@@ -6929,20 +7131,24 @@ rules:
                                                     # - RULE-SET,GooglePlay,Google Play
                                                     # - RULE-SET,GoogleVoice,Google Voice
                                                     # - RULE-SET,Grok,Grok
+                                                    # - RULE-SET,HBOMax,HBO Max
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,OneDrive,OneDrive
-                                                    # - RULE-SET,Outlook,Microsoft Outlook
+                                                    # - RULE-SET,Outlook,Outlook
                                                     # - RULE-SET,Peacock,Peacock
                                                     # - RULE-SET,PrimeVideo,Prime Video
                                                     # - RULE-SET,SiriAI,Siri AI
+                                                    # - RULE-SET,Taobao,淘宝
                                                     # - RULE-SET,Threads,Threads
                                                     # - RULE-SET,WhatsApp,WhatsApp
                                                     # - RULE-SET,Xbox,Xbox
                                                     # - RULE-SET,YouTube,YouTube
+                                                    # - RULE-SET,Youku,优酷
                                                     # - RULE-SET,iCloud,iCloud
                                                     # - RULE-SET,ABEMA,ABEMA
+                                                    # - RULE-SET,Alibaba,阿里巴巴
                                                     # - RULE-SET,Alipay,支付宝
                                                     # - RULE-SET,Amazon,Amazon
                                                     # - RULE-SET,Anthropic,Anthropic
@@ -6955,10 +7161,10 @@ rules:
                                                     # - RULE-SET,Crunchyroll,Crunchyroll
                                                     # - RULE-SET,Cursor,Cursor
                                                     # - RULE-SET,DAZN,DAZN
+                                                    # - RULE-SET,DJI,大疆创新
                                                     # - RULE-SET,DMMTV,DMM TV
                                                     # - RULE-SET,DeepSeek,DeepSeek
                                                     # - RULE-SET,Deezer,Deezer
-                                                    # - RULE-SET,DingTalk,钉钉
                                                     # - RULE-SET,Discord,Discord
                                                     # - RULE-SET,Disney,Disney
                                                     # - RULE-SET,Docker,Docker
@@ -6990,6 +7196,7 @@ rules:
                                                     # - RULE-SET,MusicJapan,Music Japan
                                                     # - RULE-SET,Musixmatch,Musixmatch
                                                     # - RULE-SET,MyVideo,MyVideo
+                                                    # - RULE-SET,NBCUniversal,NBCUniversal
                                                     # - RULE-SET,NHK,NHK
                                                     # - RULE-SET,NetEaseCloudMusic,网易云音乐
                                                     # - RULE-SET,NetEaseMail,网易邮箱
@@ -7018,7 +7225,6 @@ rules:
                                                     # - RULE-SET,QQMail,QQ邮箱
                                                     # - RULE-SET,QQMusic,QQ音乐
                                                     # - RULE-SET,Qobuz,Qobuz
-                                                    # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
                                                     # - RULE-SET,ReadJapan,Read Japan
                                                     # - RULE-SET,Reddit,Reddit
@@ -7031,7 +7237,6 @@ rules:
                                                     # - RULE-SET,TIDAL,TIDAL
                                                     # - RULE-SET,TMDB,TMDB
                                                     # - RULE-SET,TVer,TVer
-                                                    # - RULE-SET,Taobao,淘宝
                                                     # - RULE-SET,Telegram,Telegram
                                                     # - RULE-SET,TencentVideo,腾讯视频
                                                     # - RULE-SET,TikTok,TikTok
@@ -7046,7 +7251,6 @@ rules:
                                                     # - RULE-SET,WeChat,微信
                                                     # - RULE-SET,Weibo,微博
                                                     # - RULE-SET,X,X
-                                                    # - RULE-SET,Youku,优酷
                                                     # - RULE-SET,Z-Library,Z-Library
                                                     # - RULE-SET,Zhihu,知乎
                                                     # - RULE-SET,bilibili,bilibili
@@ -7056,6 +7260,7 @@ rules:
                                                     # - RULE-SET,mora,mora
                                                     # - RULE-SET,myTVSUPER,myTV SUPER
                                                     # - RULE-SET,pixiv,pixiv
+                                                    # - RULE-SET,radiko,radiko
                                                     # - RULE-SET,rednote,小红书
                                                     # - RULE-SET,Cloudflare,Cloudflare
 

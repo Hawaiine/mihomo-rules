@@ -1,0 +1,30 @@
+# ===========================================
+# Rule Name: NBCUniversal
+# Author: Hawaiine
+# Updated: 2026-10-08 13:00:45
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 16
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,cnbc.com
+  - DOMAIN-SUFFIX,cnbcfm.com
+  - DOMAIN-SUFFIX,dreamworks.com
+  - DOMAIN-SUFFIX,msnbc.com
+  - DOMAIN-SUFFIX,nbc.co
+  - DOMAIN-SUFFIX,nbc.com
+  - DOMAIN-SUFFIX,nbcnews.com
+  - DOMAIN-SUFFIX,nbcolympics.com
+  - DOMAIN-SUFFIX,nbcsports.com
+  - DOMAIN-SUFFIX,nbcuni.com
+  - DOMAIN-SUFFIX,nbcuniversal.com
+  - DOMAIN-SUFFIX,s-nbcnews.com
+  - DOMAIN-SUFFIX,universalorlando.com
+  - DOMAIN-SUFFIX,universalpictures.com
+  - DOMAIN-SUFFIX,universalpicturesinternational.com
+  - DOMAIN-SUFFIX,universalstudioshollywood.com

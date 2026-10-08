@@ -16,6 +16,7 @@ SUB_PARENT: dict[str, str] = {
     'PrimeVideo': 'Amazon',
     'Peacock': 'NBCUniversal',
     'Hulu': 'Disney',
+    'HBOMax': 'HBO',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
     'Instagram': 'Facebook',
@@ -41,5 +42,10 @@ SUB_PARENT: dict[str, str] = {
     'GoogleMaps': 'Google',
     'GoogleNews': 'Google',
     'GoogleVoice': 'Google',
-    'Grok': 'X',
+    'Grok': 'xAI',
+    # ── 2026-10-08 Phase 3：新建父规则集（Oasisic parent_brand 一致）──
+    'Taobao': 'Alibaba',
+    'DingTalk': 'Alibaba',
+    'Youku': 'Alibaba',
+    'DisneyPlus': 'Disney',
 }

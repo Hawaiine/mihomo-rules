@@ -1,0 +1,19 @@
+# ===========================================
+# Rule Name: Disney+
+# Author: Hawaiine
+# Updated: 2026-10-08 21:00:00
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 1
+# DOMAIN-SUFFIX: 4
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN,disneyplus.com.ssl.sc.omtrdc.net
+  - DOMAIN-SUFFIX,disneyplus.bn5x.net
+  - DOMAIN-SUFFIX,disneyplus.com
+  - DOMAIN-SUFFIX,disneystreaming.com
+  - DOMAIN-SUFFIX,dssott.com
