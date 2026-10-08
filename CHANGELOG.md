@@ -1,16 +1,25 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 161 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 165 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
 
 ---
 
 ## 2026-10-08
 
 ### Added
-- **`HBOMax` 独立规则集**（151 → 152 品牌，160 → 161 规则集；含 9 兜底共 161）— 人工决定 HBO / HBO Max 分离。上游三源均无 `HBOMax`，故按 `MANUAL_BRANDS` 手工维护；**7 条域名全部从既有 `HBO` payload 提取**（`hbomax.com` / `hbomax.eu` / `hbomaxcdn.com` / `hbomax-images.warnermediacdn.com` / `hbomaxdash.s.llnwi.net` / `max.com` / `maxgo.com`），无凭空新增；`SUB_PARENT` 归 `HBO`，`resolve_ownership --apply` 已从 `HBO` 剥离这 7 条；图标 `icons/WarnerBrosDiscovery/HBOMax/HBOMax.png`
+- **`DisneyPlus` 独立规则集**（152 → 156 品牌，161 → 165 规则集；含 9 兜底共 165）— 人工决定 Disney / Disney+ 分离。**§29 复核推翻旧结论**：v2fly `data/disney` 实际含 `disneyplus.com`(117) / `disneystreaming.com`(122) / `dssott.com`(129) / `disneyplus.bn5x.net`(116) / `full:disneyplus.com.ssl.sc.omtrdc.net`(151)。按 §30 最小化，**仅取 Disney+ dedicated 5 条**，逐条 v2fly 溯源；共享 CDN `dilcdn.com` / 非官方 `disney-plus.net` **未纳入**。`SUB_PARENT['DisneyPlus']='Disney'`，`resolve_ownership --apply` 已从 `Disney` 剥离 `disneyplus.com`
+- **`Alibaba` 独立规则集**（392 条）— 上游接线 v2fly `data/alibaba`(231 行) + blackmatrix7 `Alibaba`(1321 条)。Display = `阿里巴巴`（官方中文名，与项目中文品牌口径一致）。按 §36/§38 不吞子品牌：`SUB_PARENT` 新增 `Taobao`/`DingTalk`/`Youku` → `Alibaba`（证据：Oasisic `parent_brand` + v2fly `include:`），`resolve_ownership --apply` 剥离子品牌专属域
+- **`NBCUniversal` 独立规则集**（16 条）— 上游接线 v2fly `data/nbcuniversal`。按 §41 不复制 portfolio：`peacocktv.com` 归子品牌 `Peacock`（`SUB_PARENT['Peacock']='NBCUniversal'` 已存在），`resolve_ownership --apply` 已从 `NBCUniversal` 剥离
+- **`DJI` 独立规则集**（10 条）— 上游接线 v2fly `data/dji`。Display = `大疆创新`（Oasisic canonical 一致）
+- **`HBOMax` 独立规则集**（151 → 152 品牌，160 → 161 规则集）— 人工决定 HBO / HBO Max 分离。上游三源均无 `HBOMax`，故按 `MANUAL_BRANDS` 手工维护；**7 条域名全部从既有 `HBO` payload 提取**（`hbomax.com` / `hbomax.eu` / `hbomaxcdn.com` / `hbomax-images.warnermediacdn.com` / `hbomaxdash.s.llnwi.net` / `max.com` / `maxgo.com`），无凭空新增；`SUB_PARENT` 归 `HBO`，`resolve_ownership --apply` 已从 `HBO` 剥离这 7 条；图标 `icons/WarnerBrosDiscovery/HBOMax/HBOMax.png`
+
+### Fixed
+- **daily-sync 补齐 `MIHOMO_ICON_REPO`**（§56/§57 最小改动，仅 `env:` 一行，取值与 `pr-verify.yml` 一致 `${{ github.workspace }}/Oasisic-Icons`）— 此前 2 个 icon integration tests 因环境变量缺失被 **silent skip**
 
 ### Changed
+- **双向 Ownership 审计工具化**（§22–§30/§41）— `resolve_ownership.py` 新增 `find_child_contains_parent_rules()`（child→parent 反向审计，**只报告不剥离**）；全库 36 个 `SUB_PARENT` 对双向实测：parent→child 残留 0 / child→parent 0
+
 - **Display Name 去除 Microsoft 前缀**（人工决定；Technical ID 不变，仅 Display / Strategy Group / `# Rule Name`）— `Microsoft Azure` → `Azure`、`Microsoft Bing` → `Bing`、`Microsoft Copilot` → `Copilot`、`Microsoft Outlook` → `Outlook`
 - **`Radiko` → `radiko`**（完整 Technical ID rename；官方商店名为 `radiko`）— 目录 / YAML 文件名 / provider key / RULE-SET 第一段 / Display 同步迁移；Oasisic 侧 canonical ID 仍为 `Radiko`，其变更由用户侧处理（图标经大小写不敏感匹配仍可解析）
 - **`Grok` 的 `SUB_PARENT` 由 `X` 改为 `xAI`**（人工决定；与 Oasisic `Grok.parent_brand = xAI` 及官方一致）— 实测 `X ∩ Grok = 0`，对规则内容零影响

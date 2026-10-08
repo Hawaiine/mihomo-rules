@@ -82,6 +82,7 @@ BLACKMATRIX7_BRAND_MAP: dict[str, str] = {
     "Deezer": "Deezer",
     "Discord": "Discord",
     "Disney": "Disney",
+    "Alibaba": "Alibaba",
     "Docker": "Docker",
     "DouYin": "Douyin",
     "Facebook": "Facebook",

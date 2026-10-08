@@ -26,6 +26,7 @@ MANUAL_BRANDS = frozenset({
     # 子品牌：从父品牌手工提取服务域名
     'Gmail', 'GoogleMaps', 'GoogleNews', 'GooglePhotos', 'GoogleVoice',
     'HBOMax',
+    'DisneyPlus',
     'Outlook', 'SiriAI',
     # 手工维护的国内 / 社区品牌（三源均无独立类别）
     'Crunchyroll', 'NetEaseCloudMusic', 'NetEaseMail', 'NousResearch',

@@ -65,6 +65,8 @@ jobs:
 
       - name: 🧪 单元测试 (scripts/tests 全量)
         run: python3 -m unittest discover -s scripts/tests -q
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
 
       - name: 🧹 过滤仅 Updated 噪音
         id: filter

@@ -43,4 +43,9 @@ SUB_PARENT: dict[str, str] = {
     'GoogleNews': 'Google',
     'GoogleVoice': 'Google',
     'Grok': 'xAI',
+    # ── 2026-10-08 Phase 3：新建父规则集（Oasisic parent_brand 一致）──
+    'Taobao': 'Alibaba',
+    'DingTalk': 'Alibaba',
+    'Youku': 'Alibaba',
+    'DisneyPlus': 'Disney',
 }

@@ -246,15 +246,15 @@ class TestChangelogArithmetic(unittest.TestCase):
 
     def test_base_count_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 161', '含 8 兜底共 161', 1)
-        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 161」——变异目标已随 CHANGELOG 更新而漂移')
+        bad = text.replace('含 9 兜底共 165', '含 8 兜底共 161', 1)
+        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 165」——变异目标已随 CHANGELOG 更新而漂移')
         errs = self._with(bad)
         self.assertTrue(any('兜底数' in e for e in errs), errs)
 
     def test_total_ruleset_mismatch_fails(self):
         text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-        bad = text.replace('含 9 兜底共 161', '含 9 兜底共 158', 1)
-        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 161」——变异目标已随 CHANGELOG 更新而漂移')
+        bad = text.replace('含 9 兜底共 165', '含 9 兜底共 158', 1)
+        self.assertNotEqual(bad, text, '未命中「含 9 兜底共 165」——变异目标已随 CHANGELOG 更新而漂移')
         errs = self._with(bad)
         self.assertTrue(any('规则集' in e for e in errs), errs)
 

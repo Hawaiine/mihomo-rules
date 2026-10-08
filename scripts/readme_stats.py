@@ -34,9 +34,9 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
     '🎬 流媒体': [
         'ABEMA', 'Bahamut', 'Bangumi', 'bilibili', 'CATCHPLAYPlus', 'Crunchyroll',
         'DAZN', 'dAnimeStore', 'DMMTV', 'Disney', 'Douyin', 'F1TV', 'FujiTV',
-        'GameJapan', 'HBO', 'HBOMax', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
+        'GameJapan', 'HBO', 'HBOMax', 'DisneyPlus', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
         'LINETV', 'Lemino', 'LiTV', 'MangoTV', 'MusicJapan', 'MyVideo', 'NHK',
-        'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'Podcast',
+        'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'NBCUniversal', 'Podcast',
         'PrimeVideo', 'radiko', 'RakutenTV', 'ReadJapan', 'rednote', 'TVer',
         'TELASA', 'TencentVideo', 'Tubi', 'Twitch', 'UNEXT', 'VideoMarket',
         'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'ApplePodcasts', 'friDayVideo',
@@ -59,7 +59,7 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
         'Oracle', 'Outlook', 'Synology', 'iCloud', 'iCloudPrivateRelay',
     ],
     '🎮 游戏': ['Nintendo', 'PlayStation', 'Steam', 'Xbox'],
-    '🛍️ 电商': ['Alipay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao'],
+    '🛍️ 电商': ['Alipay', 'Amazon', 'JD', 'Meituan', 'PayPal', 'Pinduoduo', 'Taobao', 'Alibaba'],
     '🎵 音乐': [
         'AppleMusic', 'Deezer', 'mora', 'Musixmatch', 'NetEaseCloudMusic',
         'Pandora', 'QQMusic', 'Qobuz', 'SoundCloud', 'Spotify', 'TIDAL',
@@ -68,7 +68,7 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
     '🏢 企业': [
         'Apple', 'AppleFitnessPlus', 'AppleTV', 'Bank', 'DingTalk', 'Lark',
         'MetaBrainz', 'OasisicSelf', 'PT', 'PTChina', 'Porn', 'PornChina',
-        'TMDB', 'WSJ', 'Wallpaper', 'Z-Library',
+        'TMDB', 'DJI', 'WSJ', 'Wallpaper', 'Z-Library',
     ],
 }
 

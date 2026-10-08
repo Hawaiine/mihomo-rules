@@ -58,6 +58,7 @@ class UncoveredShapeReportTest(unittest.TestCase):
             set(overlaps),
             {
                 ("AppStore", "Apple", "itunes.apple.com"),
+                ("DisneyPlus", "Disney", "disneyplus.com.ssl.sc.omtrdc.net"),
                 ("ApplePodcasts", "Apple", "podcasts.apple.com"),
                 ("PrimeVideo", "Amazon", "avodmp4s3ww-a.akamaihd.net"),
                 ("Xbox", "Microsoft", "img-prod-cms-rt-microsoft-com.akamaized.net"),

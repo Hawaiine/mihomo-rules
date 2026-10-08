@@ -64,7 +64,7 @@ class TestIconMappingIntegration(unittest.TestCase):
             icon_map, missing = match_icons.build_icon_map()
         finally:
             match_icons.ICON_REPO = original_repo
-        self.assertEqual((len(icon_map), len(missing)), (144, 0))
+        self.assertEqual((len(icon_map), len(missing)), (148, 0))
         self.assertEqual(missing, [])
         production_ref = "main"
         self.assertEqual(
@@ -109,7 +109,7 @@ class TestIconMappingIntegration(unittest.TestCase):
         # Microsoft Copilot→Copilot、Microsoft Outlook→Outlook、Radiko→radiko）
         # + 1 个新增键（HBO Max → WarnerBrosDiscovery/HBOMax/HBOMax.png，由 HBOMax 独立规则集引入）；
         # 已用「还原这 6 项后摘要 == a0d8f1b7…」验证无其它漂移。
-        self.assertEqual(digest, "0678792b9d3fd86582876fd37647307432b8b3cf5f173bbdb64ec1b48118e6ae")
+        self.assertEqual(digest, "62d47e2250b9b693e13915bab5212fef1787e3a8e9fe1187fcb7850a3ac69795")
 
 
 
