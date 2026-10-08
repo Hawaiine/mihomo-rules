@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: Disney
 # Author: Hawaiine
-# Updated: 2026-10-08 13:00:45
+# Updated: 2026-10-08 22:33:37
 # DOMAIN-KEYWORD: 0
 # DOMAIN-REGEX: 1
 # DOMAIN: 0
-# DOMAIN-SUFFIX: 186
+# DOMAIN-SUFFIX: 185
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -151,7 +151,6 @@ payload:
   - DOMAIN-SUFFIX,hongkongdisneyland.com
   - DOMAIN-SUFFIX,hotstar-cdn.net
   - DOMAIN-SUFFIX,hotstar-labs.com
-  - DOMAIN-SUFFIX,hotstar.com
   - DOMAIN-SUFFIX,hotstarext.com
   - DOMAIN-SUFFIX,hsprepack.akamaized.net
   - DOMAIN-SUFFIX,js-agent.newrelic.com
