@@ -1,7 +1,19 @@
 # 📋 CHANGELOG
 
 > 本文记录工程与行为变更。日更各品牌规则条数增减见 git log / Discord 通知，不在此逐品牌罗列。
-- Discord `rules_total` 计入全部 160 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+- Discord `rules_total` 计入全部 161 规则集（含 9 兜底）；`notify_pushed` 的 ± 规则与 config 变更优先用 `HEAD~1..HEAD`（CI 提交后不再恒 0）
+
+---
+
+## 2026-10-08
+
+### Added
+- **`HBOMax` 独立规则集**（151 → 152 品牌，160 → 161 规则集；含 9 兜底共 161）— 人工决定 HBO / HBO Max 分离。上游三源均无 `HBOMax`，故按 `MANUAL_BRANDS` 手工维护；**7 条域名全部从既有 `HBO` payload 提取**（`hbomax.com` / `hbomax.eu` / `hbomaxcdn.com` / `hbomax-images.warnermediacdn.com` / `hbomaxdash.s.llnwi.net` / `max.com` / `maxgo.com`），无凭空新增；`SUB_PARENT` 归 `HBO`，`resolve_ownership --apply` 已从 `HBO` 剥离这 7 条；图标 `icons/WarnerBrosDiscovery/HBOMax/HBOMax.png`
+
+### Changed
+- **Display Name 去除 Microsoft 前缀**（人工决定；Technical ID 不变，仅 Display / Strategy Group / `# Rule Name`）— `Microsoft Azure` → `Azure`、`Microsoft Bing` → `Bing`、`Microsoft Copilot` → `Copilot`、`Microsoft Outlook` → `Outlook`
+- **`Radiko` → `radiko`**（完整 Technical ID rename；官方商店名为 `radiko`）— 目录 / YAML 文件名 / provider key / RULE-SET 第一段 / Display 同步迁移；Oasisic 侧 canonical ID 仍为 `Radiko`，其变更由用户侧处理（图标经大小写不敏感匹配仍可解析）
+- **`Grok` 的 `SUB_PARENT` 由 `X` 改为 `xAI`**（人工决定；与 Oasisic `Grok.parent_brand = xAI` 及官方一致）— 实测 `X ∩ Grok = 0`，对规则内容零影响
 
 ---
 

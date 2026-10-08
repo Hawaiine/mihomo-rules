@@ -106,16 +106,17 @@ STRATEGY_GROUP_MAP: dict[str, str] = {
     "AppleNewsPlus": "Apple News+",
     "ApplePodcasts": "Apple Podcasts",
     "AppStore": "App Store",
-    "Azure": "Microsoft Azure",
-    "Outlook": "Microsoft Outlook",
-    "Bing": "Microsoft Bing",
-    "Copilot": "Microsoft Copilot",
+    "Azure": "Azure",
+    "Outlook": "Outlook",
+    "Bing": "Bing",
+    "Copilot": "Copilot",
     "GoogleDrive": "Google Drive",
     "GooglePhotos": "Google Photos",
     "GoogleMaps": "Google Maps",
     "GoogleVoice": "Google Voice",
     "GoogleNews": "Google News",
     "Grok": "Grok",
+    "HBOMax": "HBO Max",
 }
 
 

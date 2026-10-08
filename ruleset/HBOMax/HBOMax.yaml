@@ -1,0 +1,21 @@
+# ===========================================
+# Rule Name: HBO Max
+# Author: Hawaiine
+# Updated: 2026-10-08 12:00:53
+# DOMAIN-KEYWORD: 0
+# DOMAIN-REGEX: 0
+# DOMAIN: 0
+# DOMAIN-SUFFIX: 7
+# IP-CIDR: 0
+# IP-CIDR6: 0
+# IP-ASN: 0
+# PROCESS-NAME: 0
+# ===========================================
+payload:
+  - DOMAIN-SUFFIX,hbomax-images.warnermediacdn.com
+  - DOMAIN-SUFFIX,hbomax.com
+  - DOMAIN-SUFFIX,hbomax.eu
+  - DOMAIN-SUFFIX,hbomaxcdn.com
+  - DOMAIN-SUFFIX,hbomaxdash.s.llnwi.net
+  - DOMAIN-SUFFIX,max.com
+  - DOMAIN-SUFFIX,maxgo.com

@@ -16,6 +16,7 @@ SUB_PARENT: dict[str, str] = {
     'PrimeVideo': 'Amazon',
     'Peacock': 'NBCUniversal',
     'Hulu': 'Disney',
+    'HBOMax': 'HBO',
     'OneDrive': 'Microsoft',
     'GitHub': 'Microsoft',
     'Instagram': 'Facebook',
@@ -41,5 +42,5 @@ SUB_PARENT: dict[str, str] = {
     'GoogleMaps': 'Google',
     'GoogleNews': 'Google',
     'GoogleVoice': 'Google',
-    'Grok': 'X',
+    'Grok': 'xAI',
 }

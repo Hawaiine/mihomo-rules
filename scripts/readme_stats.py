@@ -34,10 +34,10 @@ BRAND_CATEGORIES: dict[str, list[str]] = {
     '🎬 流媒体': [
         'ABEMA', 'Bahamut', 'Bangumi', 'bilibili', 'CATCHPLAYPlus', 'Crunchyroll',
         'DAZN', 'dAnimeStore', 'DMMTV', 'Disney', 'Douyin', 'F1TV', 'FujiTV',
-        'GameJapan', 'HBO', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
+        'GameJapan', 'HBO', 'HBOMax', 'HOYTV', 'HamiVideo', 'JioHotstar', 'Hulu', 'KKTV',
         'LINETV', 'Lemino', 'LiTV', 'MangoTV', 'MusicJapan', 'MyVideo', 'NHK',
         'Netflix', 'Niconico', 'NowE', 'ParamountPlus', 'Peacock', 'Podcast',
-        'PrimeVideo', 'Radiko', 'RakutenTV', 'ReadJapan', 'rednote', 'TVer',
+        'PrimeVideo', 'radiko', 'RakutenTV', 'ReadJapan', 'rednote', 'TVer',
         'TELASA', 'TencentVideo', 'Tubi', 'Twitch', 'UNEXT', 'VideoMarket',
         'Viu', 'WOWOW', 'YouTube', 'Youku', 'AppleNewsPlus', 'ApplePodcasts', 'friDayVideo',
         'iQIYI', 'KaraokeDAM', 'myTVSUPER',

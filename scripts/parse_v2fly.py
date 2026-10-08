@@ -107,7 +107,7 @@ V2FLY_BRAND_MAP: dict[str, str] = {
     "pixiv": "pixiv",
     "poe": "Poe",
     "primevideo": "PrimeVideo",
-    "radiko": "Radiko",
+    "radiko": "radiko",
     "rakuten": "RakutenTV",
     "reddit": "Reddit",
     "spotify": "Spotify",

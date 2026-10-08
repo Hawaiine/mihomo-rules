@@ -1097,7 +1097,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Apple/AppleTV/AppleTV.png"
 
-  - name: "Microsoft Azure"
+  - name: "Azure"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1130,7 +1130,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Azure/Azure.png"
 
-  - name: "Microsoft Bing"
+  - name: "Bing"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1163,7 +1163,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/Bing/Bing.png"
 
-  - name: "Microsoft Copilot"
+  - name: "Copilot"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -1526,6 +1526,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/SpaceXAI/xAI/Grok/Grok.png"
 
+  - name: "HBO Max"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/WarnerBrosDiscovery/HBOMax/HBOMax.png"
+
   - name: "Hulu"
     type: select
     proxies:
@@ -1658,7 +1691,7 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Microsoft/OneDrive/OneDrive.png"
 
-  - name: "Microsoft Outlook"
+  - name: "Outlook"
     type: select
     proxies:
       - "🎯 全球直连"
@@ -4455,39 +4488,6 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Music/Qobuz/Qobuz.png"
 
-  - name: "Radiko"
-    type: select
-    proxies:
-      - "🎯 全球直连"
-      - "♻️ 自动选择"
-      - "🔧 手动切换"
-      - "🔯 故障转移"
-      - "🔀 负载均衡"
-      - "🇭🇰 香港节点"
-      - "🇯🇵 日本节点"
-      - "🇺🇸 美国节点"
-      - "🇸🇬 新加坡节点"
-      - "🇹🇼 台湾节点"
-      - "🇰🇷 韩国节点"
-      - "🇬🇧 英国节点"
-      - "🇩🇪 德国节点"
-      - "🇫🇷 法国节点"
-      - "🇨🇦 加拿大节点"
-      - "🇦🇺 澳大利亚节点"
-      - "🇮🇳 印度节点"
-      - "🇹🇷 土耳其节点"
-      - "🇦🇷 阿根廷节点"
-      - "🇧🇷 巴西节点"
-      - "🇷🇺 俄罗斯节点"
-      - "🇲🇾 马来西亚节点"
-      - "🇹🇭 泰国节点"
-      - "🇻🇳 越南节点"
-      - "🇵🇭 菲律宾节点"
-      - "🇮🇩 印尼节点"
-    use:
-      - provider1
-    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Radiko/Radiko.png"
-
   - name: "Rakuten TV"
     type: select
     proxies:
@@ -5709,6 +5709,39 @@ proxy-groups:
       - provider1
     icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Social/pixiv/pixiv.png"
 
+  - name: "radiko"
+    type: select
+    proxies:
+      - "🎯 全球直连"
+      - "♻️ 自动选择"
+      - "🔧 手动切换"
+      - "🔯 故障转移"
+      - "🔀 负载均衡"
+      - "🇭🇰 香港节点"
+      - "🇯🇵 日本节点"
+      - "🇺🇸 美国节点"
+      - "🇸🇬 新加坡节点"
+      - "🇹🇼 台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🇬🇧 英国节点"
+      - "🇩🇪 德国节点"
+      - "🇫🇷 法国节点"
+      - "🇨🇦 加拿大节点"
+      - "🇦🇺 澳大利亚节点"
+      - "🇮🇳 印度节点"
+      - "🇹🇷 土耳其节点"
+      - "🇦🇷 阿根廷节点"
+      - "🇧🇷 巴西节点"
+      - "🇷🇺 俄罗斯节点"
+      - "🇲🇾 马来西亚节点"
+      - "🇹🇭 泰国节点"
+      - "🇻🇳 越南节点"
+      - "🇵🇭 菲律宾节点"
+      - "🇮🇩 印尼节点"
+    use:
+      - provider1
+    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/Media/Radiko/Radiko.png"
+
   - name: "小红书"
     type: select
     proxies:
@@ -5992,6 +6025,13 @@ rule-providers:
     url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Grok/Grok.yaml"
     interval: 86400
     path: ./ruleset/Grok.yaml
+
+  HBOMax:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/HBOMax/HBOMax.yaml"
+    interval: 86400
+    path: ./ruleset/HBOMax.yaml
 
   Hulu:
     type: http
@@ -6616,13 +6656,6 @@ rule-providers:
     interval: 86400
     path: ./ruleset/Qobuz.yaml
 
-  Radiko:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Radiko/Radiko.yaml"
-    interval: 86400
-    path: ./ruleset/Radiko.yaml
-
   RakutenTV:
     type: http
     behavior: classical
@@ -6882,6 +6915,13 @@ rule-providers:
     interval: 86400
     path: ./ruleset/pixiv.yaml
 
+  radiko:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/radiko/radiko.yaml"
+    interval: 86400
+    path: ./ruleset/radiko.yaml
+
   rednote:
     type: http
     behavior: classical
@@ -6916,9 +6956,9 @@ rules:
                                                     # - RULE-SET,AppleNewsPlus,Apple News+
                                                     # - RULE-SET,ApplePodcasts,Apple Podcasts
                                                     # - RULE-SET,AppleTV,Apple TV
-                                                    # - RULE-SET,Azure,Microsoft Azure
-                                                    # - RULE-SET,Bing,Microsoft Bing
-                                                    # - RULE-SET,Copilot,Microsoft Copilot
+                                                    # - RULE-SET,Azure,Azure
+                                                    # - RULE-SET,Bing,Bing
+                                                    # - RULE-SET,Copilot,Copilot
                                                     # - RULE-SET,GitHub,GitHub
                                                     # - RULE-SET,Gmail,Gmail
                                                     # - RULE-SET,GoogleAI,Google AI
@@ -6929,11 +6969,12 @@ rules:
                                                     # - RULE-SET,GooglePlay,Google Play
                                                     # - RULE-SET,GoogleVoice,Google Voice
                                                     # - RULE-SET,Grok,Grok
+                                                    # - RULE-SET,HBOMax,HBO Max
                                                     # - RULE-SET,Hulu,Hulu
                                                     # - RULE-SET,Instagram,Instagram
                                                     # - RULE-SET,Messenger,Messenger
                                                     # - RULE-SET,OneDrive,OneDrive
-                                                    # - RULE-SET,Outlook,Microsoft Outlook
+                                                    # - RULE-SET,Outlook,Outlook
                                                     # - RULE-SET,Peacock,Peacock
                                                     # - RULE-SET,PrimeVideo,Prime Video
                                                     # - RULE-SET,SiriAI,Siri AI
@@ -7018,7 +7059,6 @@ rules:
                                                     # - RULE-SET,QQMail,QQ邮箱
                                                     # - RULE-SET,QQMusic,QQ音乐
                                                     # - RULE-SET,Qobuz,Qobuz
-                                                    # - RULE-SET,Radiko,Radiko
                                                     # - RULE-SET,RakutenTV,Rakuten TV
                                                     # - RULE-SET,ReadJapan,Read Japan
                                                     # - RULE-SET,Reddit,Reddit
@@ -7056,6 +7096,7 @@ rules:
                                                     # - RULE-SET,mora,mora
                                                     # - RULE-SET,myTVSUPER,myTV SUPER
                                                     # - RULE-SET,pixiv,pixiv
+                                                    # - RULE-SET,radiko,radiko
                                                     # - RULE-SET,rednote,小红书
                                                     # - RULE-SET,Cloudflare,Cloudflare
 
