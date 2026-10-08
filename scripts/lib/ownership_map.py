@@ -49,3 +49,30 @@ SUB_PARENT: dict[str, str] = {
     'Youku': 'Alibaba',
     'DisneyPlus': 'Disney',
 }
+
+# 跨品牌域名归属（非父子关系）—— 域名 → canonical owner 单源。
+#
+# 生成管道在解析上游时，会从「非 owner 品牌」的候选规则中剥离这些域名，
+# 以保证 canonical single representation：只手工改 YAML 无效，因为
+# batch_update 的品牌写入是 merged(上游) ∪ manual(现存文件) 的并集，
+# 会把被删规则重新长回来。归属决策必须表达在这里。
+#
+# 只作用于 DOMAIN / DOMAIN-SUFFIX；owner 自身与 Base 基础规则集不受影响。
+# 决策来源：Phase 4B / 4D 人工批准（D#1 / D#3 / D#4 / D#5）。
+CROSS_BRAND_OWNERSHIP: dict[str, str] = {
+    # D#1 Copilot → OpenAI
+    'openai.com': 'OpenAI',
+    'chatgpt.com': 'OpenAI',
+    'oaistatic.com': 'OpenAI',
+    'oaiusercontent.com': 'OpenAI',
+    'openaiapi-site.azureedge.net': 'OpenAI',
+    'openaicomproductionae4b.blob.core.windows.net': 'OpenAI',
+    'production-openaicom-storage.azureedge.net': 'OpenAI',
+    # D#3 SoundCloud → Pandora
+    'p-cdn.us': 'Pandora',
+    # D#4 Disney → JioHotstar（仅 hotstar.com；hotstar-cdn.net /
+    # hotstar-labs.com / hotstarext.com 为 legacy，本轮明确不动）
+    'hotstar.com': 'JioHotstar',
+    # D#5 Copilot → GitHub
+    'githubcopilot.com': 'GitHub',
+}

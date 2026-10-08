@@ -34,6 +34,7 @@ from lib.canonical import (
     count_by_type,
 )
 from lib.policy import is_allowed_bare_suffix, is_bare, is_single_char
+from lib.ownership import strip_cross_brand_owned
 
 # 无 "+." 的有点域名怎么处理。
 # domain：写成 DOMAIN，只匹配这一个域名。
@@ -406,6 +407,12 @@ def parse_loyalsoldier_brand(
         print(f"  🧹 {brand_name}: 同值后缀盖住精确域名 {covered} 条")
     if bare_dropped:
         print(f"  🧹 {brand_name}: 剔除无点品牌词 {bare_dropped} 条")
+    # 跨品牌归属过滤：剥离 canonical owner 为他品牌的域名（非父子关系）
+    rules, xb_dropped = strip_cross_brand_owned(rules, brand_name)
+    if xb_dropped:
+        samples = ", ".join(r.value for r in xb_dropped[:8])
+        more = " …" if len(xb_dropped) > 8 else ""
+        print(f"  🧹 {brand_name}: 跨品牌归属剥离 {len(xb_dropped)} 条: {samples}{more}")
     rules = sort_rules(rules)
 
     return rules

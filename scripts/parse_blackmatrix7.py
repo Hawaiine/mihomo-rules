@@ -31,6 +31,7 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from lib.ownership import strip_cross_brand_owned
 from lib.canonical import (
     CanonicalRule,
     drop_domain_covered_by_suffix,
@@ -327,6 +328,12 @@ def parse_blackmatrix7_brand(
         samples = ", ".join(r.value for r in cross_dropped[:8])
         more = " …" if len(cross_dropped) > 8 else ""
         print(f"  🧹 {brand_name}: 同值跨类型去重 {len(cross_dropped)} 条: {samples}{more}")
+    # 跨品牌归属过滤：剥离 canonical owner 为他品牌的域名（非父子关系）
+    rules, xb_dropped = strip_cross_brand_owned(rules, brand_name)
+    if xb_dropped:
+        samples = ", ".join(r.value for r in xb_dropped[:8])
+        more = " …" if len(xb_dropped) > 8 else ""
+        print(f"  🧹 {brand_name}: 跨品牌归属剥离 {len(xb_dropped)} 条: {samples}{more}")
     rules = sort_rules(rules)
 
     return rules

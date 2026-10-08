@@ -18,6 +18,7 @@
 - **daily-sync 补齐 `MIHOMO_ICON_REPO`**（§56/§57 最小改动，仅 `env:` 一行，取值与 `pr-verify.yml` 一致 `${{ github.workspace }}/Oasisic-Icons`）— 此前 2 个 icon integration tests 因环境变量缺失被 **silent skip**
 
 ### Changed
+- **跨品牌 Ownership 精修（Phase 4B/4D，人工批准 D#1 / D#3 / D#4 / D#5）** — 新增 `lib/ownership_map.py::CROSS_BRAND_OWNERSHIP`（域名 → canonical owner 单源）与 `lib/ownership.py::strip_cross_brand_owned()`，三个上游解析器（v2fly / loyalsoldier / blackmatrix7）在**解析期**剥离「非 owner 品牌」候选，保证 canonical single representation（仅改 YAML 无效：`batch_update` 的品牌写入是 `merged(上游) ∪ manual(现存文件)` 并集，会把删除的规则重新长回来）。共迁移 **10 条域名 / 3 个源规则集**：`Copilot → OpenAI` 7 条、`Copilot → GitHub` 1 条（`githubcopilot.com`）、`SoundCloud → Pandora` 1 条（`p-cdn.us`）、`Disney → JioHotstar` 1 条（**仅 `hotstar.com`**；`hotstar-cdn.net` / `hotstar-labs.com` / `hotstarext.com` 为 legacy 域，明确保留在 `Disney`，不外推）。域名匹配覆盖不变（目标规则集本已承载这些规则），仅**策略组归属**变化；`SUB_PARENT` / Base / Oasisic / 4 份 config 均未改动
 - **双向 Ownership 审计工具化**（§22–§30/§41）— `resolve_ownership.py` 新增 `find_child_contains_parent_rules()`（child→parent 反向审计，**只报告不剥离**）；全库 36 个 `SUB_PARENT` 对双向实测：parent→child 残留 0 / child→parent 0
 
 - **Display Name 去除 Microsoft 前缀**（人工决定；Technical ID 不变，仅 Display / Strategy Group / `# Rule Name`）— `Microsoft Azure` → `Azure`、`Microsoft Bing` → `Bing`、`Microsoft Copilot` → `Copilot`、`Microsoft Outlook` → `Outlook`
