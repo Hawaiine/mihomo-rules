@@ -18,9 +18,70 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ICON_REPO = Path(os.environ.get('MIHOMO_ICON_REPO', str(ROOT / 'Oasisic-Icons')))
-if not ICON_REPO.exists():
-    ICON_REPO = Path('/opt/data/Oasisic-Icons')
+ICON_REPO_ENV_VAR = 'MIHOMO_ICON_REPO'
+
+
+def icon_repo_candidates(environ=None, root=None):
+    """按优先级返回 [(候选路径, 来源说明)]。
+
+    优先级：显式 ``MIHOMO_ICON_REPO`` → 仓库相对 ``<root>/Oasisic-Icons``。
+
+    显式指定时**不再追加任何机器专属回退**——调用方给出的值必须被尊重，
+    即使它无效，也要在 :func:`icon_repo_problems` 中显式报错，
+    而不是被静默替换成另一台机器上的目录。
+    """
+    env = os.environ if environ is None else environ
+    project_root = ROOT if root is None else Path(root)
+    supplied = (env.get(ICON_REPO_ENV_VAR) or '').strip()
+    if supplied:
+        return [(Path(supplied), f'{ICON_REPO_ENV_VAR}={supplied}')]
+    relative = project_root / 'Oasisic-Icons'
+    return [(relative, f'仓库相对路径 {relative}')]
+
+
+def resolve_icon_repo(environ=None, root=None):
+    """解析 Oasisic-Icons 检出位置（只做选择，不做可用性判断）。"""
+    return icon_repo_candidates(environ=environ, root=root)[0][0]
+
+
+def icon_repo_problems(repo, revision, runner=None):
+    """检查检出是否可用于读取 pinned tree，返回问题列表（空 = 可用）。
+
+    只判断“路径存在”是不够的：必须同时确认它是可用的 git 工作树，
+    且能读取 ``oasisic_revision.json`` 指定的固定 revision。
+    """
+    run = subprocess.run if runner is None else runner
+    repo = Path(repo)
+    if not repo.is_dir():
+        return [f'路径不存在或不是目录: {repo}']
+    if not (repo / '.git').exists():
+        return [f'缺少 git 元数据 {repo / ".git"}（需要完整 clone；仅复制文件无法读取 pinned tree）']
+    try:
+        probe = run(
+            ['git', '-C', str(repo), 'cat-file', '-e', f'{revision}^{{commit}}'],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [f'无法执行 git 校验固定 revision {revision}: {exc}']
+    if probe.returncode != 0:
+        return [f'固定 revision 在检出中不可读: {revision}']
+    return []
+
+
+def icon_repo_required_message(revision, environ=None, root=None):
+    """构造 fail-closed 错误信息：尝试过的路径 + 预期条件 + 解决方法。"""
+    lines = ['无法定位可用的 Oasisic-Icons 检出（生产图标映射 fail-closed，不回退到任何机器专属目录）']
+    for repo, origin in icon_repo_candidates(environ=environ, root=root):
+        problems = icon_repo_problems(repo, revision)
+        lines.append(f'  - 尝试 {origin} → {repo}：{"可用" if not problems else "; ".join(problems)}')
+    lines.append(f'预期条件：完整 git clone，且能读取固定 revision {revision}'
+                 '（scripts/config_contract/oasisic_revision.json）')
+    lines.append('解决方法：将 Hawaiine/Oasisic-Icons clone 到 <仓库根>/Oasisic-Icons，'
+                 f'或设置 {ICON_REPO_ENV_VAR} 指向其绝对路径')
+    return '\n'.join(lines)
+
+
+ICON_REPO = resolve_icon_repo()
 _REVISION_MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
 try:
     with _REVISION_MANIFEST.open(encoding='utf-8') as f:
@@ -99,7 +160,7 @@ def scan_icons():
         _SCAN_SOURCE = src
         return icons
 
-    raise RuntimeError(f'固定 Oasisic revision 不存在或无法读取: {ICON_REPO}@{_OASIC_REVISION}')
+    raise RuntimeError(icon_repo_required_message(_OASIC_REVISION))
 
 
 def scan_source():

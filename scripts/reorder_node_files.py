@@ -1,9 +1,24 @@
 #!/usr/bin/env python3
+"""重排 providers/nodes/<协议>/ 下的节点模板文件顺序。
+
+用法：`python3 scripts/reorder_node_files.py`
+
+仓库根按以下顺序解析（禁止硬编码机器专属绝对路径）：
+1. 环境变量 ``MIHOMO_RULES_REPO``（显式指定，优先级最高）；
+2. 本脚本所在的仓库根目录（``scripts/`` 的上一级）。
+"""
 import os
 from pathlib import Path
 
-repo = Path('/opt/data/mihomo-rules')
+ROOT = Path(__file__).resolve().parent.parent
+repo = Path(os.environ.get('MIHOMO_RULES_REPO', str(ROOT)))
 nodes = repo / 'providers' / 'nodes'
+
+if not nodes.is_dir():
+    raise SystemExit(
+        f'找不到节点模板目录: {nodes}\n'
+        '请从仓库根目录运行本脚本，或设置 MIHOMO_RULES_REPO 指向仓库根目录。'
+    )
 
 # 定义每个目录的期望顺序
 order = {
