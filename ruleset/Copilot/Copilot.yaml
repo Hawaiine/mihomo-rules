@@ -1,10 +1,10 @@
 # ===========================================
 # Rule Name: Copilot
 # Author: Hawaiine
-# Updated: 2026-10-08 22:33:30
+# Updated: 2026-10-09 08:14:50
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
-# DOMAIN: 21
+# DOMAIN: 23
 # DOMAIN-SUFFIX: 21
 # IP-CIDR: 2
 # IP-CIDR6: 0
@@ -19,6 +19,8 @@ payload:
   - DOMAIN,browser-intake-datadoghq.com
   - DOMAIN,chat.openai.com.cdn.cloudflare.net
   - DOMAIN,copilot-proxy.githubusercontent.com
+  - DOMAIN,copilot-telemetry-service.githubusercontent.com
+  - DOMAIN,copilot-telemetry.githubusercontent.com
   - DOMAIN,copilot-workspace.githubnext.com
   - DOMAIN,copilot.microsoft.com
   - DOMAIN,copilotprodattachments.blob.core.windows.net

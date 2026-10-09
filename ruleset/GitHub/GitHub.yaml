@@ -1,11 +1,11 @@
 # ===========================================
 # Rule Name: GitHub
 # Author: Hawaiine
-# Updated: 2026-09-25 01:20:04
+# Updated: 2026-10-09 08:14:50
 # DOMAIN-KEYWORD: 1
 # DOMAIN-REGEX: 0
 # DOMAIN: 27
-# DOMAIN-SUFFIX: 36
+# DOMAIN-SUFFIX: 38
 # IP-CIDR: 0
 # IP-CIDR6: 0
 # IP-ASN: 0
@@ -41,6 +41,8 @@ payload:
   - DOMAIN,productionresultssa8.blob.core.windows.net
   - DOMAIN,productionresultssa9.blob.core.windows.net
   - DOMAIN-SUFFIX,atom.io
+  - DOMAIN-SUFFIX,cafe.github.com
+  - DOMAIN-SUFFIX,collector.github.com
   - DOMAIN-SUFFIX,dependabot.com
   - DOMAIN-SUFFIX,gh.io
   - DOMAIN-SUFFIX,ghcr.io

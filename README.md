@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 156 品牌 · 165 规则集 · 35.0 万规则 · 每日自动同步</em>
+  <em>Mihomo / clash-meta 通用 RULE-SET 规则集仓库 · 156 品牌 · 165 规则集 · 35.1 万规则 · 每日自动同步</em>
 </p>
 
 <p align="center">
@@ -345,20 +345,20 @@ python3 -m unittest discover -s scripts/tests
 
 | 分类 | 基础规则集 | 品牌规则集 | 合计 | 规则总数 |
 |------|:----------:|:----------:|:----:|:--------:|
-| 基础 | 9 | — | 9 | 335,919 |
-| 品牌 | — | 156 | 156 | 14,255 |
-| **合计** | **9** | **156** | **165** | **350,174** |
+| 基础 | 9 | — | 9 | 336,537 |
+| 品牌 | — | 156 | 156 | 14,259 |
+| **合计** | **9** | **156** | **165** | **350,796** |
 
-规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(149) · DOMAIN(1,036) · DOMAIN-SUFFIX(338,819) · IP-CIDR(6,465) · IP-CIDR6(3,511) · IP-ASN(10) · PROCESS-NAME(147)
+规则类型分布：DOMAIN-KEYWORD(37) · DOMAIN-REGEX(149) · DOMAIN(1,038) · DOMAIN-SUFFIX(339,478) · IP-CIDR(6,422) · IP-CIDR6(3,515) · IP-ASN(10) · PROCESS-NAME(147)
 
 ### 品牌分类统计
 
 | 类别 | 品牌数 | 规则数 | 品牌 |
 |------|:-----:|:------:|------|
 | 🎬 流媒体 | 58 | 1,274 | ABEMA · Bahamut · Bangumi · bilibili · CATCHPLAYPlus · Crunchyroll · DAZN · dAnimeStore · DMMTV · Disney · Douyin · F1TV · FujiTV · GameJapan · HBO · HBOMax · DisneyPlus · HOYTV · HamiVideo · JioHotstar · Hulu · KKTV · LINETV · Lemino · LiTV · MangoTV · MusicJapan · MyVideo · NHK · Netflix · Niconico · NowE · ParamountPlus · Peacock · NBCUniversal · Podcast · PrimeVideo · radiko · RakutenTV · ReadJapan · rednote · TVer · TELASA · TencentVideo · Tubi · Twitch · UNEXT · VideoMarket · Viu · WOWOW · YouTube · Youku · AppleNewsPlus · ApplePodcasts · friDayVideo · iQIYI · KaraokeDAM · myTVSUPER |
-| 🤖 AI | 14 | 232 | Anthropic · Copilot · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Grok · Manus · NousResearch · OpenAI · Perplexity · Poe · SiriAI |
+| 🤖 AI | 14 | 234 | Anthropic · Copilot · Cursor · DeepSeek · Doubao · GeneralAI · GoogleAI · Grok · Manus · NousResearch · OpenAI · Perplexity · Poe · SiriAI |
 | 📱 社交 | 21 | 1,027 | Bluesky · Discord · Facebook · Instagram · KakaoTalk · Messenger · NetEaseMail · Pinterest · pixiv · QQ · QQMail · Reddit · Snapchat · Telegram · Threads · TikTok · WeChat · Weibo · WhatsApp · X · Zhihu |
-| ☁️ 云服务 | 22 | 1,735 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
+| ☁️ 云服务 | 22 | 1,737 | AWS · AppStore · Azure · Bing · Cloudflare · Docker · GitHub · Gmail · Google · GoogleDrive · GoogleMaps · GoogleNews · GooglePhotos · GooglePlay · GoogleVoice · Microsoft · OneDrive · Oracle · Outlook · Synology · iCloud · iCloudPrivateRelay |
 | 🎮 游戏 | 4 | 247 | Nintendo · PlayStation · Steam · Xbox |
 | 🛍️ 电商 | 8 | 1,118 | Alipay · Amazon · JD · Meituan · PayPal · Pinduoduo · Taobao · Alibaba |
 | 🎵 音乐 | 12 | 108 | AppleMusic · Deezer · mora · Musixmatch · NetEaseCloudMusic · Pandora · QQMusic · Qobuz · SoundCloud · Spotify · TIDAL · YouTubeMusic |
