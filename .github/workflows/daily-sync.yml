@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # 图标仓库显式化：本 job 所有步骤统一使用检出的 Oasisic-Icons，
+    # 不再依赖 match_icons 的隐式相对解析（<repo>/Oasisic-Icons）。
+    env:
+      MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+
     steps:
       - name: 📥 拉取 mihomo-rules 仓库
         uses: actions/checkout@v7
@@ -43,6 +48,29 @@ jobs:
       - name: 📦 安装依赖
         run: pip install pyyaml
 
+      - name: 🛡️ 预检图标仓库固定 revision
+        run: |
+          set -euo pipefail
+          REV=$(python3 -c "import json;print(json.load(open('scripts/config_contract/oasisic_revision.json'))['revision'])")
+          echo "固定 revision (清单) = $REV"
+          echo "MIHOMO_ICON_REPO     = $MIHOMO_ICON_REPO"
+          if [ ! -d "$MIHOMO_ICON_REPO/.git" ]; then
+            echo "❌ 图标仓库缺少 .git 元数据：$MIHOMO_ICON_REPO"
+            echo "   match_icons.scan_icons() 需要 git ls-tree <固定 revision>；无 .git 会让 generate_config 直接 RuntimeError 退出"
+            exit 1
+          fi
+          HEAD_REV=$(git -C "$MIHOMO_ICON_REPO" rev-parse HEAD)
+          echo "图标仓库 HEAD        = $HEAD_REV"
+          if ! git -C "$MIHOMO_ICON_REPO" cat-file -e "${REV}^{commit}" 2>/dev/null; then
+            echo "❌ 固定 revision 在图标仓库中不可读：$REV"
+            exit 1
+          fi
+          if [ "$HEAD_REV" != "$REV" ]; then
+            echo "❌ 图标仓库 HEAD 与清单固定 revision 不一致（checkout ref 与 config_contract 未同步）"
+            exit 1
+          fi
+          echo "✅ 图标仓库与固定 revision 一致且可读"
+
       - name: 🔄 执行同步（8 步串联）
         id: sync
         run: python3 scripts/batch_update.py --no-commit
@@ -65,8 +93,6 @@ jobs:
 
       - name: 🧪 单元测试 (scripts/tests 全量)
         run: python3 -m unittest discover -s scripts/tests -q
-        env:
-          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
 
       - name: 🧹 过滤仅 Updated 噪音
         id: filter
