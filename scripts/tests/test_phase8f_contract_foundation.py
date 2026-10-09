@@ -186,6 +186,27 @@ class IconRepoPortabilityTest(unittest.TestCase):
                     hits.append(f"{path.relative_to(ROOT)}: {marker}")
         self.assertEqual(hits, [])
 
+    def test_no_machine_specific_paths_in_production_sources(self):
+        """生产脚本（scripts/**，排除 tests/ 与缓存）同样不得含机器专属默认路径。
+
+        旧门禁只扫描测试、CI 与 workflow，因此生产脚本里残留的机器路径
+        （如 match_icons.py 曾有的机器专属回退）可以长期不被发现。
+        """
+        production = [
+            path for path in sorted((ROOT / "scripts").rglob("*.py"))
+            if "tests" not in path.relative_to(ROOT / "scripts").parts
+            and "__pycache__" not in path.parts
+        ]
+        self.assertGreater(len(production), 10, "未扫描到生产源码，扫描范围有误")
+        self.assertIn(ROOT / "scripts" / "match_icons.py", production)
+        hits = []
+        for path in production:
+            text = path.read_text(encoding="utf-8")
+            for marker in self.MACHINE_PATH_MARKERS:
+                if marker in text:
+                    hits.append(f"{path.relative_to(ROOT)}: {marker}")
+        self.assertEqual(hits, [], f"生产脚本仍含机器专属路径: {hits}")
+
     def test_child_env_passes_through_caller_supplied_repo(self):
         env = _child_env({"MIHOMO_ICON_REPO": "/tmp/arbitrary-icon-repo"})
         self.assertEqual(env["MIHOMO_ICON_REPO"], "/tmp/arbitrary-icon-repo")
