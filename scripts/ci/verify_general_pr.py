@@ -117,45 +117,59 @@ def _rule_providers_of(config: dict) -> dict[str, dict]:
 
 
 def _remote_rule_set_brand(url: str) -> str | None:
-    """Extract <Brand> from a raw.githubusercontent ruleset URL (…/ruleset/<Brand>/<Brand>.yaml)."""
+    """Extract <Brand> from a raw.githubusercontent ruleset URL (…/ruleset/<Brand>/<Brand>.yaml).
+
+    目录名与文件名必须一致：``ruleset/Alibaba/AlibabaX.yaml`` 这种错配返回 None，
+    以免错误品牌 URL 冒充另一个品牌的 provider。
+    """
     match = re.search(r"/ruleset/([^/]+)/([^/]+)\.yaml$", url or "")
-    if match:
+    if match and match.group(1) == match.group(2):
         return match.group(1)
     return None
 
 
-def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str = "ruleset/") -> list[str]:
+def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str = "ruleset/",
+                         label: str = CONFIG_FOR_TREE_CHECK) -> list[str]:
     """Head tree self-consistency: providers <-> ruleset files <-> remote URLs.
 
     This is a structural invariant of the head tree (not a base/head comparison):
     any legitimate feature PR (new brand, rule change, config regeneration)
     passes as long as the three sources of truth agree. It is independent of
     generate_config.py and therefore cannot share its failure modes.
+
+    ``label`` 是被校验配置的路径，用于让四份配置各自的失败信息可区分。
     """
     problems: list[str] = []
     providers = _rule_providers_of(config)
     if not providers:
-        return [f"{CONFIG_FOR_TREE_CHECK}: rule-providers section is missing or empty"]
+        return [f"{label}: rule-providers section is missing or empty"]
 
     tree_rule_files = {path for path in tree_files if path.startswith(ruleset_root)}
 
     provider_brands: dict[str, str] = {}
     for name, entry in sorted(providers.items()):
         url = entry.get("url", "")
+        # path 必须符合生成器约定 ./ruleset/<key>.yaml（URL 或 path 改错任一项都不能通过）
+        expected_path = f"./ruleset/{name}.yaml"
+        if entry.get("path") != expected_path:
+            problems.append(
+                f"{label}: rule-provider `{name}`: path must be {expected_path!r}, "
+                f"got {_short(entry.get('path'))!r}")
         brand = _remote_rule_set_brand(url)
         if brand is None:
-            problems.append(f"rule-provider `{name}`: url is not a ruleset URL: {_short(url)}")
+            problems.append(f"{label}: rule-provider `{name}`: url is not a ruleset URL: {_short(url)}")
             continue
         remote_file = f"{ruleset_root}{brand}/{brand}.yaml"
         if remote_file not in tree_rule_files:
-            problems.append(f"rule-provider `{name}`: remote ruleset {remote_file!r} is missing from the head tree")
+            problems.append(
+                f"{label}: rule-provider `{name}`: remote ruleset {remote_file!r} is missing from the head tree")
         provider_brands[brand] = name
 
     # every brand directory in the head tree must be served by exactly one provider
     tree_brands = {path.split("/", 2)[1] for path in tree_rule_files}
     for brand in sorted(tree_brands):
         if brand not in provider_brands:
-            problems.append(f"ruleset brand {brand!r} has no rule-provider entry in {CONFIG_FOR_TREE_CHECK}")
+            problems.append(f"{label}: ruleset brand {brand!r} has no rule-provider entry")
 
     return problems
 
@@ -546,6 +560,61 @@ def _report(name: str, expected: str, problems: list[str], base: str, head: str)
     return 1
 
 
+def config_tree_guard_problems(head: str) -> list[str]:
+    """C3：对**四份**生产配置逐一做 head 树自洽检查。
+
+    原先只用单一 ``CONFIG_FOR_TREE_CHECK``（Android full），导致 Nikki 侧
+    URL/path 被改坏时没有任何检查发现。此处对四份配置各自校验
+    provider key ↔ URL ↔ path ↔ 规则集树，并对被引用的规则集文件做一次
+    存在性/可解析性检查（该检查只取决于 URL 集合，四份合并后做一次即可）。
+    """
+    problems: list[str] = []
+    head_rule_files = set(tree_paths(head, "ruleset/"))
+    merged_providers: dict[str, dict] = {}
+    for config_path in PRODUCTION_CONFIGS:
+        try:
+            config = yaml.safe_load(tree_file(head, config_path))
+        except (subprocess.CalledProcessError, yaml.YAMLError) as exc:
+            problems.append(f"{config_path}: cannot evaluate from PR head: {exc}")
+            continue
+        if not isinstance(config, dict):
+            problems.append(f"{config_path}: must parse to a mapping")
+            continue
+        problems += config_tree_problems(config, head_rule_files, label=config_path)
+        merged_providers.update(_rule_providers_of(config))
+    problems += provider_file_problems({"rule-providers": merged_providers}, head)
+    return problems
+
+
+def icon_baseline_guard_problems(head: str) -> list[str]:
+    """C3：对**四份**生产配置逐一校验「图标覆盖 == head 规则集品牌树」。"""
+    # 注意：使用本模块自身所在目录导入 match_icons，而不是可能被测试替换的 ROOT
+    scripts_dir = Path(__file__).resolve().parents[1]
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    import match_icons
+
+    problems: list[str] = []
+    icon_map, missing = match_icons.build_icon_map()
+    brand_dirs = _brand_dirs_from_tree_paths(tree_paths(head, "ruleset/"))
+    # 「0 missing」只取决于图标仓库本身，与具体配置无关，只报一次
+    if missing:
+        problems.append(f"icon map: missing {len(missing)} icons, e.g. {sorted(missing)[:10]}")
+    for config_path in PRODUCTION_CONFIGS:
+        config = yaml.safe_load(tree_file(head, config_path))
+        if not isinstance(config, dict):
+            problems.append(f"{config_path}: must parse to a mapping for icon coverage")
+            continue
+        for problem in icon_baseline_problems(
+                config, [], brand_dirs,
+                match_icons.STRATEGY_GROUP_MAP, match_icons.is_emoji_group):
+            problems.append(f"{config_path}: {problem}")
+    problems += podcast_problems(
+        icon_map, tree_file(head, ORACLE_FIXTURES_PATH).decode("utf-8", "replace")
+    )
+    return problems
+
+
 def main() -> int:
     try:
         base, head = revisions_from_env(os.environ)
@@ -562,19 +631,10 @@ def main() -> int:
     expected = (
         "every ruleset brand is served by exactly one rule-provider whose remote URL "
         "points at a ruleset file present in the head tree; every referenced ruleset "
-        "file parses as YAML (base/head may legitimately differ)"
+        "file parses as YAML; validated for all four production configs "
+        "(base/head may legitimately differ)"
     )
-    problems: list[str] = []
-    try:
-        config = yaml.safe_load(tree_file(head, CONFIG_FOR_TREE_CHECK))
-        if not isinstance(config, dict):
-            problems.append(f"{CONFIG_FOR_TREE_CHECK}: must parse to a mapping")
-        else:
-            problems += config_tree_problems(config, set(tree_paths(head, "ruleset/")))
-            problems += provider_file_problems(config, head)
-    except (subprocess.CalledProcessError, yaml.YAMLError) as exc:
-        problems.append(f"{CONFIG_FOR_TREE_CHECK}: cannot evaluate from PR head: {exc}")
-    results.append(("config-tree-consistency-guard", expected, problems))
+    results.append(("config-tree-consistency-guard", expected, config_tree_guard_problems(head)))
 
     expected = "Android strict / Nikki off are APPROVED_CURRENT_BASELINE in Contract and in all four production configs"
     problems = []
@@ -619,31 +679,14 @@ def main() -> int:
 
     expected = (
         "icon coverage: committed config icon groups == ruleset brand tree (0 emoji), "
-        "derived dynamically; 0 missing; Podcast -> Xiaoyuzhou, ApplePodcasts independent"
+        "derived dynamically; 0 missing; validated for all four production configs; "
+        "Podcast -> Xiaoyuzhou, ApplePodcasts independent"
     )
     problems = []
     try:
-        sys.path.insert(0, str(ROOT / "scripts"))
-        import match_icons
-
-        icon_map, missing = match_icons.build_icon_map()
-        android_full = yaml.safe_load(tree_file(head, CONFIG_FOR_TREE_CHECK))
-        if not isinstance(android_full, dict):
-            problems.append(f"{CONFIG_FOR_TREE_CHECK}: must parse to a mapping for icon coverage")
-            android_full = {}
-        head_rule_paths = tree_paths(head, "ruleset/")
-        problems += icon_baseline_problems(
-            android_full,
-            missing,
-            _brand_dirs_from_tree_paths(head_rule_paths),
-            match_icons.STRATEGY_GROUP_MAP,
-            match_icons.is_emoji_group,
-        )
-        problems += podcast_problems(
-            icon_map, tree_file(head, ORACLE_FIXTURES_PATH).decode("utf-8", "replace")
-        )
+        problems = icon_baseline_guard_problems(head)
     except Exception as exc:  # noqa: BLE001 - report any matcher failure verbatim
-        problems.append(f"icon matcher could not be evaluated: {exc!r}")
+        problems = [f"icon matcher could not be evaluated: {exc!r}"]
     results.append(("icon-baseline-guard", expected, problems))
 
     expected = "oracle.py imports no contract/generator/matcher/ownership code"

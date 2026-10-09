@@ -1,0 +1,279 @@
+"""test_config_contract_equivalence.py — C1/C2 四份配置契约的永久回归测试。
+
+C1 ``check_full_min_equivalence``：同平台 full 与 min 在去空行/去注释后必须逐行相等。
+C2 ``check_platform_contract``：Android 与 Nikki 的结构差异必须完全等于已审查契约，
+   且每个平台专属字段的**实际值**必须等于该平台期望值——路径白名单只说明「允许不同」，
+   本表进一步约束「各自应该是多少」，改成第三个值同样必须失败。
+
+覆盖：正样本（真实四份配置）、C1 负样本、C2 负样本、防误报样本、归一化器单元测试。
+"""
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]
+_SCRIPTS_DIR = _ROOT / "scripts"
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+import verify_configs as vc  # noqa: E402
+
+VARIANTS = {
+    "android_full": "configs/Android/config.yaml",
+    "android_min": "configs/Android/config.min.yaml",
+    "nikki_full": "configs/Nikki/config.yaml",
+    "nikki_min": "configs/Nikki/config.min.yaml",
+}
+
+ALIBABA_URL = ("https://raw.githubusercontent.com/Hawaiine/mihomo-rules/"
+               "main/ruleset/Alibaba/Alibaba.yaml")
+
+
+class ConfigContractTestCase(unittest.TestCase):
+    """把真实四份配置复制到临时目录，变异后调用契约检查函数。"""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(prefix="cfg-contract-")
+        self.root = Path(self._tmp.name)
+        self.configs = {}
+        for variant, rel in VARIANTS.items():
+            dst = self.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(_ROOT / rel, dst)
+            self.configs[variant] = str(dst)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    # -- helpers ---------------------------------------------------------- #
+
+    def path(self, variant):
+        return Path(self.configs[variant])
+
+    def text(self, variant):
+        return self.path(variant).read_text(encoding="utf-8")
+
+    def edit(self, variant, old, new, count=1):
+        text = self.text(variant)
+        self.assertIn(old, text, f"{variant}: 未找到待替换文本 {old[:70]!r}")
+        self.path(variant).write_text(text.replace(old, new, count), encoding="utf-8")
+
+    def problems(self):
+        return vc.check_full_min_equivalence(self.configs) + vc.check_platform_contract(self.configs)
+
+    def assert_contract_ok(self):
+        self.assertEqual(self.problems(), [], "契约检查不应报错")
+
+    def assert_contract_fails(self, needle=None):
+        problems = self.problems()
+        self.assertTrue(problems, "契约检查应当失败，但没有报错")
+        if needle is not None:
+            joined = "\n".join(problems)
+            self.assertIn(needle, joined, f"失败信息未包含 {needle!r}:\n{joined}")
+
+
+class FullMinEquivalenceTest(ConfigContractTestCase):
+    """C1：同平台 full/min 整份等价。"""
+
+    def test_real_configs_pass(self):
+        self.assert_contract_ok()
+
+    def test_min_extra_literal_domain_rule_fails(self):
+        """旧检查只提取 RULE-SET/MATCH/GEOIP，看不见字面 DOMAIN 漂移。"""
+        self.edit("android_min", "rules:\n", "rules:\n  - DOMAIN,drift-probe.example.com,🎯 全球直连\n")
+        self.assert_contract_fails("android")
+
+    def test_min_extra_ip_cidr_rule_fails(self):
+        self.edit("nikki_min", "rules:\n", "rules:\n  - IP-CIDR,203.0.113.0/24,🎯 全球直连\n")
+        self.assert_contract_fails("nikki")
+
+    def test_min_provider_url_change_fails(self):
+        self.edit("nikki_min", f'url: "{ALIBABA_URL}"',
+                  'url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/AlibabaX/AlibabaX.yaml"')
+        self.assert_contract_fails("nikki")
+
+    def test_min_provider_path_change_fails(self):
+        self.edit("nikki_min", "path: ./ruleset/Alibaba.yaml", "path: ./ruleset/AlibabaX.yaml")
+        self.assert_contract_fails("nikki")
+
+    def test_full_dns_change_not_synced_to_min_fails(self):
+        self.edit("android_full", "listen: 127.0.0.1:53", "listen: 127.0.0.1:5353")
+        self.assert_contract_fails("android")
+
+    def test_full_tun_change_not_synced_to_min_fails(self):
+        self.edit("nikki_full", "  stack: mixed", "  stack: gvisor")
+        self.assert_contract_fails("nikki")
+
+    def test_full_proxy_group_rename_not_synced_to_min_fails(self):
+        self.edit("nikki_full", '- name: "阿里巴巴"', '- name: "阿里巴巴-改名"')
+        self.assert_contract_fails("nikki")
+
+    def test_min_proxy_provider_change_not_synced_fails(self):
+        self.edit("android_min", "path: ./providers/provider1.yaml", "path: ./providers/provider1-x.yaml")
+        self.assert_contract_fails("android")
+
+    def test_provider_removed_from_min_fails(self):
+        self.edit("nikki_min", f'  Alibaba:\n    type: http\n    behavior: classical\n'
+                               f'    url: "{ALIBABA_URL}"\n    interval: 86400\n'
+                               f'    path: ./ruleset/Alibaba.yaml\n', "")
+        self.assert_contract_fails("nikki")
+
+    # -- 防误报 ---------------------------------------------------------- #
+
+    def test_whole_line_comment_added_is_not_flagged(self):
+        self.edit("android_full", "# Configuration: mihomo for Android",
+                  "# Configuration: mihomo for Android\n# 仅注释变更，不应触发失败")
+        self.edit("nikki_min", "rules:\n", "# 仅注释变更\nrules:\n")
+        self.assert_contract_ok()
+
+    def test_inline_comment_rewritten_is_not_flagged(self):
+        self.edit("android_full", "# 开启 DNS 解析", "# 说明文字改写")
+        self.edit("nikki_full", "# 开启 TUN", "# 另一段说明")
+        self.assert_contract_ok()
+
+    def test_blank_lines_removed_or_added_is_not_flagged(self):
+        text = self.text("android_min")
+        self.path("android_min").write_text(text.replace("rules:\n", "\nrules:\n\n", 1), encoding="utf-8")
+        self.assert_contract_ok()
+
+
+class NormalizerUnitTest(unittest.TestCase):
+    """归一化器必须识别引号与转义，不得粗暴按 '#' 截断。"""
+
+    def test_plain_inline_comment_is_stripped(self):
+        self.assertEqual(vc.strip_inline_comment("key: value  # note"), "key: value")
+
+    def test_hash_without_preceding_space_is_not_a_comment(self):
+        self.assertEqual(vc.strip_inline_comment("key: value#nothash"), "key: value#nothash")
+
+    def test_double_quoted_hash_is_preserved(self):
+        self.assertEqual(vc.strip_inline_comment('key: "a#b"  # note'), 'key: "a#b"')
+
+    def test_single_quoted_hash_is_preserved(self):
+        self.assertEqual(vc.strip_inline_comment("key: 'a#b'  # note"), "key: 'a#b'")
+
+    def test_escaped_double_quote_inside_string(self):
+        self.assertEqual(vc.strip_inline_comment('key: "a\\"#b"  # note'), 'key: "a\\"#b"')
+
+    def test_doubled_single_quote_escape(self):
+        self.assertEqual(vc.strip_inline_comment("key: 'it''s # here'  # note"), "key: 'it''s # here'")
+
+    def test_whole_line_comment_becomes_empty(self):
+        self.assertEqual(vc.strip_inline_comment("   # whole line"), "")
+
+    def test_normalize_drops_blank_and_comment_lines(self):
+        text = "a: 1\n\n# comment\nb: 2  # inline\n"
+        self.assertEqual(vc.normalize_config_lines(text), ["a: 1", "b: 2"])
+
+
+class PlatformContractTest(ConfigContractTestCase):
+    """C2：Android/Nikki 平台差异契约（路径 + 期望值双重约束）。"""
+
+    def test_real_configs_pass(self):
+        self.assert_contract_ok()
+
+    # -- 值必须正确：白名单路径也不许改成第三个值 ------------------------ #
+
+    def test_port_changed_to_third_value_fails(self):
+        """port 本就是允许不同的路径；改成第三个值必须失败。"""
+        self.edit("android_full", "port: 7891", "port: 9999")
+        self.assert_contract_fails("port")
+
+    def test_socks_port_changed_to_third_value_fails(self):
+        self.edit("nikki_full", "socks-port: 1080", "socks-port: 1081")
+        self.assert_contract_fails("socks-port")
+
+    def test_find_process_mode_changed_to_wrong_value_fails(self):
+        # 注意：Nikki 配置里的说明注释也含 "find-process-mode: off" 字样，
+        # 必须用换行锚定到真正的键行，否则只会改到注释。
+        self.edit("nikki_full", "\nfind-process-mode: off\n", "\nfind-process-mode: strict\n")
+        self.assert_contract_fails("find-process-mode")
+
+    def test_tun_enable_changed_to_wrong_value_fails(self):
+        self.edit("nikki_full", "  enable: true", "  enable: false")
+        self.assert_contract_fails("tun.enable")
+
+    def test_dns_listen_changed_to_wrong_value_fails(self):
+        self.edit("nikki_full", "listen: 0.0.0.0:1053", "listen: 0.0.0.0:1054")
+        self.assert_contract_fails("dns.listen")
+
+    def test_external_controller_changed_to_third_value_fails(self):
+        self.edit("android_full", "external-controller: 127.0.0.1:9090",
+                  "external-controller: 127.0.0.1:9091")
+        self.assert_contract_fails("external-controller")
+
+    def test_tun_device_changed_to_wrong_value_fails(self):
+        self.edit("nikki_full", "  device: nikki", "  device: utun")
+        self.assert_contract_fails("tun.device")
+
+    # -- 路径必须已批准：未批准的差异一律失败 ---------------------------- #
+
+    def test_brand_group_added_only_in_android_fails(self):
+        self.edit("android_full", '  - name: "阿里巴巴"\n',
+                  '  - name: "额外品牌组"\n    type: select\n    proxies:\n      - "🎯 全球直连"\n  - name: "阿里巴巴"\n')
+        self.assert_contract_fails("proxy-groups")
+
+    def test_brand_group_renamed_fails(self):
+        self.edit("nikki_full", '- name: "阿里巴巴"', '- name: "Alibaba_OLD"')
+        self.assert_contract_fails()
+
+    def test_rule_provider_added_only_in_android_fails(self):
+        self.edit("android_full", "  Alibaba:\n    type: http",
+                  "  ZZTestBrand:\n    type: http\n    behavior: classical\n"
+                  f'    url: "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/ZZTestBrand/ZZTestBrand.yaml"\n'
+                  "    interval: 86400\n    path: ./ruleset/ZZTestBrand.yaml\n  Alibaba:\n    type: http")
+        self.assert_contract_fails()
+
+    def test_rule_provider_removed_from_nikki_fails(self):
+        self.edit("nikki_full", f'  Alibaba:\n    type: http\n    behavior: classical\n'
+                                f'    url: "{ALIBABA_URL}"\n    interval: 86400\n'
+                                f'    path: ./ruleset/Alibaba.yaml\n', "")
+        self.assert_contract_fails()
+
+    def test_proxy_provider_changed_only_in_android_fails(self):
+        self.edit("android_full", "path: ./providers/provider1.yaml", "path: ./providers/provider1-x.yaml")
+        self.assert_contract_fails("proxy-providers")
+
+    def test_top_level_key_order_change_fails(self):
+        self.edit("android_full", "port: 7891\n", "")
+        self.edit("android_full", "socks-port: 7892\n", "socks-port: 7892\nport: 7891\n")
+        self.assert_contract_fails()
+
+    # -- rules 段：只允许精确的 Applications 差异 ------------------------ #
+
+    def test_extra_rule_in_android_fails(self):
+        self.edit("android_full", "rules:\n", "rules:\n  - DOMAIN,extra.example.com,🎯 全球直连\n")
+        self.assert_contract_fails("rules")
+
+    def test_extra_rule_in_nikki_fails(self):
+        self.edit("nikki_full", "rules:\n", "rules:\n  - DOMAIN,extra.example.com,🎯 全球直连\n")
+        self.assert_contract_fails("rules")
+
+    def test_rule_order_change_fails(self):
+        text = self.text("android_full")
+        first, second = "- RULE-SET,DirectDNS,🇨🇳 直连DNS", "- RULE-SET,ProxyDNS,🌍 代理DNS"
+        self.assertIn(first, text)
+        self.edit("android_full", f"  {first}\n  {second}\n", f"  {second}\n  {first}\n")
+        self.assert_contract_fails("rules")
+
+    def test_applications_rule_removed_from_android_fails(self):
+        self.edit("android_full", "  - RULE-SET,Applications,🎯 全球直连\n", "")
+        self.assert_contract_fails("Applications")
+
+    def test_applications_rule_added_to_nikki_fails(self):
+        self.edit("nikki_full", "rules:\n", "rules:\n  - RULE-SET,Applications,🎯 全球直连\n")
+        self.assert_contract_fails("Applications")
+
+    # -- 防误报 ---------------------------------------------------------- #
+
+    def test_comment_only_change_is_not_flagged(self):
+        self.edit("android_full", "# TUN 虚拟网卡 (Android 端关闭, 使用 VPN 模式)",
+                  "# TUN 虚拟网卡（说明改写）")
+        self.edit("nikki_full", "# 开启 TUN", "# 开启 TUN（说明改写）")
+        self.assert_contract_ok()
+
+
+if __name__ == "__main__":
+    unittest.main()
