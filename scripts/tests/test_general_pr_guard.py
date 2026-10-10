@@ -587,6 +587,44 @@ class WorkflowSecurityGuardTest(unittest.TestCase):
         problems = guard.workflow_problems(text)
         self.assertTrue(any("missing required verification step" in p for p in problems), problems)
 
+    def test_icon_url_check_is_a_required_workflow_step(self):
+        """生产图标 URL 可达性检查必须纳入必需步骤契约。"""
+        self.assertIn("scripts/icon_urls.py", guard.WORKFLOW_REQUIRED_SCRIPTS)
+        self.assertIn("python3 scripts/icon_urls.py", self._workflow())
+        self.assertEqual(guard.workflow_problems(self._workflow()), [])
+
+    def test_removing_only_the_icon_url_check_step_fails(self):
+        """只删掉 icon_urls.py 这一个步骤，guard 必须报告缺少该必需检查。"""
+        text = self._workflow()
+        self.assertIn("python3 scripts/icon_urls.py", text)
+        removed = text.replace("python3 scripts/icon_urls.py", "true  # 已移除必需步骤")
+        self.assertNotIn("python3 scripts/icon_urls.py", removed)
+        problems = guard.workflow_problems(removed)
+        self.assertIn(
+            f"{guard.PR_WORKFLOW_PATH}: missing required verification step 'scripts/icon_urls.py'",
+            problems,
+        )
+
+    def test_every_required_step_is_individually_enforced(self):
+        """逐个删除每个必需步骤都必须失败——不能只对其中一个生效。"""
+        for required in guard.WORKFLOW_REQUIRED_SCRIPTS:
+            with self.subTest(required=required):
+                text = self._workflow().replace(required, "true  # 已移除必需步骤")
+                self.assertNotIn(required, text, f"替换后仍含 {required!r}")
+                problems = guard.workflow_problems(text)
+                self.assertIn(
+                    f"{guard.PR_WORKFLOW_PATH}: missing required verification step {required!r}",
+                    problems,
+                )
+
+    def test_read_only_and_pin_guards_still_hold(self):
+        """返修不得放宽既有 workflow 安全 / 只读 / 固定 pin 断言。"""
+        text = self._workflow()
+        self.assertEqual(guard.workflow_problems(text), [])
+        self.assertTrue(guard.workflow_problems(text.replace("contents: read", "contents: write")))
+        self.assertTrue(guard.workflow_problems(text.replace(f"ref: {guard.PINNED_OASIC}", "ref: main")))
+        self.assertIn(f"ref: {guard.PINNED_OASIC}", text)
+
     def test_wrong_branch_fails(self):
         problems = guard.workflow_problems(self._workflow().replace("      - main\n", "      - develop\n"))
         self.assertTrue(any("main branch" in p for p in problems), problems)

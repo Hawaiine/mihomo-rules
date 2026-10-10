@@ -50,12 +50,9 @@ SYSTEM_GROUPS = list(getattr(_GEN, 'SYSTEM_GROUPS', []))
 # 21 个地区组——单一来源 generate_config.REGION_GROUPS
 REGION_GROUPS = list(getattr(_GEN, 'REGION_GROUPS', []))
 
-# Oasisic-Icons 仓库位置（用于校验 icon 引用是否真实存在）
-def _icon_repo_candidates(root=None, environ=None):
-    """只返回调用方显式指定与项目内相对位置，不猜机器目录。"""
-    env = os.environ if environ is None else environ
-    project_root = ROOT if root is None else Path(root)
-    return [env.get('MIHOMO_ICON_REPO'), str(project_root / 'Oasisic-Icons')]
+# Oasisic-Icons 检出路径解析：唯一实现见 scripts/icon_repo.py
+# （与 scripts/match_icons.py、scripts/ci/verify_general_pr.py 共用同一套优先级）
+import icon_repo
 
 
 # 从 commit_writer.py 加载
@@ -675,14 +672,18 @@ def check_regions_not_in_use(groups, variant):
 
 
 def check_icons_exist(lines, variant, icon_ref):
-    """所有 icon 引用必须指向 Oasisic-Icons 上真实存在的文件
+    """所有 icon 引用必须指向**固定 revision** 的 Oasisic-Icons tree 中真实存在的文件。
 
-    基准优先取图标仓库的 git tree（origin/main → main → HEAD），
-    避免工作区残留已被上游删除的文件造成误判。
+    基准固定为 manifest 的 discovery revision（见 ``load_icon_reference``），
+    因此「上游删掉图标但本机工作区还有残留」不会再被误判为通过。
+
+    基准不可用时**必须失败**（fail-closed）：「无法确认」不等于「图标存在」，
+    不得静默返回空集合并继续 PASS。
     """
-    if icon_ref is None:
-        return True
-    paths, _ = icon_ref
+    paths, source = icon_ref
+    if paths is None:
+        print(f'  FAIL: {variant} — 图标基准不可用，无法校验 icon 存在性: {source}')
+        return False
     broken = []
     for line in lines:
         m = re.match(r'\s+icon:\s*"([^"]+)"', line)
@@ -697,40 +698,119 @@ def check_icons_exist(lines, variant, icon_ref):
             broken.append(rel)
     if broken:
         for rel in sorted(set(broken)):
-            print(f'  FAIL: {variant} — icon 文件不存在于 Oasisic-Icons: {rel}')
+            print(f'  FAIL: {variant} — icon 文件不存在于 Oasisic-Icons@{source}: {rel}')
         return False
     return True
 
 
-def load_icon_reference(root=None, environ=None):
-    """返回 ((icon 相对路径集合), 来源描述) 或 (None, 原因)"""
+# 图标校验基准必须是**完整的 40 位十六进制 commit SHA**。
+#
+# 符号引用（`main`/`HEAD`）、缩写 SHA、空值、非十六进制字符串一律不接受：
+# 本地 Git 能解析 `main`/`HEAD`/缩写 SHA，这正是「看起来通过、实际校验的不是
+# 被审阅快照」的来源。格式检查必须在任何 Git 对象检查**之前**完成。
+_FULL_REVISION = re.compile(r'\A[0-9a-fA-F]{40}\Z')
+
+_MISSING_REVISION = '缺少固定 Oasisic revision（scripts/config_contract/oasisic_revision.json）'
+
+_BASELINE_HINT = '无法确定图标存在性的校验基准（不回退 main/HEAD，也不扫描工作区）'
+
+
+def _revision_format_problem(revision):
+    """返回 revision 的**格式**问题描述；``None`` 表示格式合法。
+
+    只判断格式，不触碰 Git——因此非法格式在任何 git 调用之前失败，且失败信息
+    是「格式不合法」，不会误报成误导性的「固定 revision 不存在」。
+    """
+    if revision is None:
+        return _MISSING_REVISION
+    if not isinstance(revision, str) or not revision.strip():
+        return f'revision 格式不合法: {revision!r}（必须是非空的完整 40 位十六进制 commit SHA）'
+    if not _FULL_REVISION.match(revision.strip()):
+        return (f'revision 格式不合法: {revision!r}（必须是完整 40 位十六进制 commit SHA；'
+                '不接受 main/HEAD 等符号引用或缩写 SHA）')
+    return None
+
+
+def _manifest_revision():
+    """从 manifest 读出**原始** revision（不做格式校验）；不可用时 ``None``。
+
+    复用 ``match_icons.load_manifest()``——不在本文件另写第二份可独立漂移的
+    manifest 解析逻辑，也不新增硬编码的批准 SHA；独立 pin 信任锚仍由
+    ``scripts/ci/verify_general_pr.py`` 的 ``PINNED_OASIC`` 承担。
+    """
+    try:
+        manifest = match_icons.load_manifest()
+    except (RuntimeError, OSError, ValueError):
+        return None
+    revision = manifest.get('revision') if isinstance(manifest, dict) else None
+    return revision if isinstance(revision, str) else None
+
+
+def pinned_icon_revision():
+    """图标存在性校验所用的**固定 revision**——唯一来源是 manifest。
+
+    只在 revision **格式合法**（完整 40 位十六进制 commit SHA）时返回它，
+    否则返回 ``None``，由调用方 fail-closed。
+
+    注意：这与**生产 URL ref**（``main``）是两个不同概念——校验基准必须是
+    可复现的固定快照，而不是会随时间移动的分支。
+    """
+    raw = _manifest_revision()
+    if not isinstance(raw, str) or _revision_format_problem(raw) is not None:
+        return None
+    return raw.strip()
+
+
+def load_icon_reference(root=None, environ=None, revision=None):
+    """返回 ``(icon 相对路径集合, 来源描述)``；不可用时返回 ``(None, 原因)``。
+
+    基准**固定**为 manifest 的 discovery revision，且必须是**完整 40 位十六进制
+    commit SHA**：
+
+    - **格式检查先于任何 Git 调用**：``main`` / ``HEAD`` / 缩写 SHA / 空值 /
+      非十六进制字符串一律在触碰 Git 之前失败（本地 Git 能解析符号引用与缩写
+      SHA，正是「看起来通过、实际校验的不是被审阅快照」的来源）；
+    - **不回退** ``origin/main`` / ``main`` / ``HEAD``（旧实现按此顺序探测）；
+    - **不**扫描工作区（旧实现会据此把上游已删除的残留文件当成存在）；
+    - **不**用生产 ``main`` 兜底读取失败。
+
+    任一环节不可用（缺 revision / 格式非法 / 路径不存在 / 非 git 工作树 /
+    固定 revision 不可读 / git 失败 / 无 png）都返回 ``(None, 原因)``，
+    调用方必须 fail-closed。
+    """
     import subprocess
+
     env = os.environ if environ is None else environ
-    candidates = _icon_repo_candidates(root=root, environ=env)
-    for cand in candidates:
-        if not cand or not os.path.isdir(os.path.join(cand, 'icons')):
-            continue
-        for ref in ('origin/main', 'main', 'HEAD'):
-            try:
-                r = subprocess.run(
-                    ['git', '-C', cand, 'ls-tree', '-r', '--name-only', ref, '--', 'icons/'],
-                    capture_output=True, text=True, timeout=30,
-                )
-            except (OSError, subprocess.SubprocessError):
-                break
-            if r.returncode == 0 and r.stdout.strip():
-                paths = {p[len('icons/'):] for p in r.stdout.splitlines() if p.endswith('.png')}
-                if paths:
-                    return paths, f'{cand}@{ref}'
-        root = os.path.join(cand, 'icons')
-        paths = set()
-        for dirpath, _, files in os.walk(root):
-            for f in files:
-                if f.endswith('.png'):
-                    paths.add(os.path.relpath(os.path.join(dirpath, f), root))
-        if paths:
-            return paths, f'{cand} (工作区扫描)'
-    return None, '未找到 Oasisic-Icons'
+    project_root = ROOT if root is None else Path(root)
+    if revision is None:
+        pinned = pinned_icon_revision()
+        if pinned is None:
+            raw = _manifest_revision()
+            detail = _MISSING_REVISION if raw is None else _revision_format_problem(raw)
+            return None, f'{detail}；{_BASELINE_HINT}'
+    else:
+        problem = _revision_format_problem(revision)
+        if problem is not None:
+            return None, f'{problem}；{_BASELINE_HINT}'
+        pinned = revision.strip()
+    repo = icon_repo.resolve_icon_repo(environ=env, root=project_root)
+    problems = icon_repo.icon_repo_problems(repo, pinned)
+    if problems:
+        return None, f'检出 {repo} 无法读取固定 revision {pinned}: {"; ".join(problems)}'
+    try:
+        r = subprocess.run(
+            ['git', '-C', str(repo), 'ls-tree', '-r', '--name-only', pinned, '--', 'icons/'],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, f'读取 {repo}@{pinned} 的 git tree 失败: {exc}'
+    if r.returncode != 0:
+        return None, (f'git ls-tree {pinned} 失败（rc={r.returncode}）: '
+                      f'{(r.stderr or "").strip()[:200]}')
+    paths = {p[len('icons/'):] for p in r.stdout.splitlines() if p.endswith('.png')}
+    if not paths:
+        return None, f'固定 revision {pinned} 的 icons/ 下没有任何 png'
+    return paths, f'{repo}@{pinned}'
 
 
 # --------------------------------------------------------------------------- #
@@ -1150,11 +1230,12 @@ def main():
     print('=' * 60)
     print(f'  品牌总数: {len(ALL_BRANDS)}')
     icon_paths, icon_src = load_icon_reference()
-    if icon_paths:
-        print(f'  icon 基准: {icon_src}（{len(icon_paths)} 个 png）')
+    if icon_paths is None:
+        print(f'  FAIL: 图标基准不可用 — {icon_src}')
+        print('        （图标存在性校验 fail-closed：无法确认即失败，不回退 main/HEAD，也不扫描工作区）')
     else:
-        print(f'  icon 基准: 无（{icon_src}），跳过 icon 存在性检查')
-    icon_ref = (icon_paths, icon_src) if icon_paths else None
+        print(f'  icon 基准: {icon_src}（{len(icon_paths)} 个 png）')
+    icon_ref = (icon_paths, icon_src)
     # 按平台分组
     configs = {}
     for platform, dir_path in CONFIG_DIRS.items():

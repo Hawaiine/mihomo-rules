@@ -27,9 +27,15 @@ class TestCheckIconsExist(unittest.TestCase):
         lines = ['    icon: "https://example.com/whatever.png"']
         self.assertFalse(verify_configs.check_icons_exist(lines, 'x', self.ref))
 
-    def test_skip_without_reference(self):
+    def test_fail_closed_when_reference_unavailable(self):
+        """基准不可用 → 必须 FAIL（旧实现返回 True = 软跳过，本阶段禁止）。"""
         lines = ['    icon: "https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/main/icons/No/Such/File.png"']
-        self.assertTrue(verify_configs.check_icons_exist(lines, 'x', None))
+        self.assertFalse(
+            verify_configs.check_icons_exist(lines, 'x', (None, '缺少固定 Oasisic revision')))
+
+    def test_fail_closed_even_without_icon_lines(self):
+        """即使本变体没有 icon 行，基准不可用也不得报 PASS。"""
+        self.assertFalse(verify_configs.check_icons_exist(['    type: select'], 'x', (None, 'boom')))
 
     def test_ignores_non_icon_lines(self):
         lines = ['    icon-type: http', '    type: select', '    proxies:']

@@ -60,6 +60,13 @@ jobs:
       - name: 🔍 verify_rulesets
         run: python3 scripts/verify_rulesets.py
 
+      - name: 🌐 生产图标 URL 当前可达性（阻断；无法判定即失败，不假绿）
+        # 只检查生产配置实际引用的 URL（去重），HEAD → ranged GET 兜底，有限重试退避。
+        # 明确不存在（可信 404）与无法判定（403/429/5xx/超时/连接失败）都判失败。
+        # 注意：这是「检查时刻」的可达性，不是未来可用性保证——生产 URL 指向 main，
+        # 该分支在检查后仍可能移动/删除文件，生产 URL 仍可能随后 404。
+        run: python3 scripts/icon_urls.py
+
       - name: 🔍 校验 README 统计口径
         run: python3 scripts/readme_stats.py --check
 

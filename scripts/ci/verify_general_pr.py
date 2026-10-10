@@ -84,6 +84,7 @@ WORKFLOW_FORBIDDEN_COMMANDS = ("git commit", "git push", "git merge", "git rebas
 WORKFLOW_REQUIRED_SCRIPTS = (
     "scripts/verify_configs.py",
     "scripts/verify_rulesets.py",
+    "scripts/icon_urls.py",
     "scripts/readme_stats.py --check",
     "python3 -m unittest discover -s scripts/tests",
 )
