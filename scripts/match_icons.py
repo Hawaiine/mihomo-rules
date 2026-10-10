@@ -5,97 +5,102 @@ match_icons.py — 品牌图标映射的唯一入口
 `build_icon_map()` 返回 {策略组名: icon URL}，供 generate_config.py 使用；
 `python3 scripts/match_icons.py` 直接打印映射与缺失清单。
 
-扫描基准（discovery/validation source）只读取 oasisic_revision.json 固定的 pinned SHA。
-找不到该 tree 时失败，不回退 origin/main、main、HEAD 或工作区文件。
-生产消费 icon URL（consumer asset URL）固定使用 main 分支 ref，
-与 discovery/validation 的 pinned SHA 分离——两者不得混用。
+两种用途，必须分清（详见 scripts/config_contract/oasisic_revision.json）：
+
+* **discovery / validation revision**：``revision`` 的完整 40 位 SHA，用于扫描
+  Oasisic-Icons 的固定 Git tree、复现图标匹配结果。找不到该 tree 时失败，
+  不回退 ``origin/main`` / ``main`` / ``HEAD`` / 工作区文件。
+* **production asset URL ref**：``asset_url_mode`` + ``production_url_ref`` 决定的
+  消费端 ref，用于生成生产图标 URL。
+
+两者都只从 manifest 读取——本模块不再自带第二份运行时配置。
+路径解析（``MIHOMO_ICON_REPO`` 优先，其次仓库相对 ``Oasisic-Icons``）来自
+``scripts/icon_repo.py`` 的单一实现，与 PR 门禁共用。
 """
-import os
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ICON_REPO_ENV_VAR = 'MIHOMO_ICON_REPO'
+_REVISION_MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
+_REPO_SLUG = re.compile(r'^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$')
+
+# 生产资产 URL 模式 → 该模式允许的 ``production_url_ref``（None = 由 revision 决定）
+ASSET_URL_MODES = {
+    'branch-main': 'main',
+    'commit-pinned': None,
+}
 
 
-def icon_repo_candidates(environ=None, root=None):
-    """按优先级返回 [(候选路径, 来源说明)]。
-
-    优先级：显式 ``MIHOMO_ICON_REPO`` → 仓库相对 ``<root>/Oasisic-Icons``。
-
-    显式指定时**不再追加任何机器专属回退**——调用方给出的值必须被尊重，
-    即使它无效，也要在 :func:`icon_repo_problems` 中显式报错，
-    而不是被静默替换成另一台机器上的目录。
-    """
-    env = os.environ if environ is None else environ
-    project_root = ROOT if root is None else Path(root)
-    supplied = (env.get(ICON_REPO_ENV_VAR) or '').strip()
-    if supplied:
-        return [(Path(supplied), f'{ICON_REPO_ENV_VAR}={supplied}')]
-    relative = project_root / 'Oasisic-Icons'
-    return [(relative, f'仓库相对路径 {relative}')]
-
-
-def resolve_icon_repo(environ=None, root=None):
-    """解析 Oasisic-Icons 检出位置（只做选择，不做可用性判断）。"""
-    return icon_repo_candidates(environ=environ, root=root)[0][0]
-
-
-def icon_repo_problems(repo, revision, runner=None):
-    """检查检出是否可用于读取 pinned tree，返回问题列表（空 = 可用）。
-
-    只判断“路径存在”是不够的：必须同时确认它是可用的 git 工作树，
-    且能读取 ``oasisic_revision.json`` 指定的固定 revision。
-    """
-    run = subprocess.run if runner is None else runner
-    repo = Path(repo)
-    if not repo.is_dir():
-        return [f'路径不存在或不是目录: {repo}']
-    if not (repo / '.git').exists():
-        return [f'缺少 git 元数据 {repo / ".git"}（需要完整 clone；仅复制文件无法读取 pinned tree）']
+def load_manifest(path=None):
+    """读取 revision manifest；缺失 / 非法 JSON / 无 revision 一律抛错（fail-fast）。"""
+    manifest_path = _REVISION_MANIFEST if path is None else Path(path)
     try:
-        probe = run(
-            ['git', '-C', str(repo), 'cat-file', '-e', f'{revision}^{{commit}}'],
-            capture_output=True, text=True, timeout=30,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return [f'无法执行 git 校验固定 revision {revision}: {exc}']
-    if probe.returncode != 0:
-        return [f'固定 revision 在检出中不可读: {revision}']
-    return []
+        with manifest_path.open(encoding='utf-8') as f:
+            manifest = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f'缺少固定 Oasisic revision: {manifest_path}') from exc
+    if not isinstance(manifest, dict) or not manifest.get('revision'):
+        raise RuntimeError(f'缺少固定 Oasisic revision: {manifest_path}')
+    return manifest
 
 
-def icon_repo_required_message(revision, environ=None, root=None):
-    """构造 fail-closed 错误信息：尝试过的路径 + 预期条件 + 解决方法。"""
-    lines = ['无法定位可用的 Oasisic-Icons 检出（生产图标映射 fail-closed，不回退到任何机器专属目录）']
-    for repo, origin in icon_repo_candidates(environ=environ, root=root):
-        problems = icon_repo_problems(repo, revision)
-        lines.append(f'  - 尝试 {origin} → {repo}：{"可用" if not problems else "; ".join(problems)}')
-    lines.append(f'预期条件：完整 git clone，且能读取固定 revision {revision}'
-                 '（scripts/config_contract/oasisic_revision.json）')
-    lines.append('解决方法：将 Hawaiine/Oasisic-Icons clone 到 <仓库根>/Oasisic-Icons，'
-                 f'或设置 {ICON_REPO_ENV_VAR} 指向其绝对路径')
-    return '\n'.join(lines)
+def asset_url_ref(manifest):
+    """生产资产 URL 使用的 ref：由 ``asset_url_mode`` 唯一决定，并做 fail-closed 校验。"""
+    mode = manifest.get('asset_url_mode')
+    if mode not in ASSET_URL_MODES:
+        raise RuntimeError(
+            f'未知的 asset_url_mode {mode!r}（{_REVISION_MANIFEST}）；'
+            f'允许值: {sorted(ASSET_URL_MODES)}')
+    required_ref = ASSET_URL_MODES[mode]
+    ref = manifest.get('revision') if required_ref is None else manifest.get('production_url_ref')
+    if required_ref is not None and ref != required_ref:
+        raise RuntimeError(
+            f'asset_url_mode {mode!r} 要求 production_url_ref == {required_ref!r}，'
+            f'实际 {ref!r}（{_REVISION_MANIFEST}）')
+    if not isinstance(ref, str) or not ref:
+        raise RuntimeError(f'生产图标 URL 的 ref 为空（{_REVISION_MANIFEST}）')
+    return ref
 
+
+def asset_url_base(manifest):
+    """由 manifest 单一来源构建生产图标 URL 基址。
+
+    ``asset_url_mode`` 未知、``production_url_ref`` 与模式自相矛盾、``repository``
+    不是 ``owner/name`` 时一律抛错——不允许把任意主机 / 仓库 / ref 注入生产 URL。
+    """
+    ref = asset_url_ref(manifest)
+    repository = manifest.get('repository')
+    if not isinstance(repository, str) or not _REPO_SLUG.match(repository):
+        raise RuntimeError(
+            f'repository 必须是 "owner/name" 形式，实际 {repository!r}（{_REVISION_MANIFEST}）')
+    return f'https://raw.githubusercontent.com/{repository}/{ref}/icons'
+
+
+_MANIFEST = load_manifest()
+_OASIC_REVISION = _MANIFEST['revision']
+# 生产消费 URL 的 ref：由 manifest 推导，不再硬编码（见 ASSET_URL_MODES）
+ASSET_URL_REF = asset_url_ref(_MANIFEST)
+GITHUB_BASE = asset_url_base(_MANIFEST)
+
+# 共享路径解析：本模块不再自带一份实现（scripts/icon_repo.py 是唯一来源）。
+# 注意顺序：manifest 校验必须先于本导入，缺失 manifest 时要先报“缺少固定 revision”。
+sys.path.insert(0, str(ROOT / 'scripts'))
+from icon_repo import (  # noqa: E402
+    ICON_REPO_ENV_VAR,
+    icon_repo_candidates,
+    icon_repo_problems,
+    icon_repo_relative_path,
+    icon_repo_required_message,
+    resolve_icon_repo,
+)
+
+from commit_writer import STRATEGY_GROUP_MAP  # noqa: E402
 
 ICON_REPO = resolve_icon_repo()
-_REVISION_MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
-try:
-    with _REVISION_MANIFEST.open(encoding='utf-8') as f:
-        _OASIC_REVISION = json.load(f)['revision']
-except (OSError, KeyError, json.JSONDecodeError) as exc:
-    raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}') from exc
-if not _OASIC_REVISION:
-    raise RuntimeError(f'缺少固定 Oasisic revision: {_REVISION_MANIFEST}')
-# 生产消费 URL 固定使用 main 分支 ref；discovery/validation 的 tree 扫描仍只用 pinned SHA
-ASSET_URL_REF = 'main'
-GITHUB_BASE = f'https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{ASSET_URL_REF}/icons'
-
-sys.path.insert(0, str(ROOT / 'scripts'))
-from commit_writer import STRATEGY_GROUP_MAP
 
 BASE = {'Reject', 'Direct', 'Proxy', 'CNCIDR', 'Private', 'Applications', 'LanCIDR', 'DirectDNS', 'ProxyDNS'}
 

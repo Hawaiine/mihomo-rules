@@ -48,6 +48,10 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+# 共享的 Oasisic 检出路径解析（与 scripts/match_icons.py 同一实现，避免两处优先级分叉）
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from icon_repo import resolve_icon_repo  # noqa: E402
+
 PINNED_OASIC = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
 PRODUCTION_CONFIGS = (
     "configs/Android/config.yaml",
@@ -278,32 +282,186 @@ def production_mode_problems(path: str, config: dict) -> list[str]:
 # --------------------------------------------------------------------------- #
 # Oasisic authority guard
 # --------------------------------------------------------------------------- #
+#
+# 信任锚：``PINNED_OASIC`` 是本模块自带的 approved pin，**故意**与
+# ``scripts/config_contract/oasisic_revision.json`` 分开存放。
+#
+# * manifest = 运行时的单一数据来源（matcher / workflow 都从它取值）；
+# * 本常量   = 「revision 只能通过明确审阅流程更新」的独立门禁。
+#
+# 只改 manifest / contract / matcher / workflow 而不同步本常量，guard 必然失败；
+# 反之要换 pin 就必须同时改到这里，从而在 PR 里显式可见、可独立审阅。
+# 这正是不把 pin 折叠成单一字面量的原因。
 
-def oasisic_problems(manifest: dict, matcher: str, daily_sync: str) -> list[str]:
+_REVISION_SHA = re.compile(r"^[0-9a-f]{40}$")
+_REPO_SLUG = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+_ASSET_URL_MODES = {"branch-main": "main", "commit-pinned": None}
+_FLOATING_REFS = {"main", "master", "latest", "head", "develop", "dev", "trunk"}
+
+
+def manifest_problems(manifest: dict) -> list[str]:
+    """manifest 自身：revision 必须是完整 40 位 SHA 且等于 approved pin，且字段自洽。"""
     problems: list[str] = []
-    if manifest.get("revision") != PINNED_OASIC:
+    revision = manifest.get("revision")
+    if not isinstance(revision, str) or not _REVISION_SHA.match(revision):
+        problems.append(f"{MANIFEST_PATH}: revision must be a full 40-hex SHA, got {_short(revision)}")
+    elif revision != PINNED_OASIC:
+        problems.append(f"{MANIFEST_PATH}: revision {revision!r} != approved pin {PINNED_OASIC}")
+    mode = manifest.get("asset_url_mode")
+    if mode not in _ASSET_URL_MODES:
         problems.append(
-            f"{MANIFEST_PATH}: revision {manifest.get('revision')!r} != approved pin {PINNED_OASIC}"
-        )
-    if manifest.get("asset_url_mode") != "branch-main":
-        problems.append(f"{MANIFEST_PATH}: asset_url_mode must be branch-main")
-    if manifest.get("production_url_ref") != "main":
-        problems.append(f"{MANIFEST_PATH}: production_url_ref must be main")
-    if f"ref: {PINNED_OASIC}" not in daily_sync:
-        problems.append(f"{DAILY_SYNC_PATH}: Oasisic checkout ref does not use the approved pin")
-    for floating in ("ref: main", "ref: latest", "ref: master"):
-        if floating in daily_sync:
-            problems.append(f"{DAILY_SYNC_PATH}: floating revision {floating!r} is forbidden")
+            f"{MANIFEST_PATH}: unknown asset_url_mode {_short(mode)}; allowed {sorted(_ASSET_URL_MODES)}")
+    else:
+        required = _ASSET_URL_MODES[mode]
+        ref = manifest.get("production_url_ref")
+        if required is not None and ref != required:
+            problems.append(
+                f"{MANIFEST_PATH}: asset_url_mode {mode!r} requires production_url_ref {required!r}, "
+                f"got {_short(ref)}")
+    repository = manifest.get("repository")
+    if not isinstance(repository, str) or not _REPO_SLUG.match(repository):
+        problems.append(f"{MANIFEST_PATH}: repository must be 'owner/name', got {_short(repository)}")
+    return problems
+
+
+def contract_icon_policy_problems(contract: dict, manifest: dict) -> list[str]:
+    """contract.json 的 icon_policy 必须与 manifest 语义一致（解析真实 JSON 值）。"""
+    policy = contract.get("icon_policy")
+    if not isinstance(policy, dict):
+        return [f"{CONTRACT_PATH}: icon_policy missing or not a mapping"]
+    problems: list[str] = []
+    if policy.get("manifest") != MANIFEST_PATH:
+        problems.append(
+            f"{CONTRACT_PATH}: icon_policy.manifest {_short(policy.get('manifest'))} != {MANIFEST_PATH}")
+    if policy.get("url_mode") != manifest.get("asset_url_mode"):
+        problems.append(
+            f"{CONTRACT_PATH}: icon_policy.url_mode {_short(policy.get('url_mode'))} "
+            f"!= manifest asset_url_mode {_short(manifest.get('asset_url_mode'))}")
+    if policy.get("production_url_ref") != manifest.get("production_url_ref"):
+        problems.append(
+            f"{CONTRACT_PATH}: icon_policy.production_url_ref {_short(policy.get('production_url_ref'))} "
+            f"!= manifest production_url_ref {_short(manifest.get('production_url_ref'))}")
+    if policy.get("discovery_revision_role") != manifest.get("revision_role"):
+        problems.append(
+            f"{CONTRACT_PATH}: icon_policy.discovery_revision_role "
+            f"{_short(policy.get('discovery_revision_role'))} "
+            f"!= manifest revision_role {_short(manifest.get('revision_role'))}")
+    # contract 里不得再写一份 revision：第二份副本必然会各自漂移
+    for key, value in policy.items():
+        if isinstance(value, str) and _REVISION_SHA.match(value.strip()):
+            problems.append(
+                f"{CONTRACT_PATH}: icon_policy.{key} duplicates a revision SHA; "
+                f"{MANIFEST_PATH} is the only source")
+    return problems
+
+
+def oasisic_checkout_refs(workflow_text: str) -> list | None:
+    """解析 workflow 中 Oasisic-Icons checkout 步骤声明的 ref（解析 YAML，不做子串匹配）。
+
+    返回 ``None`` 表示 workflow 无法解析（fail-closed）。
+    """
+    try:
+        doc = yaml.safe_load(workflow_text)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    jobs = doc.get("jobs")
+    if not isinstance(jobs, dict):
+        return None
+    refs: list = []
+    for job in jobs.values():
+        if not isinstance(job, dict):
+            continue
+        for step in job.get("steps") or []:
+            if not isinstance(step, dict):
+                continue
+            block = step.get("with")
+            if not isinstance(block, dict):
+                continue
+            if str(block.get("repository", "")).lower().endswith("oasisic-icons"):
+                refs.append(block.get("ref"))
+    return refs
+
+
+def checkout_ref_problems(workflow_text: str, path: str, revision: str) -> list[str]:
+    """Oasisic checkout 必须使用 manifest 指定的固定 revision，不得 checkout 浮动 ref。"""
+    refs = oasisic_checkout_refs(workflow_text)
+    if refs is None:
+        return [f"{path}: cannot parse workflow YAML to verify the Oasisic checkout ref"]
+    if not refs:
+        return [f"{path}: no Oasisic-Icons checkout step found"]
+    problems: list[str] = []
+    for ref in refs:
+        text = "" if ref is None else str(ref).strip()
+        if not text:
+            problems.append(
+                f"{path}: Oasisic checkout declares no ref (would float to the default branch)")
+        elif text.lower() in _FLOATING_REFS:
+            problems.append(
+                f"{path}: floating Oasisic checkout ref {text!r} is forbidden; use the approved pin")
+        elif text != revision:
+            problems.append(f"{path}: Oasisic checkout ref {text!r} != approved pin {revision}")
+    return problems
+
+
+def matcher_source_problems(matcher: str) -> list[str]:
+    """matcher 必须从 manifest 取 revision 与 URL ref，不得自带第二份运行时配置。"""
+    problems: list[str] = []
     if ENV_REVISION_FALLBACK.search(matcher):
         problems.append(f"{MATCHER_PATH}: environment revision fallback OASIC_REVISION is forbidden")
-    if "_REVISION_MANIFEST" not in matcher or "_OASIC_REVISION" not in matcher:
-        problems.append(f"{MATCHER_PATH}: matcher must resolve its revision from the manifest")
+    for symbol in ("_REVISION_MANIFEST", "_OASIC_REVISION", "asset_url_base"):
+        if symbol not in matcher:
+            problems.append(f"{MATCHER_PATH}: matcher must resolve {symbol} from the manifest")
     if "for ref in (_OASIC_REVISION,)" not in matcher:
         problems.append(f"{MATCHER_PATH}: git tree scan must use the pinned revision only")
-    if "ASSET_URL_REF = 'main'" not in matcher:
-        problems.append(f"{MATCHER_PATH}: production icon URLs must use the main branch ref")
-    if re.search(rf"ASSET_URL_REF\s*=\s*'{PINNED_OASIC}'", matcher):
-        problems.append(f"{MATCHER_PATH}: production icon URLs must not use the pinned SHA ref")
+    if re.search(r"raw\.githubusercontent\.com/[A-Za-z0-9._-]+/", matcher):
+        problems.append(
+            f"{MATCHER_PATH}: production icon URL base must be derived from the manifest, "
+            "not hardcoded with a literal host/owner path")
+    if re.search(r"ASSET_URL_REF\s*=\s*['\"]", matcher):
+        problems.append(f"{MATCHER_PATH}: ASSET_URL_REF must be derived from the manifest, not a literal")
+    return problems
+
+
+def oasisic_problems(manifest: dict, matcher: str, daily_sync: str,
+                     contract: dict | None = None, pr_workflow: str | None = None) -> list[str]:
+    """Oasisic revision / URL 契约：解析真实值，不做字符串包含式判断。"""
+    problems = manifest_problems(manifest)
+    problems += matcher_source_problems(matcher)
+    revision = manifest.get("revision")
+    if isinstance(revision, str):
+        problems += checkout_ref_problems(daily_sync, DAILY_SYNC_PATH, revision)
+        if pr_workflow is not None:
+            problems += checkout_ref_problems(pr_workflow, PR_WORKFLOW_PATH, revision)
+    if contract is not None:
+        problems += contract_icon_policy_problems(contract, manifest)
+    return problems
+
+
+def matcher_url_base_problems(manifest: dict) -> list[str]:
+    """运行时值检查：真实 import matcher，比对它推导出的 revision / URL 基址与 manifest。"""
+    scripts_dir = Path(__file__).resolve().parents[1]
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    import match_icons
+
+    try:
+        expected_base = match_icons.asset_url_base(manifest)
+        expected_ref = match_icons.asset_url_ref(manifest)
+    except (RuntimeError, KeyError) as exc:
+        return [f"{MANIFEST_PATH}: cannot derive the production icon URL base: {exc}"]
+    problems: list[str] = []
+    if match_icons.GITHUB_BASE != expected_base:
+        problems.append(
+            f"{MATCHER_PATH}: GITHUB_BASE {match_icons.GITHUB_BASE!r} != manifest-derived {expected_base!r}")
+    if match_icons.ASSET_URL_REF != expected_ref:
+        problems.append(
+            f"{MATCHER_PATH}: ASSET_URL_REF {match_icons.ASSET_URL_REF!r} != manifest-derived {expected_ref!r}")
+    if match_icons._OASIC_REVISION != manifest.get("revision"):
+        problems.append(
+            f"{MATCHER_PATH}: scanned revision {match_icons._OASIC_REVISION!r} "
+            f"!= manifest revision {manifest.get('revision')!r}")
     return problems
 
 
@@ -316,20 +474,13 @@ def pinned_checkout_problems(repo: Path | None, expected: str = PINNED_OASIC) ->
     return []
 
 
-def icon_repo_path(environ: Mapping[str, str]) -> Path | None:
-    """Resolve the pinned Oasisic checkout from the environment that owns it.
+def icon_repo_path(environ: Mapping[str, str]) -> Path:
+    """Oasisic 检出路径：优先级来自 scripts/icon_repo.py 的单一实现（与 matcher 共用）。
 
-    The caller (local shell or the PR verification workflow) declares the
-    checkout via ``MIHOMO_ICON_REPO``; when it is absent, only the
-    repository-relative layout used by the workflows is considered. No
-    machine-specific absolute path is embedded, and an unresolved checkout is
-    reported instead of silently guessed.
+    显式 ``MIHOMO_ICON_REPO`` 优先；未设置时只用仓库相对 ``<ROOT>/Oasisic-Icons``。
+    不嵌入任何机器专属绝对路径，也不静默回退到别处。
     """
-    supplied = (environ.get("MIHOMO_ICON_REPO") or "").strip()
-    if supplied:
-        return Path(supplied)
-    candidate = ROOT / "Oasisic-Icons"
-    return candidate if candidate.is_dir() else None
+    return resolve_icon_repo(environ=environ, root=ROOT)
 
 
 # --------------------------------------------------------------------------- #
@@ -676,8 +827,9 @@ def main() -> int:
     results.append(("find-process-mode-guard", expected, problems))
 
     expected = (
-        f"manifest pin {PINNED_OASIC} (discovery/validation), daily-sync pinned checkout, "
-        "and matcher production URLs on the main branch ref"
+        f"manifest pin {PINNED_OASIC} (discovery/validation) is the single runtime source; "
+        "contract icon_policy agrees with it; daily-sync and PR workflows check out that pin; "
+        "matcher derives its revision and production URL ref from the manifest"
     )
     problems = []
     try:
@@ -686,7 +838,10 @@ def main() -> int:
             manifest,
             tree_file(head, MATCHER_PATH).decode("utf-8", "replace"),
             tree_file(head, DAILY_SYNC_PATH).decode("utf-8", "replace"),
+            contract=json.loads(tree_file(head, CONTRACT_PATH)),
+            pr_workflow=tree_file(head, PR_WORKFLOW_PATH).decode("utf-8", "replace"),
         )
+        problems += matcher_url_base_problems(manifest)
     except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
         problems.append(f"{MANIFEST_PATH}: cannot load from PR head: {exc}")
     icon_repo = icon_repo_path(os.environ)
