@@ -281,7 +281,7 @@ def check_active_rules_count(variant, lines):
     """激活规则**条数**检查（不是等价检查）。
 
     只断言未注释规则行数等于 generate_config.gen_rules 的固定结构条数；
-    full 与 min 的规则**列表全等**由 check_cross_variant_rules 负责。
+    full 与 min 的整份配置等价由 C1 ``check_full_min_equivalence`` 负责。
     两者分工明确，避免「名义等价、实际只数条数」。
     """
     is_nikki = 'nikki' in variant
@@ -733,26 +733,393 @@ def load_icon_reference(root=None, environ=None):
     return None, '未找到 Oasisic-Icons'
 
 
-def check_cross_variant_rules(all_lines):
-    """同平台 full vs min 激活规则列表必须全等（真等价检查，含条数）"""
-    platforms = {
-        'android': ('android_full', 'android_min'),
-        'nikki': ('nikki_full', 'nikki_min'),
-    }
-    all_pass = True
-    for platform, (full_var, min_var) in platforms.items():
-        full_rules = extract_rules_lines(all_lines[full_var])
-        min_rules = extract_rules_lines(all_lines[min_var])
-        # 过滤掉 Applications（min Nikki 不应有）
-        if platform == 'nikki':
-            full_rules = [r for r in full_rules if 'Applications' not in r]
-            min_rules = [r for r in min_rules if 'Applications' not in r]
-        if len(full_rules) != len(min_rules) or full_rules != min_rules:
-            print(f'  FAIL: cross-variant — {platform} full vs min active rules mismatch')
-            print(f'    full ({len(full_rules)}): {full_rules}')
-            print(f'    min  ({len(min_rules)}): {min_rules}')
-            all_pass = False
-    return all_pass
+# --------------------------------------------------------------------------- #
+# 配置契约：C1 同平台 full/min 整份等价 + C2 Android/Nikki 平台差异契约
+# --------------------------------------------------------------------------- #
+
+# 哨兵：表示该键在对应平台不应存在
+MISSING = object()
+
+# 平台差异契约：路径 → (Android 期望值, Nikki 期望值)
+#
+# 依据：configs/Android/config.yaml 与 configs/Nikki/config.yaml 的实测结构差异，
+# 对照 generate_config.py 的 extract_system_config()——平台段由各平台自己的已提交
+# 配置提取，故这些值属于「已审查的既有基线」，不是生成器推导结果。
+#
+# 路径白名单只说明「允许不同」；本表进一步说明「各自应该是多少」。
+# 把任一项改成第三个值必须失败——这是白名单本身无法覆盖的。
+PLATFORM_CONTRACT = {
+    # 端口：Android 7891/7892（避开移动端常见端口），Nikki 8080/1080
+    'port': (7891, 8080),
+    'socks-port': (7892, 1080),
+    # 外部控制端口：Android 仅本机可达，Nikki 允许外部访问
+    'external-controller': ('127.0.0.1:9090', '0.0.0.0:9090'),
+    # 连接保持：Android 手机端 15s，Nikki 600s
+    'keep-alive-idle': (15, 600),
+    # 进程匹配：Android strict；Nikki off（YAML 将 off 解析为 False）
+    'find-process-mode': ('strict', False),
+    # DNS 监听：Android 本地 53；Nikki 1053（由 nftables 把 53 劫持到 1053）
+    'dns.listen': ('127.0.0.1:53', '0.0.0.0:1053'),
+    # TUN：Android 关闭（走 VPN 模式）；Nikki 开启透明代理并带完整参数
+    'tun.enable': (False, True),
+    'tun.device': (MISSING, 'nikki'),
+    'tun.stack': (MISSING, 'mixed'),
+    'tun.dns-hijack': (MISSING, ['tcp://any:53', 'udp://any:53']),
+    'tun.auto-route': (MISSING, False),
+    'tun.auto-redirect': (MISSING, False),
+    'tun.auto-detect-interface': (MISSING, False),
+    'tun.disable-icmp-forwarding': (MISSING, True),
+}
+
+# rules 段唯一允许的跨平台差异：Applications 规则（Nikki find-process-mode: off）
+PLATFORM_RULES_EXCEPTION = 'RULE-SET,Applications,🎯 全球直连'
+
+
+def _scan_line(line, quote=None, plain=False):
+    """按 YAML 语义扫描一行，剥离行内注释并报告引号状态。
+
+    返回 ``(内容, 行尾引号状态, 当前引号的起始下标)``：
+
+    * ``quote`` 是进入该行时的引号状态（跨行标量续行为 ``"`` 或 ``'``）；
+    * 行尾引号状态非 None 表示该行的引号未闭合，标量可能延续到下一行；
+    * 第三个值仅在引号未闭合时有意义，用于判断这个引号是否真的开启了一个
+      标量值（而不是普通标量里的撇号，例如 ``note: don't``）。
+
+    ``plain=True`` 表示按 YAML **plain scalar** 规则扫描：引号只是普通字符，
+    不开启任何 quoted scalar，`` #`` 一律起始注释。一旦确认某行的引号并不处于
+    合法 quoted scalar 起始位置（如 ``note: don't`` 的撇号），必须用该模式
+    **整行重扫**——只把引号状态清零而不重扫，会把已经吞进内容的 ``# comment``
+    留下来，使 full/min 仅注释不同时被误判为语义差异。
+
+    不得用 ``line.split('#', 1)``：引号内含 ``#`` 的合法值（密码、URL fragment 等）
+    会被误截断。YAML 中 ``#`` 仅在行首或空白之后才起始注释。
+    """
+    out = []
+    quote_at = None
+    i = 0
+    n = len(line)
+    while i < n:
+        ch = line[i]
+        if quote == '"':
+            out.append(ch)
+            if ch == '\\' and i + 1 < n:      # 双引号内的反斜杠转义
+                out.append(line[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                quote = None
+                quote_at = None
+            i += 1
+            continue
+        if quote == "'":
+            out.append(ch)
+            if ch == "'":
+                if i + 1 < n and line[i + 1] == "'":   # YAML 单引号转义写成 ''
+                    out.append("'")
+                    i += 2
+                    continue
+                quote = None
+                quote_at = None
+            i += 1
+            continue
+        if not plain and ch in ('"', "'"):
+            quote = ch
+            quote_at = i
+            out.append(ch)
+            i += 1
+            continue
+        if ch == '#' and (i == 0 or line[i - 1] in ' \t'):
+            break
+        out.append(ch)
+        i += 1
+    return ''.join(out).rstrip(), quote, quote_at
+
+
+def strip_inline_comment(line):
+    """移除 YAML 行内注释，正确识别单/双引号与转义（单行语义）。"""
+    return _scan_line(line)[0]
+
+
+# 块标量起始标记：``key: |``、``key: >-``、``key: |2``、``key: |2-`` 等，必须出现在行尾。
+# YAML 允许缩进指示符与 chomping 指示符任意次序（``|2-`` 与 ``|-2`` 等价）。
+_BLOCK_SCALAR_TAIL = re.compile(r':[ \t]*[|>](?:[0-9][+-]?|[+-][0-9]?)?[ \t]*$')
+# 引号开启标量值的前缀形态：可选的 ``- `` 序列标记 + 可选的 ``key:``，其余只有空白。
+_SCALAR_OPEN_PREFIX = re.compile(r'[\s\-]*(?:[^:#]+:)?[ \t]*$')
+
+
+def normalize_config_lines(text):
+    """归一化配置文本：丢弃空行与整行注释、剥离行内注释，保留缩进与顺序。
+
+    **必须感知 YAML 多行标量**：``|`` / ``>`` 块标量与跨行引号标量的正文里，
+    以 ``#`` 开头的行是内容而不是注释。若逐行套用单行注释剥离，这些正文会被
+    删除，使 full/min 的真实语义差异被掩盖（例如块标量正文分别是
+    ``# FULL_ONLY`` 与 ``# MIN_ONLY`` 时会被误判为相等）。
+
+    该函数只负责文本级比较；语义上的最终判定由
+    :func:`check_full_min_equivalence` 中的 YAML 结构投影承担。
+    """
+    lines = []
+    block_indent = None   # 块标量父键所在行的缩进；正文行缩进必须更大
+    quote = None          # 跨行引号标量的状态
+    for raw in text.split('\n'):
+        if block_indent is not None:
+            if not raw.strip():
+                continue                      # 标量内空行：C1 不比较空行
+            indent = len(raw) - len(raw.lstrip(' \t'))
+            if indent > block_indent:
+                lines.append(raw.rstrip())    # 正文行原样保留，绝不当作注释
+                continue
+            block_indent = None               # 缩进回退 → 块标量结束
+        if quote is not None:
+            content, quote, _ = _scan_line(raw, quote)
+            if content.strip():
+                lines.append(content)
+            continue
+        stripped = raw.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        line, quote, quote_at = _scan_line(raw, None)
+        if quote is not None and quote_at is not None \
+                and not _SCALAR_OPEN_PREFIX.match(raw[:quote_at]):
+            # 引号并不处于合法 quoted scalar 起始位置（如 note: don't 的撇号）：
+            # 必须按 plain scalar 规则**整行重扫**，使其后的 " #" 正确开始注释。
+            line, quote, _ = _scan_line(raw, None, plain=True)
+        if not line.strip():
+            continue
+        if _BLOCK_SCALAR_TAIL.search(line):
+            block_indent = len(raw) - len(raw.lstrip(' \t'))
+        lines.append(line)
+    return lines
+
+
+def _read_config_text(path):
+    with open(path, encoding='utf-8') as handle:
+        return handle.read()
+
+
+def _first_difference(left, right):
+    for index in range(min(len(left), len(right))):
+        if left[index] != right[index]:
+            return index
+    return min(len(left), len(right))
+
+
+def _yaml_projection(node):
+    """把解析结果投影成**保留 mapping 键顺序与列表顺序**的可比较结构。
+
+    不能直接用 ``dict`` 相等：Python 的 dict 比较忽略插入顺序，会漏掉
+    「键集合相同但顺序不同」的差异。这里把 mapping 投影成有序的 ``(key, value)``
+    列表，使投影比较与项目既有的顺序约束一致。
+    """
+    if isinstance(node, dict):
+        return ('map', [(str(key), _yaml_projection(value)) for key, value in node.items()])
+    if isinstance(node, list):
+        return ('seq', [_yaml_projection(item) for item in node])
+    return ('scalar', node)
+
+
+def _first_structural_difference(left, right, path='<root>'):
+    """返回首个结构差异 ``(路径, 左值, 右值)``；完全相同返回 None。"""
+    if not isinstance(left, tuple) or not isinstance(right, tuple) \
+            or left[0] != right[0]:
+        return path, left, right
+    kind = left[0]
+    if kind == 'scalar':
+        return None if left[1] == right[1] else (path, left[1], right[1])
+    if kind == 'map':
+        left_keys = [key for key, _ in left[1]]
+        right_keys = [key for key, _ in right[1]]
+        if left_keys != right_keys:
+            return f'{path}.order', left_keys, right_keys
+        for (key, left_value), (_, right_value) in zip(left[1], right[1]):
+            found = _first_structural_difference(left_value, right_value, f'{path}.{key}')
+            if found:
+                return found
+        return None
+    if len(left[1]) != len(right[1]):
+        return f'{path}.length', len(left[1]), len(right[1])
+    for index, (left_item, right_item) in enumerate(zip(left[1], right[1])):
+        found = _first_structural_difference(left_item, right_item, f'{path}[{index}]')
+        if found:
+            return found
+    return None
+
+
+def _short_repr(value, limit=160):
+    text = repr(value)
+    return text if len(text) <= limit else text[:limit] + '…'
+
+
+def check_full_min_equivalence(configs):
+    """C1：同平台 full 与 min 必须语义等价（整份配置，不只是 rules）。
+
+    两条**独立证据**同时成立才算通过：
+
+    1. **YAML 结构投影（顺序敏感）**——真正的语义比较。它天然正确区分
+       「注释」与「块标量 / 多行引号标量的正文」，因此不会被
+       「以 ``#`` 开头的正文行被当成注释删掉」所欺骗。
+    2. **归一化文本逐行比较**——保留项目原有的文本级严格性（例如
+       ``key: "v"`` 与 ``key: v`` 这类改写仍算差异），并提供精确的行号诊断。
+
+    只用 (2) 会漏掉多行标量正文差异；只用 (1) 会丢掉既有文本契约。两者并存，
+    任一条发现差异即失败。
+    """
+    import yaml  # 延迟导入：保持本模块在无第三方依赖的最小环境中仍可导入
+
+    problems = []
+    for platform in ('android', 'nikki'):
+        full_path = configs[f'{platform}_full']
+        min_path = configs[f'{platform}_min']
+        if not (os.path.exists(full_path) and os.path.exists(min_path)):
+            continue  # 缺文件由其它检查报告
+        full_text = _read_config_text(full_path)
+        min_text = _read_config_text(min_path)
+
+        # ---- 证据 1：YAML 结构投影（顺序敏感） ----
+        try:
+            full_doc = yaml.safe_load(full_text)
+            min_doc = yaml.safe_load(min_text)
+        except yaml.YAMLError as exc:
+            problems.append(f'{platform}: full/min 至少一份无法解析为 YAML: {exc}')
+            continue
+        difference = _first_structural_difference(
+            _yaml_projection(full_doc), _yaml_projection(min_doc))
+        if difference:
+            path, left_value, right_value = difference
+            problems.append(
+                f'{platform}: full 与 min 语义不等 ({full_path} vs {min_path})')
+            problems.append(f'    首个差异路径: {path}')
+            problems.append(f'    full: {_short_repr(left_value)}')
+            problems.append(f'    min : {_short_repr(right_value)}')
+
+        # ---- 证据 2：归一化文本逐行比较（保留既有严格性 + 行号诊断） ----
+        full_lines = normalize_config_lines(full_text)
+        min_lines = normalize_config_lines(min_text)
+        if full_lines != min_lines:
+            index = _first_difference(full_lines, min_lines)
+            problems.append(
+                f'{platform}: full 与 min 归一化后文本不等 '
+                f'(full {len(full_lines)} 行 / min {len(min_lines)} 行, 首个差异在第 {index + 1} 行)')
+            problems.append(f'    full {full_path}')
+            problems.append(f'    min  {min_path}')
+            if index < len(full_lines):
+                problems.append(f'    full 第 {index + 1} 行: {full_lines[index][:110]!r}')
+            if index < len(min_lines):
+                problems.append(f'    min  第 {index + 1} 行: {min_lines[index][:110]!r}')
+    return problems
+
+
+def _structural_diff(left, right, prefix=''):
+    """递归收集两棵 YAML 树的结构差异路径。
+
+    dict：递归到子键；键集合不同 → 报告缺失键路径；键集合相同但顺序不同 →
+    报告 ``<path>.order``。
+    list：整体不同 → 报告该列表路径，**不做逐 index 级联**，避免单个元素
+    变化导致其后所有下标都被误报。
+    标量：值不同 → 报告该路径。
+    """
+    diffs = set()
+    if isinstance(left, dict) and isinstance(right, dict):
+        keys_left, keys_right = list(left.keys()), list(right.keys())
+        for key in set(keys_left) | set(keys_right):
+            path = f'{prefix}{key}'
+            if key not in left or key not in right:
+                diffs.add(path)
+            else:
+                diffs |= _structural_diff(left[key], right[key], f'{path}.')
+        if set(keys_left) == set(keys_right) and keys_left != keys_right:
+            name = prefix.rstrip('.') or '<root>'
+            diffs.add(f'{name}.order')
+    elif isinstance(left, list) and isinstance(right, list):
+        if left != right:
+            diffs.add(prefix.rstrip('.'))
+    elif left != right:
+        diffs.add(prefix.rstrip('.'))
+    return diffs
+
+
+def _path_value(tree, path):
+    node = tree
+    for part in path.split('.'):
+        if not isinstance(node, dict) or part not in node:
+            return MISSING
+        node = node[part]
+    return node
+
+
+def _contract_value_matches(want, got):
+    """比较契约期望值与实际值；布尔与字符串不互相等价。"""
+    if isinstance(want, bool) != isinstance(got, bool):
+        return False
+    return want == got
+
+
+def check_platform_contract(configs):
+    """C2：Android 与 Nikki 的结构差异必须完全等于已审查的平台契约。
+
+    双重约束：
+      1) 差异路径集合 ⊆ 契约路径集合（不许多出未批准的差异）；
+      2) 契约中每个路径的实际值必须等于该平台期望值（不许改成第三个值）。
+
+    ``rules`` 段单独处理：只允许精确的 Applications 差异，其余规则内容与顺序
+    必须完全一致——不把整份 rules 列表放进白名单来掩盖任意改动。
+    """
+    import yaml  # 延迟导入：与 parse_proxy_groups 一致，保持本模块在无第三方依赖时仍可导入
+
+    problems = []
+    android_path = configs['android_full']
+    nikki_path = configs['nikki_full']
+    if not (os.path.exists(android_path) and os.path.exists(nikki_path)):
+        return problems
+    try:
+        android = yaml.safe_load(_read_config_text(android_path))
+        nikki = yaml.safe_load(_read_config_text(nikki_path))
+    except yaml.YAMLError as exc:
+        return [f'platform-contract: full 配置解析失败: {exc}']
+    if not isinstance(android, dict) or not isinstance(nikki, dict):
+        return ['platform-contract: full 配置必须解析为 mapping']
+
+    unexpected = sorted(
+        path for path in _structural_diff(android, nikki)
+        if path != 'rules' and path not in PLATFORM_CONTRACT)
+    if unexpected:
+        problems.append(f'Android/Nikki 出现平台契约之外的差异路径: {unexpected}')
+
+    for path, (want_android, want_nikki) in sorted(PLATFORM_CONTRACT.items()):
+        got_android = _path_value(android, path)
+        got_nikki = _path_value(nikki, path)
+        if not (_contract_value_matches(want_android, got_android)
+                and _contract_value_matches(want_nikki, got_nikki)):
+            problems.append(
+                f'{path}: 平台值不符合契约 '
+                f'(android 期望 {want_android!r} 实际 {got_android!r}; '
+                f'nikki 期望 {want_nikki!r} 实际 {got_nikki!r})')
+
+    rules_android = android.get('rules') or []
+    rules_nikki = nikki.get('rules') or []
+    if not isinstance(rules_android, list) or not isinstance(rules_nikki, list):
+        problems.append('platform-contract: rules 必须是列表')
+        return problems
+    exception = PLATFORM_RULES_EXCEPTION
+    android_exc = [rule for rule in rules_android if rule == exception]
+    nikki_exc = [rule for rule in rules_nikki if rule == exception]
+    if len(android_exc) != 1:
+        problems.append(
+            f'platform-contract: Android rules 应恰好含 1 条 {exception!r}，实际 {len(android_exc)} 条')
+    if nikki_exc:
+        problems.append(
+            f'platform-contract: Nikki rules 不应含 {exception!r}（find-process-mode: off）')
+    rest_android = [rule for rule in rules_android if rule != exception]
+    if rest_android != rules_nikki:
+        index = _first_difference(rest_android, rules_nikki)
+        problems.append(
+            f'platform-contract: 去除 Applications 后 Android/Nikki rules 不等 '
+            f'(android {len(rest_android)} 条 / nikki {len(rules_nikki)} 条, 首个差异在第 {index + 1} 条)')
+        if index < len(rest_android):
+            problems.append(f'    android 第 {index + 1} 条: {rest_android[index]!r}')
+        if index < len(rules_nikki):
+            problems.append(f'    nikki   第 {index + 1} 条: {rules_nikki[index]!r}')
+    return problems
 
 
 def print_order_summary(names, variant):
@@ -796,7 +1163,6 @@ def main():
 
     all_pass = True
     results = {}
-    all_lines = {}
     for variant in VARIANTS:
         path = configs[variant]
         print(f'\n--- {variant} ({path}) ---')
@@ -807,7 +1173,6 @@ def main():
             continue
 
         lines = read_file_lines(path)
-        all_lines[variant] = lines
         try:
             groups_cfg = parse_proxy_groups(path)
         except Exception as exc:  # YAML 结构损坏时给出明确失败而不是抛栈
@@ -855,12 +1220,16 @@ def main():
         all_pass = all_pass and variant_pass
         results[variant] = variant_pass
 
-    # 跨变体校验
+    # 跨变体校验：C1 同平台 full/min 整份等价 + C2 Android/Nikki 平台契约
     print(f'\n--- cross-variant ---')
-    cv_pass = check_cross_variant_rules(all_lines)
-    if cv_pass:
-        print('  [PASS] full vs min active rules match')
-    all_pass = all_pass and cv_pass
+    contract_problems = check_full_min_equivalence(configs) + check_platform_contract(configs)
+    if contract_problems:
+        print('  [FAIL] full/min 整份等价 + Android/Nikki 平台契约')
+        for problem in contract_problems:
+            print(f'    {problem}')
+    else:
+        print('  [PASS] full/min 整份等价 + Android/Nikki 平台契约')
+    all_pass = all_pass and not contract_problems
 
     # 汇总
     print(f'\n{"=" * 60}')

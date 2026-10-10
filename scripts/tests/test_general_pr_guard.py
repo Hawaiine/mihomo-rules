@@ -14,6 +14,8 @@ repositories. They describe the *target* architecture:
   never be hidden by the count.
 """
 import json
+import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -27,11 +29,18 @@ import verify_general_pr as guard  # noqa: E402
 
 
 def _rs_url(brand: str) -> str:
-    return f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{guard.PINNED_OASIC}/ruleset/{brand}/{brand}.yaml"
+    """规范规则集 URL——与生成器契约一致（主机/仓库/ref 由 guard 的常量锁定）。"""
+    return guard.ruleset_url_for(brand)
 
 
 def _config(providers: dict) -> dict:
-    return {"rule-providers": providers, "proxy-groups": []}
+    """构造测试用配置；provider 的 path 按生成器约定补全为 ./ruleset/<key>.yaml。"""
+    full = {}
+    for key, entry in providers.items():
+        entry = dict(entry)
+        entry.setdefault("path", f"./ruleset/{key}.yaml")
+        full[key] = entry
+    return {"rule-providers": full, "proxy-groups": []}
 
 
 class ConfigTreeConsistencyGuardTest(unittest.TestCase):
@@ -56,7 +65,25 @@ class ConfigTreeConsistencyGuardTest(unittest.TestCase):
     def test_non_ruleset_url_fails(self):
         config = _config({"Weird": {"url": "https://example.com/not-a-ruleset.txt"}})
         problems = guard.config_tree_problems(config, {"ruleset/Weird/Weird.yaml"})
-        self.assertTrue(any("not a ruleset URL" in p for p in problems), problems)
+        self.assertTrue(any("url must be" in p for p in problems), problems)
+
+    def test_wrong_provider_path_fails(self):
+        """URL 正确但 path 不符合生成器约定，必须失败（URL 或 path 改错任一项都不能通过）。"""
+        config = _config({"Google": {"url": _rs_url("Google"), "path": "./ruleset/GoogleX.yaml"}})
+        problems = guard.config_tree_problems(config, {"ruleset/Google/Google.yaml"})
+        self.assertTrue(any("path must be" in p for p in problems), problems)
+
+    def test_missing_provider_path_fails(self):
+        config = {"rule-providers": {"Google": {"url": _rs_url("Google")}}, "proxy-groups": []}
+        problems = guard.config_tree_problems(config, {"ruleset/Google/Google.yaml"})
+        self.assertTrue(any("path must be" in p for p in problems), problems)
+
+    def test_url_directory_and_filename_mismatch_fails(self):
+        """ruleset/Google/GoogleX.yaml 这种错配不得冒充 Google 的 provider。"""
+        config = _config({"Google": {"url": "https://raw.githubusercontent.com/Hawaiine/"
+                                    "mihomo-rules/main/ruleset/Google/GoogleX.yaml"}})
+        problems = guard.config_tree_problems(config, {"ruleset/Google/Google.yaml"})
+        self.assertTrue(any("url must be" in p for p in problems), problems)
 
     def test_missing_or_empty_providers_fails(self):
         self.assertTrue(guard.config_tree_problems({"proxy-groups": []}, {"ruleset/A/A.yaml"}))
@@ -72,6 +99,132 @@ class ConfigTreeConsistencyGuardTest(unittest.TestCase):
         })
         tree = {"ruleset/Google/Google.yaml", "ruleset/ApplePodcasts/ApplePodcasts.yaml"}
         self.assertEqual(guard.config_tree_problems(config, tree), [])
+
+
+class RulesetUrlBindingTest(unittest.TestCase):
+    """C3 补强：provider key ↔ URL ↔ path ↔ head 树必须指向同一个 Technical ID。
+
+    审阅指出仅提取 ``/ruleset/<Brand>/<Brand>.yaml`` 的后缀正则会放过四类漂移：
+    品牌互换、外部主机、错误仓库路径、错误 ref。以下反例必须失败，且失败信息要
+    能指出配置路径、provider key 与原因；正确基线与合法新增品牌必须通过。
+    """
+
+    TREE = {"ruleset/Alpha/Alpha.yaml", "ruleset/Beta/Beta.yaml"}
+
+    def _problems(self, providers, tree=None):
+        return guard.config_tree_problems(_config(providers), set(self.TREE if tree is None else tree))
+
+    def _assert_fails(self, providers, needle, tree=None):
+        problems = self._problems(providers, tree)
+        self.assertTrue(problems, "应当失败但没有报错")
+        self.assertTrue(any(needle in p for p in problems),
+                        f"失败信息未包含 {needle!r}: {problems}")
+
+    # -- 正样本 ---------------------------------------------------------- #
+
+    def test_correct_baseline_passes(self):
+        self.assertEqual(self._problems({
+            "Alpha": {"url": _rs_url("Alpha")},
+            "Beta": {"url": _rs_url("Beta")},
+        }), [])
+
+    def test_legitimate_new_brand_passes(self):
+        """新增品牌（目录 + YAML + provider + 正确 URL/path）不得被误拦。"""
+        tree = set(self.TREE) | {"ruleset/AlphaX/AlphaX.yaml"}
+        self.assertEqual(self._problems({
+            "Alpha": {"url": _rs_url("Alpha")},
+            "Beta": {"url": _rs_url("Beta")},
+            "AlphaX": {"url": _rs_url("AlphaX")},
+        }, tree), [])
+
+    # -- 品牌互换：两个目录都存在，过去能整体通过 ------------------------ #
+
+    def test_brand_swap_between_two_existing_brands_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Alpha")},
+        }, "url must be")
+
+    def test_one_way_cross_brand_mapping_fails(self):
+        """Alpha 指向 Beta 的规则集，path 仍写 ./ruleset/Alpha.yaml。"""
+        self._assert_fails({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    # -- 主机 / 仓库 / ref 漂移：尾路径相同也不许通过 -------------------- #
+
+    def test_foreign_host_with_same_path_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://evil.example.com/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_wrong_repository_owner_path_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/SomeoneElse/mihomo-rules/"
+                               "main/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_wrong_branch_ref_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/"
+                               "dev/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_pinned_sha_ref_fails(self):
+        """生产配置不得把规则集 URL 钉到某个 SHA 而不是约定分支。"""
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/"
+                               f"{guard.PINNED_OASIC}/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    # -- 失败信息必须可定位 ---------------------------------------------- #
+
+    def test_failure_message_names_config_provider_and_reason(self):
+        problems = self._problems({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Beta")},
+        })
+        joined = "\n".join(problems)
+        self.assertIn("configs/Android/config.yaml", joined)
+        self.assertIn("`Alpha`", joined)
+        self.assertIn("url must be", joined)
+
+    def test_cross_brand_mapping_does_not_mask_a_missing_provider(self):
+        """跨品牌映射不得冒充覆盖：Beta 没有自己的 provider 时必须报缺失。"""
+        problems = self._problems({"Alpha": {"url": _rs_url("Beta")}})
+        self.assertTrue(any("ruleset brand 'Beta' has no rule-provider entry" in p for p in problems),
+                        problems)
+        self.assertTrue(any("ruleset brand 'Alpha' has no rule-provider entry" in p for p in problems),
+                        problems)
+
+
+class RulesetUrlContractTest(unittest.TestCase):
+    """guard 独立声明的 URL 基址必须与生成器契约逐字一致，并由本测试锁定。
+
+    guard 刻意不导入生成器（避免与它共享失效模式），所以这条对应关系必须由
+    测试来钉住——生成器改了基址而 guard 没跟上时，这里会失败。
+    """
+
+    def test_guard_base_matches_generator_constant(self):
+        scripts = ROOT / "scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        import generate_config
+
+        self.assertEqual(guard.RULESET_URL_BASE, generate_config.GITHUB_BASE)
+
+    def test_generated_url_shape_matches_guard_contract(self):
+        self.assertEqual(guard.ruleset_url_for("Alibaba"),
+                         f"{guard.RULESET_URL_BASE}/ruleset/Alibaba/Alibaba.yaml")
+
+    def test_guard_base_is_the_documented_template(self):
+        self.assertEqual(guard.RULESET_URL_BASE,
+                         "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main")
 
 
 class ProviderFileGuardTest(unittest.TestCase):
@@ -536,6 +689,191 @@ class IconRepoPathResolverTest(unittest.TestCase):
     def test_missing_checkout_is_surfaced_as_unavailable(self):
         problems = guard.pinned_checkout_problems(Path("/definitely/missing"))
         self.assertTrue(any("not available" in p for p in problems), problems)
+
+
+class ConfigTreeAllVariantsTest(unittest.TestCase):
+    """C3：head 树自洽检查必须覆盖四份生产配置，而不是只有 Android full。
+
+    用一次性临时 git 仓库构造最小树（两个品牌 + 四份配置），把 guard.ROOT
+    指向它，从而真实走 ``git show <head>:<path>`` 代码路径。
+    """
+
+    BRANDS = ("Alpha", "Beta")
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(prefix="guard-c3-")
+        self.repo = Path(self._tmp.name)
+        self._orig_root = guard.ROOT
+        guard.ROOT = self.repo
+        self.addCleanup(self._restore)
+        subprocess.run(["git", "init", "-q", str(self.repo)], check=True, capture_output=True)
+        for brand in self.BRANDS:
+            self._write(f"ruleset/{brand}/{brand}.yaml", "payload:\n  - DOMAIN,x.example\n")
+        for rel in guard.PRODUCTION_CONFIGS:
+            self._write_config(rel)
+        self._commit("init")
+
+    def _restore(self):
+        guard.ROOT = self._orig_root
+        self._tmp.cleanup()
+
+    def _write(self, rel, text):
+        path = self.repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _url(self, brand):
+        return (f"https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/"
+                f"ruleset/{brand}/{brand}.yaml")
+
+    def _write_config(self, rel, urls=None, paths=None, skip=(), extra=()):
+        urls = urls or {}
+        paths = paths or {}
+        lines = ["rule-providers:"]
+        for brand in (*self.BRANDS, *extra):
+            if brand in skip:
+                continue
+            lines += [
+                f"  {brand}:",
+                "    type: http",
+                "    behavior: classical",
+                f'    url: "{urls.get(brand, self._url(brand))}"',
+                "    interval: 86400",
+                f"    path: {paths.get(brand, f'./ruleset/{brand}.yaml')}",
+            ]
+        self._write(rel, "\n".join(lines) + "\n")
+
+    def _commit(self, message):
+        subprocess.run(["git", "add", "-A"], cwd=self.repo, check=True, capture_output=True)
+        subprocess.run(["git", "-c", "user.email=t@example.test", "-c", "user.name=t",
+                        "commit", "-qm", message], cwd=self.repo, check=True, capture_output=True)
+
+    def _problems(self):
+        return guard.config_tree_guard_problems("HEAD")
+
+    # -- 正样本 ---------------------------------------------------------- #
+
+    def test_production_configs_covers_all_four_variants(self):
+        self.assertEqual(
+            tuple(guard.PRODUCTION_CONFIGS),
+            ("configs/Android/config.yaml", "configs/Android/config.min.yaml",
+             "configs/Nikki/config.yaml", "configs/Nikki/config.min.yaml"),
+        )
+
+    def test_consistent_four_configs_pass(self):
+        self.assertEqual(self._problems(), [])
+
+    # -- 每一份都必须被检查：Nikki / min 不再漏检 ------------------------ #
+
+    def test_nikki_full_url_corrupted_fails(self):
+        self._write_config("configs/Nikki/config.yaml", urls={"Alpha": self._url("Beta")})
+        self._commit("corrupt nikki full url")
+        problems = self._problems()
+        self.assertTrue(any("Nikki/config.yaml" in p for p in problems), problems)
+
+    def test_nikki_full_path_corrupted_fails(self):
+        self._write_config("configs/Nikki/config.yaml", paths={"Alpha": "./ruleset/AlphaX.yaml"})
+        self._commit("corrupt nikki full path")
+        problems = self._problems()
+        self.assertTrue(any("Nikki/config.yaml" in p and "path must be" in p for p in problems), problems)
+
+    def test_android_min_url_corrupted_fails(self):
+        self._write_config("configs/Android/config.min.yaml", urls={"Alpha": self._url("Beta")})
+        self._commit("corrupt android min url")
+        problems = self._problems()
+        self.assertTrue(any("Android/config.min.yaml" in p for p in problems), problems)
+
+    def test_nikki_min_path_corrupted_fails(self):
+        self._write_config("configs/Nikki/config.min.yaml", paths={"Beta": "./ruleset/BetaX.yaml"})
+        self._commit("corrupt nikki min path")
+        problems = self._problems()
+        self.assertTrue(any("Nikki/config.min.yaml" in p for p in problems), problems)
+
+    def test_android_full_url_corrupted_fails(self):
+        self._write_config("configs/Android/config.yaml", urls={"Alpha": self._url("Beta")})
+        self._commit("corrupt android full url")
+        self.assertTrue(self._problems())
+
+    # -- key / URL / path 三方错配 --------------------------------------- #
+
+    def test_url_dir_and_file_mismatch_fails(self):
+        """ruleset/Alpha/AlphaX.yaml 这种错配不得冒充 Alpha 的 provider。"""
+        self._write_config("configs/Nikki/config.min.yaml",
+                           urls={"Alpha": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Alpha/AlphaX.yaml"})
+        self._commit("dir/file mismatch")
+        problems = self._problems()
+        self.assertTrue(any("url must be" in p for p in problems), problems)
+
+    def test_two_keys_pointing_to_same_brand_fails(self):
+        self._write_config("configs/Android/config.min.yaml", urls={"Beta": self._url("Alpha")})
+        self._commit("two keys same brand")
+        problems = self._problems()
+        self.assertTrue(any("has no rule-provider entry" in p for p in problems), problems)
+
+    def test_variant_missing_a_brand_provider_fails(self):
+        self._write_config("configs/Nikki/config.yaml", skip=("Beta",))
+        self._commit("nikki full missing brand")
+        problems = self._problems()
+        self.assertTrue(any("Nikki/config.yaml" in p for p in problems), problems)
+
+    def test_url_pointing_at_absent_ruleset_file_fails(self):
+        """URL 形态正确（key 与 URL 品牌一致），但 head 树里没有对应规则集文件。"""
+        self._write_config("configs/Android/config.min.yaml", extra=("Gamma",))
+        self._commit("url points at absent brand")
+        problems = self._problems()
+        self.assertTrue(any("missing from the head tree" in p for p in problems), problems)
+
+
+class IconBaselineAllVariantsTest(unittest.TestCase):
+    """C3（图标）：四份配置各自参与图标覆盖比对。"""
+
+    def _icon_repo(self):
+        env = os.environ.get("MIHOMO_ICON_REPO")
+        if env and Path(env).is_dir():
+            return Path(env)
+        candidate = ROOT / "Oasisic-Icons"
+        return candidate if candidate.is_dir() else None
+
+    def test_every_config_participates_in_icon_coverage(self):
+        if self._icon_repo() is None:
+            self.skipTest("没有可用的 Oasisic-Icons 检出")
+        with tempfile.TemporaryDirectory(prefix="guard-icon-") as tmp:
+            repo = Path(tmp)
+            original = guard.ROOT
+            guard.ROOT = repo
+            try:
+                subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
+                for rel in (*guard.PRODUCTION_CONFIGS, guard.ORACLE_FIXTURES_PATH):
+                    src = original / rel
+                    dst = repo / rel
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+                # 按真实仓库的布局镜像 ruleset 树（仅需路径结构，payload 用占位内容）
+                ruleset_root = original / "ruleset"
+                if ruleset_root.is_dir():
+                    for src in ruleset_root.rglob("*"):
+                        if src.is_file():
+                            dst = repo / src.relative_to(original)
+                            dst.parent.mkdir(parents=True, exist_ok=True)
+                            dst.write_text("payload:\n  - DOMAIN,x.example\n", encoding="utf-8")
+                subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+                subprocess.run(["git", "-c", "user.email=t@example.test", "-c", "user.name=t",
+                                "commit", "-qm", "init"], cwd=repo, check=True, capture_output=True)
+                self.assertEqual(guard.icon_baseline_guard_problems("HEAD"), [])
+
+                # 只给 Nikki min 去掉一个 icon → 该份配置的图标覆盖缺失，必须被点名报出
+                target = repo / "configs/Nikki/config.min.yaml"
+                mutated, count = re.subn(r"^\s*icon: .*$", "", target.read_text(encoding="utf-8"),
+                                         count=1, flags=re.M)
+                self.assertEqual(count, 1, "未能在 Nikki min 中找到可移除的 icon 行")
+                target.write_text(mutated, encoding="utf-8")
+                subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+                subprocess.run(["git", "-c", "user.email=t@example.test", "-c", "user.name=t",
+                                "commit", "-qm", "mutate"], cwd=repo, check=True, capture_output=True)
+                problems = guard.icon_baseline_guard_problems("HEAD")
+                self.assertTrue(any("Nikki/config.min.yaml" in p for p in problems), problems)
+            finally:
+                guard.ROOT = original
 
 
 if __name__ == "__main__":
