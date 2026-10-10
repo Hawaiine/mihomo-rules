@@ -775,14 +775,21 @@ PLATFORM_CONTRACT = {
 PLATFORM_RULES_EXCEPTION = 'RULE-SET,Applications,🎯 全球直连'
 
 
-def strip_inline_comment(line):
-    """移除 YAML 行内注释，正确识别单/双引号与转义。
+def _scan_line(line, quote=None):
+    """按 YAML 语义扫描一行，剥离行内注释并报告引号状态。
+
+    返回 ``(内容, 行尾引号状态, 当前引号的起始下标)``：
+
+    * ``quote`` 是进入该行时的引号状态（跨行标量续行为 ``"`` 或 ``'``）；
+    * 行尾引号状态非 None 表示该行的引号未闭合，标量可能延续到下一行；
+    * 第三个值仅在引号未闭合时有意义，用于判断这个引号是否真的开启了一个
+      标量值（而不是普通标量里的撇号，例如 ``note: don't``）。
 
     不得用 ``line.split('#', 1)``：引号内含 ``#`` 的合法值（密码、URL fragment 等）
     会被误截断。YAML 中 ``#`` 仅在行首或空白之后才起始注释。
     """
     out = []
-    quote = None
+    quote_at = None
     i = 0
     n = len(line)
     while i < n:
@@ -795,6 +802,7 @@ def strip_inline_comment(line):
                 continue
             if ch == '"':
                 quote = None
+                quote_at = None
             i += 1
             continue
         if quote == "'":
@@ -805,10 +813,12 @@ def strip_inline_comment(line):
                     i += 2
                     continue
                 quote = None
+                quote_at = None
             i += 1
             continue
         if ch in ('"', "'"):
             quote = ch
+            quote_at = i
             out.append(ch)
             i += 1
             continue
@@ -816,19 +826,60 @@ def strip_inline_comment(line):
             break
         out.append(ch)
         i += 1
-    return ''.join(out).rstrip()
+    return ''.join(out).rstrip(), quote, quote_at
+
+
+def strip_inline_comment(line):
+    """移除 YAML 行内注释，正确识别单/双引号与转义（单行语义）。"""
+    return _scan_line(line)[0]
+
+
+# 块标量起始标记：``key: |``、``key: >-``、``key: |2`` 等，必须出现在行尾。
+_BLOCK_SCALAR_TAIL = re.compile(r':[ \t]*[|>][+-]?[0-9]*[ \t]*$')
+# 引号开启标量值的前缀形态：可选的 ``- `` 序列标记 + 可选的 ``key:``，其余只有空白。
+_SCALAR_OPEN_PREFIX = re.compile(r'[\s\-]*(?:[^:#]+:)?[ \t]*$')
 
 
 def normalize_config_lines(text):
-    """归一化配置文本：丢弃空行与整行注释、剥离行内注释，保留缩进与顺序。"""
+    """归一化配置文本：丢弃空行与整行注释、剥离行内注释，保留缩进与顺序。
+
+    **必须感知 YAML 多行标量**：``|`` / ``>`` 块标量与跨行引号标量的正文里，
+    以 ``#`` 开头的行是内容而不是注释。若逐行套用单行注释剥离，这些正文会被
+    删除，使 full/min 的真实语义差异被掩盖（例如块标量正文分别是
+    ``# FULL_ONLY`` 与 ``# MIN_ONLY`` 时会被误判为相等）。
+
+    该函数只负责文本级比较；语义上的最终判定由
+    :func:`check_full_min_equivalence` 中的 YAML 结构投影承担。
+    """
     lines = []
+    block_indent = None   # 块标量父键所在行的缩进；正文行缩进必须更大
+    quote = None          # 跨行引号标量的状态
     for raw in text.split('\n'):
+        if block_indent is not None:
+            if not raw.strip():
+                continue                      # 标量内空行：C1 不比较空行
+            indent = len(raw) - len(raw.lstrip(' \t'))
+            if indent > block_indent:
+                lines.append(raw.rstrip())    # 正文行原样保留，绝不当作注释
+                continue
+            block_indent = None               # 缩进回退 → 块标量结束
+        if quote is not None:
+            content, quote, _ = _scan_line(raw, quote)
+            if content.strip():
+                lines.append(content)
+            continue
         stripped = raw.strip()
         if not stripped or stripped.startswith('#'):
             continue
-        line = strip_inline_comment(raw).rstrip()
-        if line.strip():
-            lines.append(line)
+        line, quote, quote_at = _scan_line(raw, None)
+        if not line.strip():
+            continue
+        if _BLOCK_SCALAR_TAIL.search(line):
+            block_indent = len(raw) - len(raw.lstrip(' \t'))
+        elif quote is not None and quote_at is not None \
+                and not _SCALAR_OPEN_PREFIX.match(raw[:quote_at]):
+            quote = None                      # 普通标量里的撇号，不是跨行标量
+        lines.append(line)
     return lines
 
 
@@ -844,33 +895,108 @@ def _first_difference(left, right):
     return min(len(left), len(right))
 
 
-def check_full_min_equivalence(configs):
-    """C1：同平台 full 与 min 归一化后必须逐行相等（内容与顺序）。
+def _yaml_projection(node):
+    """把解析结果投影成**保留 mapping 键顺序与列表顺序**的可比较结构。
 
-    取代原先只提取 RULE-SET/MATCH/GEOIP 行的 ``check_cross_variant_rules``——
-    后者看不见 min 中新增的 DOMAIN/IP-CIDR 字面规则，也不覆盖
-    provider / proxy-groups / proxy-providers / DNS / TUN 等整份字段。
+    不能直接用 ``dict`` 相等：Python 的 dict 比较忽略插入顺序，会漏掉
+    「键集合相同但顺序不同」的差异。这里把 mapping 投影成有序的 ``(key, value)``
+    列表，使投影比较与项目既有的顺序约束一致。
     """
+    if isinstance(node, dict):
+        return ('map', [(str(key), _yaml_projection(value)) for key, value in node.items()])
+    if isinstance(node, list):
+        return ('seq', [_yaml_projection(item) for item in node])
+    return ('scalar', node)
+
+
+def _first_structural_difference(left, right, path='<root>'):
+    """返回首个结构差异 ``(路径, 左值, 右值)``；完全相同返回 None。"""
+    if not isinstance(left, tuple) or not isinstance(right, tuple) \
+            or left[0] != right[0]:
+        return path, left, right
+    kind = left[0]
+    if kind == 'scalar':
+        return None if left[1] == right[1] else (path, left[1], right[1])
+    if kind == 'map':
+        left_keys = [key for key, _ in left[1]]
+        right_keys = [key for key, _ in right[1]]
+        if left_keys != right_keys:
+            return f'{path}.order', left_keys, right_keys
+        for (key, left_value), (_, right_value) in zip(left[1], right[1]):
+            found = _first_structural_difference(left_value, right_value, f'{path}.{key}')
+            if found:
+                return found
+        return None
+    if len(left[1]) != len(right[1]):
+        return f'{path}.length', len(left[1]), len(right[1])
+    for index, (left_item, right_item) in enumerate(zip(left[1], right[1])):
+        found = _first_structural_difference(left_item, right_item, f'{path}[{index}]')
+        if found:
+            return found
+    return None
+
+
+def _short_repr(value, limit=160):
+    text = repr(value)
+    return text if len(text) <= limit else text[:limit] + '…'
+
+
+def check_full_min_equivalence(configs):
+    """C1：同平台 full 与 min 必须语义等价（整份配置，不只是 rules）。
+
+    两条**独立证据**同时成立才算通过：
+
+    1. **YAML 结构投影（顺序敏感）**——真正的语义比较。它天然正确区分
+       「注释」与「块标量 / 多行引号标量的正文」，因此不会被
+       「以 ``#`` 开头的正文行被当成注释删掉」所欺骗。
+    2. **归一化文本逐行比较**——保留项目原有的文本级严格性（例如
+       ``key: "v"`` 与 ``key: v`` 这类改写仍算差异），并提供精确的行号诊断。
+
+    只用 (2) 会漏掉多行标量正文差异；只用 (1) 会丢掉既有文本契约。两者并存，
+    任一条发现差异即失败。
+    """
+    import yaml  # 延迟导入：保持本模块在无第三方依赖的最小环境中仍可导入
+
     problems = []
     for platform in ('android', 'nikki'):
         full_path = configs[f'{platform}_full']
         min_path = configs[f'{platform}_min']
         if not (os.path.exists(full_path) and os.path.exists(min_path)):
             continue  # 缺文件由其它检查报告
-        full_lines = normalize_config_lines(_read_config_text(full_path))
-        min_lines = normalize_config_lines(_read_config_text(min_path))
-        if full_lines == min_lines:
+        full_text = _read_config_text(full_path)
+        min_text = _read_config_text(min_path)
+
+        # ---- 证据 1：YAML 结构投影（顺序敏感） ----
+        try:
+            full_doc = yaml.safe_load(full_text)
+            min_doc = yaml.safe_load(min_text)
+        except yaml.YAMLError as exc:
+            problems.append(f'{platform}: full/min 至少一份无法解析为 YAML: {exc}')
             continue
-        index = _first_difference(full_lines, min_lines)
-        problems.append(
-            f'{platform}: full 与 min 归一化后不等 '
-            f'(full {len(full_lines)} 行 / min {len(min_lines)} 行, 首个差异在第 {index + 1} 行)')
-        problems.append(f'    full {full_path}')
-        problems.append(f'    min  {min_path}')
-        if index < len(full_lines):
-            problems.append(f'    full 第 {index + 1} 行: {full_lines[index][:110]!r}')
-        if index < len(min_lines):
-            problems.append(f'    min  第 {index + 1} 行: {min_lines[index][:110]!r}')
+        difference = _first_structural_difference(
+            _yaml_projection(full_doc), _yaml_projection(min_doc))
+        if difference:
+            path, left_value, right_value = difference
+            problems.append(
+                f'{platform}: full 与 min 语义不等 ({full_path} vs {min_path})')
+            problems.append(f'    首个差异路径: {path}')
+            problems.append(f'    full: {_short_repr(left_value)}')
+            problems.append(f'    min : {_short_repr(right_value)}')
+
+        # ---- 证据 2：归一化文本逐行比较（保留既有严格性 + 行号诊断） ----
+        full_lines = normalize_config_lines(full_text)
+        min_lines = normalize_config_lines(min_text)
+        if full_lines != min_lines:
+            index = _first_difference(full_lines, min_lines)
+            problems.append(
+                f'{platform}: full 与 min 归一化后文本不等 '
+                f'(full {len(full_lines)} 行 / min {len(min_lines)} 行, 首个差异在第 {index + 1} 行)')
+            problems.append(f'    full {full_path}')
+            problems.append(f'    min  {min_path}')
+            if index < len(full_lines):
+                problems.append(f'    full 第 {index + 1} 行: {full_lines[index][:110]!r}')
+            if index < len(min_lines):
+                problems.append(f'    min  第 {index + 1} 行: {min_lines[index][:110]!r}')
     return problems
 
 

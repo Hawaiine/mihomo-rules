@@ -139,6 +139,106 @@ class FullMinEquivalenceTest(ConfigContractTestCase):
         self.assert_contract_ok()
 
 
+class MultiLineScalarEquivalenceTest(ConfigContractTestCase):
+    """C1 必须感知 YAML 多行标量：块标量 / 跨行引号标量里的 ``#`` 是正文。
+
+    这些用例在**临时配置文件**上直接驱动 ``check_full_min_equivalence``，
+    而不是只做字符串单元测试——只有这样才能证明整条 C1 路径不会漏检。
+    """
+
+    BLOCK = "x-audit-probe: |\n  first\n  {marker}\n  last\n"
+    QUOTED = 'x-audit-probe: "first\n  {marker}\n  last"\n'
+
+    def _append(self, variant, snippet):
+        path = self.path(variant)
+        path.write_text(self.text(variant).rstrip("\n") + "\n" + snippet, encoding="utf-8")
+
+    def assert_c1_ok(self):
+        self.assertEqual(vc.check_full_min_equivalence(self.configs), [], "C1 不应报错")
+
+    def assert_c1_fails(self, needle=None):
+        problems = vc.check_full_min_equivalence(self.configs)
+        self.assertTrue(problems, "C1 应当失败但没有报错")
+        if needle is not None:
+            self.assertIn(needle, "\n".join(problems))
+
+    # -- 块标量 ---------------------------------------------------------- #
+
+    def test_identical_block_scalar_bodies_pass(self):
+        self._append("android_full", self.BLOCK.format(marker="# SAME"))
+        self._append("android_min", self.BLOCK.format(marker="# SAME"))
+        self.assert_c1_ok()
+
+    def test_block_scalar_body_difference_fails(self):
+        """块标量正文里的 # 行是内容：FULL_ONLY / MIN_ONLY 不同必须失败。"""
+        self._append("android_full", self.BLOCK.format(marker="# FULL_ONLY"))
+        self._append("android_min", self.BLOCK.format(marker="# MIN_ONLY"))
+        self.assert_c1_fails("android")
+
+    def test_block_scalar_body_difference_in_nikki_fails(self):
+        self._append("nikki_full", self.BLOCK.format(marker="# FULL_ONLY"))
+        self._append("nikki_min", self.BLOCK.format(marker="# MIN_ONLY"))
+        self.assert_c1_fails("nikki")
+
+    def test_block_scalar_body_difference_not_hidden_by_comment_stripping(self):
+        """回归：修复前归一化器会把这两行都当注释删掉，从而误判相等。"""
+        full_text = self.BLOCK.format(marker="# FULL_ONLY")
+        min_text = self.BLOCK.format(marker="# MIN_ONLY")
+        self.assertNotEqual(vc.normalize_config_lines(full_text),
+                            vc.normalize_config_lines(min_text))
+        self.assertIn("  # FULL_ONLY", vc.normalize_config_lines(full_text))
+
+    def test_block_scalar_indented_under_sequence_item(self):
+        """序列项下的块标量同样不得把正文当注释。"""
+        snippet = "- name: probe\n  value: |\n    line1\n    {marker}\n    line2\n"
+        self._append("android_full", snippet.format(marker="# FULL_ONLY"))
+        self._append("android_min", snippet.format(marker="# MIN_ONLY"))
+        self.assert_c1_fails("android")
+
+    def test_folded_block_scalar_body_difference_fails(self):
+        snippet = "x-folded-probe: >\n  alpha\n  {marker}\n  beta\n"
+        self._append("nikki_full", snippet.format(marker="# FULL_ONLY"))
+        self._append("nikki_min", snippet.format(marker="# MIN_ONLY"))
+        self.assert_c1_fails("nikki")
+
+    # -- 跨行引号标量 ---------------------------------------------------- #
+
+    def test_quoted_scalar_body_difference_fails(self):
+        self._append("android_full", self.QUOTED.format(marker="# FULL_ONLY"))
+        self._append("android_min", self.QUOTED.format(marker="# MIN_ONLY"))
+        self.assert_c1_fails("android")
+
+    def test_identical_quoted_scalar_bodies_pass(self):
+        self._append("nikki_full", self.QUOTED.format(marker="# SAME"))
+        self._append("nikki_min", self.QUOTED.format(marker="# SAME"))
+        self.assert_c1_ok()
+
+    def test_quoted_scalar_body_hash_is_not_stripped(self):
+        lines = vc.normalize_config_lines(self.QUOTED.format(marker="# KEEP_ME"))
+        self.assertTrue(any("# KEEP_ME" in line for line in lines), lines)
+
+    # -- 不得回归 -------------------------------------------------------- #
+
+    def test_plain_scalar_apostrophe_does_not_open_a_multiline_scalar(self):
+        """普通标量里的撇号不能把后续行误当成标量正文。"""
+        text = "note: don't\nkey: 1\n# comment\n"
+        self.assertEqual(vc.normalize_config_lines(text), ["note: don't", "key: 1"])
+
+    def test_mapping_key_order_change_between_full_and_min_fails(self):
+        """结构投影必须保留 mapping 键顺序：仅调换键顺序也要失败。"""
+        self.edit("android_min", "\nport: 7891\n", "\n")
+        self.edit("android_min", "\nsocks-port: 7892\n", "\nsocks-port: 7892\nport: 7891\n")
+        self.assert_c1_fails("android")
+
+    def test_real_configs_still_pass(self):
+        self.assert_c1_ok()
+
+    def test_comment_and_blank_only_differences_still_pass(self):
+        self._append("android_full", "# 仅注释\n\n")
+        self._append("android_min", "# 另一段注释\n")
+        self.assert_c1_ok()
+
+
 class NormalizerUnitTest(unittest.TestCase):
     """归一化器必须识别引号与转义，不得粗暴按 '#' 截断。"""
 
