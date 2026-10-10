@@ -202,38 +202,215 @@ class MatcherSingleSourceTest(unittest.TestCase):
         self.assertTrue(any('GITHUB_BASE' in p for p in problems), problems)
 
 
+def workflow(*steps):
+    """构造最小 workflow：每个 step 是 (repository, ref, path) 三元组。"""
+    body = ''.join(
+        '      - uses: actions/checkout@v7\n        with:\n'
+        f'          repository: {repo}\n          ref: {ref}\n          path: {path}\n'
+        for repo, ref, path in steps)
+    return 'name: t\njobs:\n  sync:\n    steps:\n' + body
+
+
 class WorkflowPinTest(unittest.TestCase):
     """要求 8：daily-sync 与 PR workflow 的 Oasisic checkout 必须钉住 manifest revision。"""
 
-    def test_real_workflows_declare_the_manifest_revision(self):
-        revision = real_manifest()['revision']
+    def test_real_workflows_declare_the_manifest_revision_and_approved_repo(self):
+        manifest = real_manifest()
         for path in (DAILY_SYNC, PR_WORKFLOW):
             with self.subTest(workflow=path.name):
-                refs = guard.oasisic_checkout_refs(read(path))
-                self.assertEqual(refs, [revision], f'{path.name} 的 Oasisic checkout ref 不是 manifest revision')
-                self.assertEqual(guard.checkout_ref_problems(read(path), str(path), revision), [])
+                steps = guard.oasisic_checkout_steps(read(path))
+                self.assertEqual(len(steps), 1, f'{path.name} 应恰好有一个 Oasisic checkout')
+                self.assertEqual(steps[0]['repository'], guard.APPROVED_OASIC_REPOSITORY)
+                self.assertEqual(steps[0]['ref'], manifest['revision'])
+                self.assertEqual(guard.checkout_problems(read(path), str(path), manifest), [])
 
     def test_floating_ref_fails(self):
-        revision = real_manifest()['revision']
+        manifest = real_manifest()
+        revision = manifest['revision']
         for floating in ('main', 'master', 'latest', 'HEAD'):
             with self.subTest(ref=floating):
                 text = read(DAILY_SYNC).replace(f'ref: {revision}', f'ref: {floating}')
-                problems = guard.checkout_ref_problems(text, str(DAILY_SYNC), revision)
+                problems = guard.checkout_problems(text, str(DAILY_SYNC), manifest)
                 self.assertTrue(any('floating' in p or 'approved pin' in p for p in problems), problems)
 
     def test_missing_ref_fails(self):
-        revision = real_manifest()['revision']
-        text = read(DAILY_SYNC).replace(f'          ref: {revision}\n', '')
-        problems = guard.checkout_ref_problems(text, str(DAILY_SYNC), revision)
+        manifest = real_manifest()
+        text = read(DAILY_SYNC).replace(f'          ref: {manifest["revision"]}\n', '')
+        problems = guard.checkout_problems(text, str(DAILY_SYNC), manifest)
         self.assertTrue(any('no ref' in p for p in problems), problems)
 
     def test_unparseable_workflow_fails_closed(self):
-        problems = guard.checkout_ref_problems('jobs: [unclosed', 'x.yml', PINNED)
+        problems = guard.checkout_problems('jobs: [unclosed', 'x.yml', real_manifest())
         self.assertTrue(any('cannot parse' in p for p in problems), problems)
 
     def test_workflow_without_oasisic_checkout_fails(self):
-        problems = guard.checkout_ref_problems('jobs:\n  a:\n    steps: []\n', 'x.yml', PINNED)
+        problems = guard.checkout_problems('jobs:\n  a:\n    steps: []\n', 'x.yml', real_manifest())
         self.assertTrue(any('no Oasisic-Icons checkout step' in p for p in problems), problems)
+
+    def test_correct_repository_and_ref_passes(self):
+        manifest = real_manifest()
+        text = workflow((guard.APPROVED_OASIC_REPOSITORY, manifest['revision'], 'Oasisic-Icons'))
+        self.assertEqual(guard.checkout_problems(text, 'x.yml', manifest), [])
+
+    def test_checkout_without_repository_fails(self):
+        manifest = real_manifest()
+        text = ('name: t\njobs:\n  sync:\n    steps:\n'
+                '      - uses: actions/checkout@v7\n        with:\n'
+                f'          path: Oasisic-Icons\n          ref: {manifest["revision"]}\n')
+        problems = guard.checkout_problems(text, 'x.yml', manifest)
+        self.assertTrue(any('no repository' in p for p in problems), problems)
+
+
+class RepositoryIdentityTest(unittest.TestCase):
+    """缺口 A：Oasisic 仓库身份必须被独立批准身份锚定并交叉校验。"""
+
+    def test_approved_repository_is_an_independent_literal(self):
+        self.assertEqual(guard.APPROVED_OASIC_REPOSITORY, 'Hawaiine/Oasisic-Icons')
+        source = Path(str(guard.__file__)).read_text(encoding='utf-8')
+        self.assertRegex(source, r'APPROVED_OASIC_REPOSITORY\s*=\s*"[^"]+"')
+        self.assertNotIn('APPROVED_OASIC_REPOSITORY = manifest', source)
+
+    def test_real_manifest_repository_matches_the_anchor(self):
+        self.assertEqual(real_manifest()['repository'], guard.APPROVED_OASIC_REPOSITORY)
+
+    def test_wellformed_but_different_repository_fails(self):
+        """Evil/Oasisic-Icons 格式合法，仍必须被门禁拒绝。
+
+        matcher 只校验 ``owner/name`` 格式（它不持有批准身份，避免第二份锚点），
+        所以它会照 manifest 生成 URL —— 正因如此，身份锚定必须由 guard 承担。
+        """
+        manifest = real_manifest()
+        manifest['repository'] = 'Evil/Oasisic-Icons'
+        problems = guard.manifest_problems(manifest)
+        self.assertTrue(any('approved repository' in p for p in problems), problems)
+        # 记录真实行为：matcher 会跟随 manifest（这就是必须由 guard 锚定身份的原因）
+        self.assertEqual(
+            match_icons.asset_url_base(manifest),
+            'https://raw.githubusercontent.com/Evil/Oasisic-Icons/main/icons')
+        # 运行时值检查也会发现 matcher 与仓库内 manifest 不一致
+        self.assertTrue(guard.matcher_url_base_problems(manifest))
+
+    def test_workflow_repository_swapped_while_ref_is_correct_fails(self):
+        manifest = real_manifest()
+        text = workflow(('Evil/Oasisic-Icons', manifest['revision'], 'Oasisic-Icons'))
+        problems = guard.checkout_problems(text, 'x.yml', manifest)
+        self.assertTrue(any('approved repository' in p for p in problems), problems)
+
+    def test_manifest_and_workflow_both_swapped_but_anchor_unchanged_fails(self):
+        """manifest 与 workflow 一起换成另一个格式合法仓库，批准身份常量未改 → 失败。"""
+        manifest = real_manifest()
+        manifest['repository'] = 'Evil/Oasisic-Icons'
+        text = workflow(('Evil/Oasisic-Icons', manifest['revision'], 'Oasisic-Icons'))
+        problems = guard.oasisic_problems(manifest, read(MATCHER), text)
+        self.assertTrue(any('approved repository' in p for p in problems), problems)
+
+    def test_correct_repository_with_wrong_ref_still_fails(self):
+        manifest = real_manifest()
+        text = workflow((guard.APPROVED_OASIC_REPOSITORY, 'a' * 40, 'Oasisic-Icons'))
+        problems = guard.checkout_problems(text, 'x.yml', manifest)
+        self.assertTrue(any('approved pin' in p for p in problems), problems)
+
+    def test_duplicate_oasisic_checkouts_fail(self):
+        manifest = real_manifest()
+        text = workflow(
+            (guard.APPROVED_OASIC_REPOSITORY, manifest['revision'], 'Oasisic-Icons'),
+            (guard.APPROVED_OASIC_REPOSITORY, manifest['revision'], 'Oasisic-Icons'))
+        problems = guard.checkout_problems(text, 'x.yml', manifest)
+        self.assertTrue(any('checkout steps found' in p for p in problems), problems)
+
+    def test_conflicting_extra_checkout_cannot_mask_the_bad_one(self):
+        """在正确步骤旁边加一个 Evil 步骤，不能掩盖错误步骤。"""
+        manifest = real_manifest()
+        text = workflow(
+            (guard.APPROVED_OASIC_REPOSITORY, manifest['revision'], 'Oasisic-Icons'),
+            ('Evil/Oasisic-Icons', manifest['revision'], 'Oasisic-Icons'))
+        problems = guard.checkout_problems(text, 'x.yml', manifest)
+        self.assertTrue(any('checkout steps found' in p for p in problems), problems)
+        self.assertTrue(any('approved repository' in p for p in problems), problems)
+
+    def test_real_workflows_pass_the_identity_check(self):
+        manifest = real_manifest()
+        for path in (DAILY_SYNC, PR_WORKFLOW):
+            with self.subTest(workflow=path.name):
+                self.assertEqual(guard.checkout_problems(read(path), str(path), manifest), [])
+
+    def test_production_url_host_stays_fixed(self):
+        manifest = real_manifest()
+        self.assertTrue(match_icons.GITHUB_BASE.startswith('https://raw.githubusercontent.com/'))
+        self.assertTrue(match_icons.GITHUB_BASE.endswith('/icons'))
+        self.assertIn(f'/{manifest["production_url_ref"]}/', match_icons.GITHUB_BASE)
+
+
+class AssetUrlModeSchemaTest(unittest.TestCase):
+    """缺口 B：两种 asset_url_mode 必须完整校验 production_url_ref。"""
+
+    def test_guard_and_matcher_agree_on_the_mode_table(self):
+        self.assertEqual(guard._ASSET_URL_MODES, match_icons.ASSET_URL_MODES)
+
+    def test_branch_main_with_main_ref_passes(self):
+        manifest = real_manifest()
+        manifest['asset_url_mode'] = 'branch-main'
+        manifest['production_url_ref'] = 'main'
+        self.assertEqual(guard.manifest_problems(manifest), [])
+        self.assertEqual(match_icons.asset_url_ref(manifest), 'main')
+
+    def test_branch_main_with_other_ref_fails(self):
+        for ref in ('dev', 'master', None, 'develop'):
+            with self.subTest(ref=ref):
+                manifest = real_manifest()
+                manifest['asset_url_mode'] = 'branch-main'
+                manifest['production_url_ref'] = ref
+                self.assertTrue(guard.manifest_problems(manifest))
+                with self.assertRaises(RuntimeError):
+                    match_icons.asset_url_ref(manifest)
+
+    def test_commit_pinned_with_a_ref_field_fails(self):
+        """commit-pinned 的有效 ref 来自 revision：非空 production_url_ref 必须失败。"""
+        for ref in ('main', 'dev', 'master'):
+            with self.subTest(ref=ref):
+                manifest = real_manifest()
+                manifest['asset_url_mode'] = 'commit-pinned'
+                manifest['production_url_ref'] = ref
+                problems = guard.manifest_problems(manifest)
+                self.assertTrue(any('must be omitted or null' in p for p in problems), problems)
+                with self.assertRaises(RuntimeError):
+                    match_icons.asset_url_ref(manifest)
+
+    def test_commit_pinned_with_omitted_or_null_ref_passes(self):
+        for removal in ('omit', 'null'):
+            with self.subTest(shape=removal):
+                manifest = real_manifest()
+                manifest['asset_url_mode'] = 'commit-pinned'
+                if removal == 'omit':
+                    manifest.pop('production_url_ref', None)
+                else:
+                    manifest['production_url_ref'] = None
+                self.assertEqual(guard.manifest_problems(manifest), [])
+                self.assertEqual(match_icons.asset_url_ref(manifest), manifest['revision'])
+                self.assertEqual(
+                    match_icons.asset_url_base(manifest),
+                    f"https://raw.githubusercontent.com/{manifest['repository']}"
+                    f"/{manifest['revision']}/icons")
+
+    def test_contract_must_satisfy_the_same_mode_semantics(self):
+        """contract 自身写 commit-pinned + 非空 ref 也必须失败（不只是字段比对）。"""
+        contract = real_contract()
+        contract['icon_policy']['url_mode'] = 'commit-pinned'
+        contract['icon_policy']['production_url_ref'] = 'main'
+        problems = guard.contract_icon_policy_problems(contract, real_manifest())
+        self.assertTrue(any('must be omitted or null' in p for p in problems), problems)
+
+    def test_contract_ref_mismatch_with_manifest_fails(self):
+        contract = real_contract()
+        contract['icon_policy']['production_url_ref'] = 'dev'
+        problems = guard.contract_icon_policy_problems(contract, real_manifest())
+        self.assertTrue(any('production_url_ref' in p for p in problems), problems)
+
+    def test_current_manifest_mode_is_branch_main_on_main(self):
+        manifest = real_manifest()
+        self.assertEqual(manifest['asset_url_mode'], 'branch-main')
+        self.assertEqual(manifest['production_url_ref'], 'main')
+        self.assertEqual(match_icons.ASSET_URL_REF, 'main')
 
 
 class PathResolutionSingleSourceTest(unittest.TestCase):
@@ -343,6 +520,15 @@ class SinglePointDriftTest(unittest.TestCase):
         pr_workflow = self.pr_workflow.replace(f'ref: {PINNED}', 'ref: main')
         self.assertTrue(any('approved pin' in p or 'floating' in p
                             for p in self._problems(pr_workflow=pr_workflow)))
+
+    def test_manifest_repository_only_drift_is_caught(self):
+        manifest = real_manifest()
+        manifest['repository'] = 'Evil/Oasisic-Icons'
+        self.assertTrue(any('approved repository' in p for p in self._problems(manifest=manifest)))
+
+    def test_workflow_repository_only_drift_is_caught(self):
+        text = workflow(('Evil/Oasisic-Icons', PINNED, 'Oasisic-Icons'))
+        self.assertTrue(any('approved repository' in p for p in self._problems(daily_sync=text)))
 
 
 class PinApprovalTrustAnchorTest(unittest.TestCase):

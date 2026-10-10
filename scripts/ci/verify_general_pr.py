@@ -53,6 +53,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from icon_repo import resolve_icon_repo  # noqa: E402
 
 PINNED_OASIC = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
+# 独立批准身份信任锚：与 PINNED_OASIC 同性质——更换图标仓库必须在 diff 里显式提出
+# 并接受审阅，不能仅改 manifest 就把生产图标来源指向另一个（哪怕格式合法的）仓库。
+APPROVED_OASIC_REPOSITORY = "Hawaiine/Oasisic-Icons"
 PRODUCTION_CONFIGS = (
     "configs/Android/config.yaml",
     "configs/Android/config.min.yaml",
@@ -295,37 +298,60 @@ def production_mode_problems(path: str, config: dict) -> list[str]:
 
 _REVISION_SHA = re.compile(r"^[0-9a-f]{40}$")
 _REPO_SLUG = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+# 生产资产 URL 模式 → 该模式要求的 production_url_ref。
+# None = ref 由 revision 推导，此时 production_url_ref 必须省略或为 JSON null。
 _ASSET_URL_MODES = {"branch-main": "main", "commit-pinned": None}
 _FLOATING_REFS = {"main", "master", "latest", "head", "develop", "dev", "trunk"}
+_OASISIC_DIRNAME = "Oasisic-Icons"
+
+
+def _asset_ref_problems(mode, ref, label: str) -> list[str]:
+    """按模式语义校验 ``(asset_url_mode, production_url_ref)`` 这一对。
+
+    manifest 校验与 contract 校验共用同一条规则，避免两处各自解释模式含义。
+    """
+    if mode not in _ASSET_URL_MODES:
+        return [f"{label}: unknown asset_url_mode {_short(mode)}; allowed {sorted(_ASSET_URL_MODES)}"]
+    required = _ASSET_URL_MODES[mode]
+    if required is None:
+        if ref is not None:
+            return [
+                f"{label}: asset_url_mode {mode!r} derives the URL ref from revision; "
+                f"production_url_ref must be omitted or null, got {_short(ref)}"]
+        return []
+    if ref != required:
+        return [
+            f"{label}: asset_url_mode {mode!r} requires production_url_ref {required!r}, "
+            f"got {_short(ref)}"]
+    return []
 
 
 def manifest_problems(manifest: dict) -> list[str]:
-    """manifest 自身：revision 必须是完整 40 位 SHA 且等于 approved pin，且字段自洽。"""
+    """manifest 自身：revision 是完整 40 位 SHA 且等于 approved pin；仓库身份等于批准仓库。"""
     problems: list[str] = []
     revision = manifest.get("revision")
     if not isinstance(revision, str) or not _REVISION_SHA.match(revision):
         problems.append(f"{MANIFEST_PATH}: revision must be a full 40-hex SHA, got {_short(revision)}")
     elif revision != PINNED_OASIC:
         problems.append(f"{MANIFEST_PATH}: revision {revision!r} != approved pin {PINNED_OASIC}")
-    mode = manifest.get("asset_url_mode")
-    if mode not in _ASSET_URL_MODES:
-        problems.append(
-            f"{MANIFEST_PATH}: unknown asset_url_mode {_short(mode)}; allowed {sorted(_ASSET_URL_MODES)}")
-    else:
-        required = _ASSET_URL_MODES[mode]
-        ref = manifest.get("production_url_ref")
-        if required is not None and ref != required:
-            problems.append(
-                f"{MANIFEST_PATH}: asset_url_mode {mode!r} requires production_url_ref {required!r}, "
-                f"got {_short(ref)}")
+    problems += _asset_ref_problems(
+        manifest.get("asset_url_mode"), manifest.get("production_url_ref"), MANIFEST_PATH)
     repository = manifest.get("repository")
     if not isinstance(repository, str) or not _REPO_SLUG.match(repository):
         problems.append(f"{MANIFEST_PATH}: repository must be 'owner/name', got {_short(repository)}")
+    elif repository != APPROVED_OASIC_REPOSITORY:
+        problems.append(
+            f"{MANIFEST_PATH}: repository {repository!r} != approved repository "
+            f"{APPROVED_OASIC_REPOSITORY!r}")
     return problems
 
 
 def contract_icon_policy_problems(contract: dict, manifest: dict) -> list[str]:
-    """contract.json 的 icon_policy 必须与 manifest 语义一致（解析真实 JSON 值）。"""
+    """contract.json 的 icon_policy 必须与 manifest 语义一致（解析真实 JSON 值）。
+
+    不只比较两份文件的原始字段：contract **自身**也要满足同一条模式语义
+    （例如 ``commit-pinned`` 时不得写一个非空却被忽略的 ``production_url_ref``）。
+    """
     policy = contract.get("icon_policy")
     if not isinstance(policy, dict):
         return [f"{CONTRACT_PATH}: icon_policy missing or not a mapping"]
@@ -333,6 +359,8 @@ def contract_icon_policy_problems(contract: dict, manifest: dict) -> list[str]:
     if policy.get("manifest") != MANIFEST_PATH:
         problems.append(
             f"{CONTRACT_PATH}: icon_policy.manifest {_short(policy.get('manifest'))} != {MANIFEST_PATH}")
+    problems += _asset_ref_problems(
+        policy.get("url_mode"), policy.get("production_url_ref"), CONTRACT_PATH)
     if policy.get("url_mode") != manifest.get("asset_url_mode"):
         problems.append(
             f"{CONTRACT_PATH}: icon_policy.url_mode {_short(policy.get('url_mode'))} "
@@ -355,10 +383,33 @@ def contract_icon_policy_problems(contract: dict, manifest: dict) -> list[str]:
     return problems
 
 
-def oasisic_checkout_refs(workflow_text: str) -> list | None:
-    """解析 workflow 中 Oasisic-Icons checkout 步骤声明的 ref（解析 YAML，不做子串匹配）。
+def _is_oasisic_step(step: dict) -> bool:
+    """该 step 是否是一次 Oasisic-Icons checkout。
 
-    返回 ``None`` 表示 workflow 无法解析（fail-closed）。
+    只用来**发现候选**，不用来判定身份——真正的身份校验在
+    :func:`checkout_problems` 里按完整 ``owner/name`` 比对。
+    合并多个信号判断：既避免仅凭 ``endswith('oasisic-icons')`` 漏掉改名后的步骤，
+    也避免只认一个信号而放过额外 / 重复的 Oasisic checkout。
+    """
+    block = step.get("with")
+    block = block if isinstance(block, dict) else {}
+    repository = str(block.get("repository", "")).strip().lower()
+    target_path = str(block.get("path", "")).strip()
+    name = str(step.get("name", "")).lower()
+    if repository and (repository == "oasisic-icons" or repository.endswith("/oasisic-icons")):
+        return True
+    if target_path == _OASISIC_DIRNAME or target_path.endswith("/" + _OASISIC_DIRNAME):
+        return True
+    return "oasisic-icons" in name
+
+
+def oasisic_checkout_steps(workflow_text: str) -> list | None:
+    """解析 workflow 中每个 Oasisic-Icons checkout 步骤的仓库身份与 ref。
+
+    返回 ``[{"repository", "ref", "path", "name", "location"}, ...]``；
+    ``None`` 表示 workflow 无法解析（fail-closed）。
+
+    身份必须一起返回：只回 ref 会让「ref 正确但仓库被换成另一个」溜过门禁。
     """
     try:
         doc = yaml.safe_load(workflow_text)
@@ -369,39 +420,68 @@ def oasisic_checkout_refs(workflow_text: str) -> list | None:
     jobs = doc.get("jobs")
     if not isinstance(jobs, dict):
         return None
-    refs: list = []
-    for job in jobs.values():
+    steps: list = []
+    for job_name, job in jobs.items():
         if not isinstance(job, dict):
             continue
-        for step in job.get("steps") or []:
-            if not isinstance(step, dict):
+        for index, step in enumerate(job.get("steps") or []):
+            if not isinstance(step, dict) or not _is_oasisic_step(step):
                 continue
             block = step.get("with")
-            if not isinstance(block, dict):
-                continue
-            if str(block.get("repository", "")).lower().endswith("oasisic-icons"):
-                refs.append(block.get("ref"))
-    return refs
+            block = block if isinstance(block, dict) else {}
+            steps.append({
+                "repository": block.get("repository"),
+                "ref": block.get("ref"),
+                "path": block.get("path"),
+                "name": step.get("name"),
+                "location": f"jobs.{job_name}.steps[{index}]",
+            })
+    return steps
 
 
-def checkout_ref_problems(workflow_text: str, path: str, revision: str) -> list[str]:
-    """Oasisic checkout 必须使用 manifest 指定的固定 revision，不得 checkout 浮动 ref。"""
-    refs = oasisic_checkout_refs(workflow_text)
-    if refs is None:
-        return [f"{path}: cannot parse workflow YAML to verify the Oasisic checkout ref"]
-    if not refs:
+def checkout_problems(workflow_text: str, path: str, manifest: dict) -> list[str]:
+    """每个 Oasisic checkout 的 repository 与 ref 都必须与批准身份 / manifest 一致。
+
+    检查项：仓库身份等于批准仓库且等于 manifest；ref 等于 manifest 的 discovery
+    revision；缺字段 / 浮动 ref / 重复或额外 checkout / YAML 不可解析一律 fail-closed。
+    """
+    steps = oasisic_checkout_steps(workflow_text)
+    if steps is None:
+        return [f"{path}: cannot parse workflow YAML to verify the Oasisic checkout"]
+    if not steps:
         return [f"{path}: no Oasisic-Icons checkout step found"]
+    manifest_repository = manifest.get("repository")
+    revision = manifest.get("revision")
     problems: list[str] = []
-    for ref in refs:
+    if len(steps) > 1:
+        problems.append(
+            f"{path}: {len(steps)} Oasisic-Icons checkout steps found "
+            f"({', '.join(str(s['location']) for s in steps)}); exactly one is required")
+    for step in steps:
+        where = f"{path}: {step['location']}"
+        repository = step["repository"]
+        if not isinstance(repository, str) or not repository.strip():
+            problems.append(f"{where}: Oasisic checkout declares no repository")
+        else:
+            repository = repository.strip()
+            if repository != APPROVED_OASIC_REPOSITORY:
+                problems.append(
+                    f"{where}: Oasisic checkout repository {repository!r} != approved repository "
+                    f"{APPROVED_OASIC_REPOSITORY!r}")
+            if repository != manifest_repository:
+                problems.append(
+                    f"{where}: Oasisic checkout repository {repository!r} != manifest repository "
+                    f"{_short(manifest_repository)}")
+        ref = step["ref"]
         text = "" if ref is None else str(ref).strip()
         if not text:
             problems.append(
-                f"{path}: Oasisic checkout declares no ref (would float to the default branch)")
+                f"{where}: Oasisic checkout declares no ref (would float to the default branch)")
         elif text.lower() in _FLOATING_REFS:
             problems.append(
-                f"{path}: floating Oasisic checkout ref {text!r} is forbidden; use the approved pin")
+                f"{where}: floating Oasisic checkout ref {text!r} is forbidden; use the approved pin")
         elif text != revision:
-            problems.append(f"{path}: Oasisic checkout ref {text!r} != approved pin {revision}")
+            problems.append(f"{where}: Oasisic checkout ref {text!r} != approved pin {revision}")
     return problems
 
 
@@ -429,11 +509,9 @@ def oasisic_problems(manifest: dict, matcher: str, daily_sync: str,
     """Oasisic revision / URL 契约：解析真实值，不做字符串包含式判断。"""
     problems = manifest_problems(manifest)
     problems += matcher_source_problems(matcher)
-    revision = manifest.get("revision")
-    if isinstance(revision, str):
-        problems += checkout_ref_problems(daily_sync, DAILY_SYNC_PATH, revision)
-        if pr_workflow is not None:
-            problems += checkout_ref_problems(pr_workflow, PR_WORKFLOW_PATH, revision)
+    problems += checkout_problems(daily_sync, DAILY_SYNC_PATH, manifest)
+    if pr_workflow is not None:
+        problems += checkout_problems(pr_workflow, PR_WORKFLOW_PATH, manifest)
     if contract is not None:
         problems += contract_icon_policy_problems(contract, manifest)
     return problems

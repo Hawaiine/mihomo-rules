@@ -56,11 +56,20 @@ def asset_url_ref(manifest):
             f'未知的 asset_url_mode {mode!r}（{_REVISION_MANIFEST}）；'
             f'允许值: {sorted(ASSET_URL_MODES)}')
     required_ref = ASSET_URL_MODES[mode]
-    ref = manifest.get('revision') if required_ref is None else manifest.get('production_url_ref')
-    if required_ref is not None and ref != required_ref:
-        raise RuntimeError(
-            f'asset_url_mode {mode!r} 要求 production_url_ref == {required_ref!r}，'
-            f'实际 {ref!r}（{_REVISION_MANIFEST}）')
+    supplied = manifest.get('production_url_ref')
+    if required_ref is None:
+        # commit-pinned：有效 ref 从 revision 推导，production_url_ref 必须省略或 null
+        if supplied is not None:
+            raise RuntimeError(
+                f'asset_url_mode "commit-pinned" 的有效 ref 来自 revision，'
+                f'production_url_ref 必须省略或为 null，实际 {supplied!r}（{_REVISION_MANIFEST}）')
+        ref = manifest.get('revision')
+    else:
+        if supplied != required_ref:
+            raise RuntimeError(
+                f'asset_url_mode {mode!r} 要求 production_url_ref == {required_ref!r}，'
+                f'实际 {supplied!r}（{_REVISION_MANIFEST}）')
+        ref = supplied
     if not isinstance(ref, str) or not ref:
         raise RuntimeError(f'生产图标 URL 的 ref 为空（{_REVISION_MANIFEST}）')
     return ref
