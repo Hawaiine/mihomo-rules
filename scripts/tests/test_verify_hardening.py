@@ -162,47 +162,125 @@ class TestVerifyConfigsHardening(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "commit", "-qm", "fixture"], check=True)
         return repo
 
-    def test_repo_relative_fallback_is_used_without_environment_override(self):
-        """No env override: verifier finds ROOT/Oasisic-Icons, no machine path."""
+    @staticmethod
+    def _head(repo):
+        return subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True).stdout.strip()
+
+    def test_fixed_revision_is_used_and_no_floating_ref_fallback(self):
+        """基准必须是固定 revision：即使 origin/main、main、HEAD 都存在也不得采用。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             repo = self._make_icon_repo(root)
-            candidates = verify_configs._icon_repo_candidates(root=root, environ={})
-            self.assertEqual(candidates, [None, str(repo)])
+            head = self._head(repo)
             with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
-                paths, source = verify_configs.load_icon_reference()
+                paths, source = verify_configs.load_icon_reference(revision=head)
             self.assertEqual(paths, {"Category/icon.png"})
-            self.assertEqual(source, f"{repo}@HEAD")
+            self.assertEqual(source, f"{repo}@{head}")
+            for floating in ("origin/main", "main", "HEAD"):
+                self.assertNotIn(floating, source)
+
+    def test_unreadable_pinned_revision_fails_without_falling_back_to_head(self):
+        """仓库 HEAD 可读，但固定 revision 不可读 → 必须失败（旧实现回退 HEAD 通过）。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make_icon_repo(root)
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
+                paths, source = verify_configs.load_icon_reference(revision="a" * 40)
+            self.assertIsNone(paths)
+            self.assertIn("a" * 40, source)
+            self.assertIn("不可读", source)
 
     def test_explicit_environment_override_has_priority(self):
-        """MIHOMO_ICON_REPO is tried before the project-local fallback."""
+        """MIHOMO_ICON_REPO 优先于仓库相对位置，且不再追加任何回退。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "project"
             root.mkdir()
-            fallback_repo = self._make_icon_repo(root)
+            self._make_icon_repo(root)
             override_root = Path(tmp) / "override-root"
             override_repo = self._make_icon_repo(override_root)
-            candidates = verify_configs._icon_repo_candidates(
-                root=root,
-                environ={"MIHOMO_ICON_REPO": str(override_repo)},
-            )
-            self.assertEqual(candidates, [str(override_repo), str(fallback_repo)])
+            head = self._head(override_repo)
             with patch.object(verify_configs, "ROOT", root), patch.dict(
                 "os.environ", {"MIHOMO_ICON_REPO": str(override_repo)}, clear=True
             ):
-                paths, source = verify_configs.load_icon_reference()
+                paths, source = verify_configs.load_icon_reference(revision=head)
             self.assertEqual(paths, {"Category/icon.png"})
-            self.assertEqual(source, f"{override_repo}@HEAD")
+            self.assertEqual(source, f"{override_repo}@{head}")
 
-    def test_missing_icon_repositories_still_skip_existence_reference(self):
-        """This narrow path cleanup preserves the existing missing-repo behavior."""
+    def test_missing_repo_fails_closed_instead_of_skipping(self):
+        """仓库缺失 → 基准不可用 → 图标存在性检查必须 FAIL（旧实现软跳过为 PASS）。"""
         with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(verify_configs, "ROOT", Path(tmp)), patch.dict(
-                "os.environ", {}, clear=True
-            ):
+            with patch.object(verify_configs, "ROOT", Path(tmp)), patch.dict("os.environ", {}, clear=True):
                 paths, source = verify_configs.load_icon_reference()
             self.assertIsNone(paths)
-            self.assertEqual(source, "未找到 Oasisic-Icons")
+            self.assertIn("无法读取固定 revision", source)
+            self.assertFalse(verify_configs.check_icons_exist([], "x", (paths, source)))
+
+    def test_worktree_only_checkout_is_not_scanned(self):
+        """只有文件、没有 git 元数据 → 必须失败（旧实现扫描工作区并「找到」图标）。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "Oasisic-Icons" / "icons" / "Category").mkdir(parents=True)
+            (root / "Oasisic-Icons" / "icons" / "Category" / "icon.png").write_bytes(b"png")
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
+                paths, source = verify_configs.load_icon_reference()
+            self.assertIsNone(paths)
+            self.assertIn("git 元数据", source)
+
+    def test_missing_manifest_revision_fails_closed(self):
+        """manifest 取不到 revision → 必须失败，不得跳过检查。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(verify_configs, "ROOT", Path(tmp)), patch.dict("os.environ", {}, clear=True), \
+                 patch.object(verify_configs, "pinned_icon_revision", return_value=None):
+                paths, source = verify_configs.load_icon_reference()
+            self.assertIsNone(paths)
+            self.assertIn("缺少固定 Oasisic revision", source)
+            self.assertFalse(verify_configs.check_icons_exist([], "x", (paths, source)))
+
+    def test_missing_icon_path_fails_and_existing_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = self._make_icon_repo(root)
+            head = self._head(repo)
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
+                ref = verify_configs.load_icon_reference(revision=head)
+            url = ("https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons"
+                   "/main/icons/Category/icon.png")
+            self.assertTrue(verify_configs.check_icons_exist([f'      icon: "{url}"'], "v", ref))
+            missing = url.replace("icon.png", "nope.png")
+            self.assertFalse(verify_configs.check_icons_exist([f'      icon: "{missing}"'], "v", ref))
+
+    def test_icons_dir_without_png_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = Path(root) / "Oasisic-Icons"
+            (repo / "icons").mkdir(parents=True)
+            (repo / "icons" / "README.md").write_text("no png here")
+            subprocess.run(["git", "init", "-q", str(repo)], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm", "fixture"], check=True)
+            head = self._head(repo)
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True):
+                paths, source = verify_configs.load_icon_reference(revision=head)
+            self.assertIsNone(paths)
+            self.assertIn("没有任何 png", source)
+
+    def test_git_failure_is_reported_not_swallowed(self):
+        """git 命令失败必须如实上报为不可用，而不是静默继续。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make_icon_repo(root)
+            with patch.object(verify_configs, "ROOT", root), patch.dict("os.environ", {}, clear=True), \
+                 patch.object(verify_configs, "icon_repo") as fake_icon_repo:
+                fake_icon_repo.resolve_icon_repo.return_value = str(root / "Oasisic-Icons")
+                fake_icon_repo.icon_repo_problems.return_value = ["无法执行 git 校验固定 revision: boom"]
+                paths, source = verify_configs.load_icon_reference(revision="a" * 40)
+            self.assertIsNone(paths)
+            self.assertIn("无法执行 git 校验固定 revision", source)
+            self.assertFalse(verify_configs.check_icons_exist([], "x", (paths, source)))
 
     def test_comment_order_length_mismatch_fails(self):
         """注释 RULE-SET 少于品牌组 → 必须 FAIL（旧实现 zip 截断后 PASS）"""
