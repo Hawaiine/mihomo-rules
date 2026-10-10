@@ -60,6 +60,11 @@ class ConfigContractTestCase(unittest.TestCase):
         self.assertIn(old, text, f"{variant}: 未找到待替换文本 {old[:70]!r}")
         self.path(variant).write_text(text.replace(old, new, count), encoding="utf-8")
 
+    def append(self, variant, snippet):
+        """在临时配置末尾追加内容（顶层新键/注释/多行标量用）。"""
+        path = self.path(variant)
+        path.write_text(self.text(variant).rstrip("\n") + "\n" + snippet, encoding="utf-8")
+
     def problems(self):
         return vc.check_full_min_equivalence(self.configs) + vc.check_platform_contract(self.configs)
 
@@ -149,10 +154,6 @@ class MultiLineScalarEquivalenceTest(ConfigContractTestCase):
     BLOCK = "x-audit-probe: |\n  first\n  {marker}\n  last\n"
     QUOTED = 'x-audit-probe: "first\n  {marker}\n  last"\n'
 
-    def _append(self, variant, snippet):
-        path = self.path(variant)
-        path.write_text(self.text(variant).rstrip("\n") + "\n" + snippet, encoding="utf-8")
-
     def assert_c1_ok(self):
         self.assertEqual(vc.check_full_min_equivalence(self.configs), [], "C1 不应报错")
 
@@ -165,19 +166,19 @@ class MultiLineScalarEquivalenceTest(ConfigContractTestCase):
     # -- 块标量 ---------------------------------------------------------- #
 
     def test_identical_block_scalar_bodies_pass(self):
-        self._append("android_full", self.BLOCK.format(marker="# SAME"))
-        self._append("android_min", self.BLOCK.format(marker="# SAME"))
+        self.append("android_full", self.BLOCK.format(marker="# SAME"))
+        self.append("android_min", self.BLOCK.format(marker="# SAME"))
         self.assert_c1_ok()
 
     def test_block_scalar_body_difference_fails(self):
         """块标量正文里的 # 行是内容：FULL_ONLY / MIN_ONLY 不同必须失败。"""
-        self._append("android_full", self.BLOCK.format(marker="# FULL_ONLY"))
-        self._append("android_min", self.BLOCK.format(marker="# MIN_ONLY"))
+        self.append("android_full", self.BLOCK.format(marker="# FULL_ONLY"))
+        self.append("android_min", self.BLOCK.format(marker="# MIN_ONLY"))
         self.assert_c1_fails("android")
 
     def test_block_scalar_body_difference_in_nikki_fails(self):
-        self._append("nikki_full", self.BLOCK.format(marker="# FULL_ONLY"))
-        self._append("nikki_min", self.BLOCK.format(marker="# MIN_ONLY"))
+        self.append("nikki_full", self.BLOCK.format(marker="# FULL_ONLY"))
+        self.append("nikki_min", self.BLOCK.format(marker="# MIN_ONLY"))
         self.assert_c1_fails("nikki")
 
     def test_block_scalar_body_difference_not_hidden_by_comment_stripping(self):
@@ -191,26 +192,26 @@ class MultiLineScalarEquivalenceTest(ConfigContractTestCase):
     def test_block_scalar_indented_under_sequence_item(self):
         """序列项下的块标量同样不得把正文当注释。"""
         snippet = "- name: probe\n  value: |\n    line1\n    {marker}\n    line2\n"
-        self._append("android_full", snippet.format(marker="# FULL_ONLY"))
-        self._append("android_min", snippet.format(marker="# MIN_ONLY"))
+        self.append("android_full", snippet.format(marker="# FULL_ONLY"))
+        self.append("android_min", snippet.format(marker="# MIN_ONLY"))
         self.assert_c1_fails("android")
 
     def test_folded_block_scalar_body_difference_fails(self):
         snippet = "x-folded-probe: >\n  alpha\n  {marker}\n  beta\n"
-        self._append("nikki_full", snippet.format(marker="# FULL_ONLY"))
-        self._append("nikki_min", snippet.format(marker="# MIN_ONLY"))
+        self.append("nikki_full", snippet.format(marker="# FULL_ONLY"))
+        self.append("nikki_min", snippet.format(marker="# MIN_ONLY"))
         self.assert_c1_fails("nikki")
 
     # -- 跨行引号标量 ---------------------------------------------------- #
 
     def test_quoted_scalar_body_difference_fails(self):
-        self._append("android_full", self.QUOTED.format(marker="# FULL_ONLY"))
-        self._append("android_min", self.QUOTED.format(marker="# MIN_ONLY"))
+        self.append("android_full", self.QUOTED.format(marker="# FULL_ONLY"))
+        self.append("android_min", self.QUOTED.format(marker="# MIN_ONLY"))
         self.assert_c1_fails("android")
 
     def test_identical_quoted_scalar_bodies_pass(self):
-        self._append("nikki_full", self.QUOTED.format(marker="# SAME"))
-        self._append("nikki_min", self.QUOTED.format(marker="# SAME"))
+        self.append("nikki_full", self.QUOTED.format(marker="# SAME"))
+        self.append("nikki_min", self.QUOTED.format(marker="# SAME"))
         self.assert_c1_ok()
 
     def test_quoted_scalar_body_hash_is_not_stripped(self):
@@ -234,9 +235,81 @@ class MultiLineScalarEquivalenceTest(ConfigContractTestCase):
         self.assert_c1_ok()
 
     def test_comment_and_blank_only_differences_still_pass(self):
-        self._append("android_full", "# 仅注释\n\n")
-        self._append("android_min", "# 另一段注释\n")
+        self.append("android_full", "# 仅注释\n\n")
+        self.append("android_min", "# 另一段注释\n")
         self.assert_c1_ok()
+
+
+class PlainScalarApostropheTest(ConfigContractTestCase):
+    """plain scalar 里的撇号不得吞掉其后的行内注释（C1 误报修复）。
+
+    ``_scan_line()`` 遇到撇号会先当作单引号开启；当它并不处于合法 quoted scalar
+    起始位置（``note: don't`` 的撇号）时，必须**整行重扫**为 plain scalar。
+    只把引号状态清零而不重扫，会把 ``# comment`` 留在内容里，使 full/min 仅注释
+    文字不同、YAML 值完全相同时被 C1 误判为语义差异。
+    """
+
+    SAMPLE = "note: don't # {marker} comment\n"
+
+    # -- 归一化器 -------------------------------------------------------- #
+
+    def test_comment_after_plain_scalar_apostrophe_is_ignored(self):
+        self.assertEqual(vc.normalize_config_lines("note: don't # full comment"),
+                         ["note: don't"])
+        self.assertEqual(vc.normalize_config_lines("note: don't # full comment"),
+                         vc.normalize_config_lines("note: don't # min comment"))
+
+    def test_plain_scalar_apostrophe_does_not_open_multiline_state(self):
+        self.assertEqual(vc.normalize_config_lines("note: don't\nnext: 1\n"),
+                         ["note: don't", "next: 1"])
+
+    def test_plain_scalar_matches_yaml_semantics_for_embedded_quote(self):
+        """与 YAML 真值对齐：plain scalar 里的 `` #`` 同样起始注释。"""
+        import yaml
+
+        sample = 'note: don\'t use "a #b"'
+        self.assertEqual(yaml.safe_load(sample)["note"], 'don\'t use "a')
+        self.assertEqual(vc.normalize_config_lines(sample), ['note: don\'t use "a'])
+
+    def test_quoted_hash_is_still_preserved(self):
+        self.assertEqual(vc.strip_inline_comment("key: 'a#b'  # note"), "key: 'a#b'")
+        self.assertEqual(vc.strip_inline_comment('key: "a#b"  # note'), 'key: "a#b"')
+        self.assertEqual(vc.strip_inline_comment("key: 'it''s # here'  # note"),
+                         "key: 'it''s # here'")
+
+    def test_plain_scalar_inline_comment_difference_is_ignored(self):
+        self.assertEqual(vc.normalize_config_lines("note: plain # full"),
+                         vc.normalize_config_lines("note: plain # min"))
+
+    def test_block_scalar_indicator_order_variants_are_recognised(self):
+        """YAML 允许缩进指示符与 chomping 指示符任意次序（|2- 与 |-2 等价）。"""
+        for marker in ("|", "|-", "|+", ">", ">-", "|2", "|-2", "|2-", ">2-"):
+            with self.subTest(marker=marker):
+                lines = vc.normalize_config_lines(f"x: {marker}\n  a\n  # KEEP\n")
+                self.assertIn("  # KEEP", lines, f"{marker} 未被识别为块标量")
+
+    # -- 整条 C1 路径 ---------------------------------------------------- #
+
+    def test_comment_only_difference_after_apostrophe_passes_c1(self):
+        """注入四份临时配置：仅注释文字不同，C1 不得失败。"""
+        for platform in ("android", "nikki"):
+            with self.subTest(platform=platform):
+                self.append(f"{platform}_full", self.SAMPLE.format(marker="full"))
+                self.append(f"{platform}_min", self.SAMPLE.format(marker="min"))
+                self.assertEqual(vc.check_full_min_equivalence(self.configs), [],
+                                 "仅注释文字不同不得让 C1 失败")
+
+    def test_block_scalar_body_difference_still_fails_after_fix(self):
+        for platform in ("android", "nikki"):
+            with self.subTest(platform=platform):
+                self.append(f"{platform}_full", "x-probe: |\n  a\n  # FULL_ONLY\n")
+                self.append(f"{platform}_min", "x-probe: |\n  a\n  # MIN_ONLY\n")
+                self.assertNotEqual(vc.check_full_min_equivalence(self.configs), [])
+
+    def test_multiline_quoted_body_difference_still_fails_after_fix(self):
+        self.append("android_full", 'x-probe: "a\n  # FULL_ONLY\n  b"\n')
+        self.append("android_min", 'x-probe: "a\n  # MIN_ONLY\n  b"\n')
+        self.assertNotEqual(vc.check_full_min_equivalence(self.configs), [])
 
 
 class NormalizerUnitTest(unittest.TestCase):

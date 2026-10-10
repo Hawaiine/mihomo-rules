@@ -775,7 +775,7 @@ PLATFORM_CONTRACT = {
 PLATFORM_RULES_EXCEPTION = 'RULE-SET,Applications,🎯 全球直连'
 
 
-def _scan_line(line, quote=None):
+def _scan_line(line, quote=None, plain=False):
     """按 YAML 语义扫描一行，剥离行内注释并报告引号状态。
 
     返回 ``(内容, 行尾引号状态, 当前引号的起始下标)``：
@@ -784,6 +784,12 @@ def _scan_line(line, quote=None):
     * 行尾引号状态非 None 表示该行的引号未闭合，标量可能延续到下一行；
     * 第三个值仅在引号未闭合时有意义，用于判断这个引号是否真的开启了一个
       标量值（而不是普通标量里的撇号，例如 ``note: don't``）。
+
+    ``plain=True`` 表示按 YAML **plain scalar** 规则扫描：引号只是普通字符，
+    不开启任何 quoted scalar，`` #`` 一律起始注释。一旦确认某行的引号并不处于
+    合法 quoted scalar 起始位置（如 ``note: don't`` 的撇号），必须用该模式
+    **整行重扫**——只把引号状态清零而不重扫，会把已经吞进内容的 ``# comment``
+    留下来，使 full/min 仅注释不同时被误判为语义差异。
 
     不得用 ``line.split('#', 1)``：引号内含 ``#`` 的合法值（密码、URL fragment 等）
     会被误截断。YAML 中 ``#`` 仅在行首或空白之后才起始注释。
@@ -816,7 +822,7 @@ def _scan_line(line, quote=None):
                 quote_at = None
             i += 1
             continue
-        if ch in ('"', "'"):
+        if not plain and ch in ('"', "'"):
             quote = ch
             quote_at = i
             out.append(ch)
@@ -834,8 +840,9 @@ def strip_inline_comment(line):
     return _scan_line(line)[0]
 
 
-# 块标量起始标记：``key: |``、``key: >-``、``key: |2`` 等，必须出现在行尾。
-_BLOCK_SCALAR_TAIL = re.compile(r':[ \t]*[|>][+-]?[0-9]*[ \t]*$')
+# 块标量起始标记：``key: |``、``key: >-``、``key: |2``、``key: |2-`` 等，必须出现在行尾。
+# YAML 允许缩进指示符与 chomping 指示符任意次序（``|2-`` 与 ``|-2`` 等价）。
+_BLOCK_SCALAR_TAIL = re.compile(r':[ \t]*[|>](?:[0-9][+-]?|[+-][0-9]?)?[ \t]*$')
 # 引号开启标量值的前缀形态：可选的 ``- `` 序列标记 + 可选的 ``key:``，其余只有空白。
 _SCALAR_OPEN_PREFIX = re.compile(r'[\s\-]*(?:[^:#]+:)?[ \t]*$')
 
@@ -872,13 +879,15 @@ def normalize_config_lines(text):
         if not stripped or stripped.startswith('#'):
             continue
         line, quote, quote_at = _scan_line(raw, None)
+        if quote is not None and quote_at is not None \
+                and not _SCALAR_OPEN_PREFIX.match(raw[:quote_at]):
+            # 引号并不处于合法 quoted scalar 起始位置（如 note: don't 的撇号）：
+            # 必须按 plain scalar 规则**整行重扫**，使其后的 " #" 正确开始注释。
+            line, quote, _ = _scan_line(raw, None, plain=True)
         if not line.strip():
             continue
         if _BLOCK_SCALAR_TAIL.search(line):
             block_indent = len(raw) - len(raw.lstrip(' \t'))
-        elif quote is not None and quote_at is not None \
-                and not _SCALAR_OPEN_PREFIX.match(raw[:quote_at]):
-            quote = None                      # 普通标量里的撇号，不是跨行标量
         lines.append(line)
     return lines
 
