@@ -79,8 +79,12 @@
   "icon_policy": {
     "authority": "pinned_oasisic_snapshot",
     "manifest": "scripts/config_contract/oasisic_revision.json",
-    "url_mode": "commit_pinned",
-    "reviewed_override_allowed": true
+    "single_source": "manifest is the only runtime source for both the discovery revision and the production asset URL ref",
+    "discovery_revision_role": "discovery-validation-only",
+    "url_mode": "branch-main",
+    "production_url_ref": "main",
+    "reviewed_override_allowed": true,
+    "pin_update": "only through the explicit reviewed workflow; the PR guard holds an independent approved pin so a manifest-only edit cannot self-approve a new revision"
   },
   "publication_policy": {
     "unit": ["configs/Android/config.yaml", "configs/Android/config.min.yaml", "configs/Nikki/config.yaml", "configs/Nikki/config.min.yaml"],
