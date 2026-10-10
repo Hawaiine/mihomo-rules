@@ -29,7 +29,8 @@ import verify_general_pr as guard  # noqa: E402
 
 
 def _rs_url(brand: str) -> str:
-    return f"https://raw.githubusercontent.com/Hawaiine/Oasisic-Icons/{guard.PINNED_OASIC}/ruleset/{brand}/{brand}.yaml"
+    """规范规则集 URL——与生成器契约一致（主机/仓库/ref 由 guard 的常量锁定）。"""
+    return guard.ruleset_url_for(brand)
 
 
 def _config(providers: dict) -> dict:
@@ -64,7 +65,7 @@ class ConfigTreeConsistencyGuardTest(unittest.TestCase):
     def test_non_ruleset_url_fails(self):
         config = _config({"Weird": {"url": "https://example.com/not-a-ruleset.txt"}})
         problems = guard.config_tree_problems(config, {"ruleset/Weird/Weird.yaml"})
-        self.assertTrue(any("not a ruleset URL" in p for p in problems), problems)
+        self.assertTrue(any("url must be" in p for p in problems), problems)
 
     def test_wrong_provider_path_fails(self):
         """URL 正确但 path 不符合生成器约定，必须失败（URL 或 path 改错任一项都不能通过）。"""
@@ -82,7 +83,7 @@ class ConfigTreeConsistencyGuardTest(unittest.TestCase):
         config = _config({"Google": {"url": "https://raw.githubusercontent.com/Hawaiine/"
                                     "mihomo-rules/main/ruleset/Google/GoogleX.yaml"}})
         problems = guard.config_tree_problems(config, {"ruleset/Google/Google.yaml"})
-        self.assertTrue(any("not a ruleset URL" in p for p in problems), problems)
+        self.assertTrue(any("url must be" in p for p in problems), problems)
 
     def test_missing_or_empty_providers_fails(self):
         self.assertTrue(guard.config_tree_problems({"proxy-groups": []}, {"ruleset/A/A.yaml"}))
@@ -98,6 +99,132 @@ class ConfigTreeConsistencyGuardTest(unittest.TestCase):
         })
         tree = {"ruleset/Google/Google.yaml", "ruleset/ApplePodcasts/ApplePodcasts.yaml"}
         self.assertEqual(guard.config_tree_problems(config, tree), [])
+
+
+class RulesetUrlBindingTest(unittest.TestCase):
+    """C3 补强：provider key ↔ URL ↔ path ↔ head 树必须指向同一个 Technical ID。
+
+    审阅指出仅提取 ``/ruleset/<Brand>/<Brand>.yaml`` 的后缀正则会放过四类漂移：
+    品牌互换、外部主机、错误仓库路径、错误 ref。以下反例必须失败，且失败信息要
+    能指出配置路径、provider key 与原因；正确基线与合法新增品牌必须通过。
+    """
+
+    TREE = {"ruleset/Alpha/Alpha.yaml", "ruleset/Beta/Beta.yaml"}
+
+    def _problems(self, providers, tree=None):
+        return guard.config_tree_problems(_config(providers), set(self.TREE if tree is None else tree))
+
+    def _assert_fails(self, providers, needle, tree=None):
+        problems = self._problems(providers, tree)
+        self.assertTrue(problems, "应当失败但没有报错")
+        self.assertTrue(any(needle in p for p in problems),
+                        f"失败信息未包含 {needle!r}: {problems}")
+
+    # -- 正样本 ---------------------------------------------------------- #
+
+    def test_correct_baseline_passes(self):
+        self.assertEqual(self._problems({
+            "Alpha": {"url": _rs_url("Alpha")},
+            "Beta": {"url": _rs_url("Beta")},
+        }), [])
+
+    def test_legitimate_new_brand_passes(self):
+        """新增品牌（目录 + YAML + provider + 正确 URL/path）不得被误拦。"""
+        tree = set(self.TREE) | {"ruleset/AlphaX/AlphaX.yaml"}
+        self.assertEqual(self._problems({
+            "Alpha": {"url": _rs_url("Alpha")},
+            "Beta": {"url": _rs_url("Beta")},
+            "AlphaX": {"url": _rs_url("AlphaX")},
+        }, tree), [])
+
+    # -- 品牌互换：两个目录都存在，过去能整体通过 ------------------------ #
+
+    def test_brand_swap_between_two_existing_brands_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Alpha")},
+        }, "url must be")
+
+    def test_one_way_cross_brand_mapping_fails(self):
+        """Alpha 指向 Beta 的规则集，path 仍写 ./ruleset/Alpha.yaml。"""
+        self._assert_fails({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    # -- 主机 / 仓库 / ref 漂移：尾路径相同也不许通过 -------------------- #
+
+    def test_foreign_host_with_same_path_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://evil.example.com/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_wrong_repository_owner_path_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/SomeoneElse/mihomo-rules/"
+                               "main/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_wrong_branch_ref_fails(self):
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/"
+                               "dev/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    def test_pinned_sha_ref_fails(self):
+        """生产配置不得把规则集 URL 钉到某个 SHA 而不是约定分支。"""
+        self._assert_fails({
+            "Alpha": {"url": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/"
+                               f"{guard.PINNED_OASIC}/ruleset/Alpha/Alpha.yaml"},
+            "Beta": {"url": _rs_url("Beta")},
+        }, "url must be")
+
+    # -- 失败信息必须可定位 ---------------------------------------------- #
+
+    def test_failure_message_names_config_provider_and_reason(self):
+        problems = self._problems({
+            "Alpha": {"url": _rs_url("Beta")},
+            "Beta": {"url": _rs_url("Beta")},
+        })
+        joined = "\n".join(problems)
+        self.assertIn("configs/Android/config.yaml", joined)
+        self.assertIn("`Alpha`", joined)
+        self.assertIn("url must be", joined)
+
+    def test_cross_brand_mapping_does_not_mask_a_missing_provider(self):
+        """跨品牌映射不得冒充覆盖：Beta 没有自己的 provider 时必须报缺失。"""
+        problems = self._problems({"Alpha": {"url": _rs_url("Beta")}})
+        self.assertTrue(any("ruleset brand 'Beta' has no rule-provider entry" in p for p in problems),
+                        problems)
+        self.assertTrue(any("ruleset brand 'Alpha' has no rule-provider entry" in p for p in problems),
+                        problems)
+
+
+class RulesetUrlContractTest(unittest.TestCase):
+    """guard 独立声明的 URL 基址必须与生成器契约逐字一致，并由本测试锁定。
+
+    guard 刻意不导入生成器（避免与它共享失效模式），所以这条对应关系必须由
+    测试来钉住——生成器改了基址而 guard 没跟上时，这里会失败。
+    """
+
+    def test_guard_base_matches_generator_constant(self):
+        scripts = ROOT / "scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        import generate_config
+
+        self.assertEqual(guard.RULESET_URL_BASE, generate_config.GITHUB_BASE)
+
+    def test_generated_url_shape_matches_guard_contract(self):
+        self.assertEqual(guard.ruleset_url_for("Alibaba"),
+                         f"{guard.RULESET_URL_BASE}/ruleset/Alibaba/Alibaba.yaml")
+
+    def test_guard_base_is_the_documented_template(self):
+        self.assertEqual(guard.RULESET_URL_BASE,
+                         "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main")
 
 
 class ProviderFileGuardTest(unittest.TestCase):
@@ -599,11 +726,11 @@ class ConfigTreeAllVariantsTest(unittest.TestCase):
         return (f"https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/"
                 f"ruleset/{brand}/{brand}.yaml")
 
-    def _write_config(self, rel, urls=None, paths=None, skip=()):
+    def _write_config(self, rel, urls=None, paths=None, skip=(), extra=()):
         urls = urls or {}
         paths = paths or {}
         lines = ["rule-providers:"]
-        for brand in self.BRANDS:
+        for brand in (*self.BRANDS, *extra):
             if brand in skip:
                 continue
             lines += [
@@ -675,7 +802,7 @@ class ConfigTreeAllVariantsTest(unittest.TestCase):
                            urls={"Alpha": "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main/ruleset/Alpha/AlphaX.yaml"})
         self._commit("dir/file mismatch")
         problems = self._problems()
-        self.assertTrue(any("not a ruleset URL" in p for p in problems), problems)
+        self.assertTrue(any("url must be" in p for p in problems), problems)
 
     def test_two_keys_pointing_to_same_brand_fails(self):
         self._write_config("configs/Android/config.min.yaml", urls={"Beta": self._url("Alpha")})
@@ -690,7 +817,8 @@ class ConfigTreeAllVariantsTest(unittest.TestCase):
         self.assertTrue(any("Nikki/config.yaml" in p for p in problems), problems)
 
     def test_url_pointing_at_absent_ruleset_file_fails(self):
-        self._write_config("configs/Android/config.min.yaml", urls={"Alpha": self._url("Gamma")})
+        """URL 形态正确（key 与 URL 品牌一致），但 head 树里没有对应规则集文件。"""
+        self._write_config("configs/Android/config.min.yaml", extra=("Gamma",))
         self._commit("url points at absent brand")
         problems = self._problems()
         self.assertTrue(any("missing from the head tree" in p for p in problems), problems)

@@ -56,6 +56,12 @@ PRODUCTION_CONFIGS = (
     "configs/Nikki/config.min.yaml",
 )
 CONFIG_FOR_TREE_CHECK = "configs/Android/config.yaml"
+# 规范规则集 URL 基址。与 scripts/generate_config.py 的 GITHUB_BASE 是同一契约：
+# guard 独立声明该常量（不导入生成器，避免与它共享失效模式），两者的一致性由
+# scripts/tests/test_general_pr_guard.py::RulesetUrlContractTest 锁定。
+RULESET_URL_BASE = "https://raw.githubusercontent.com/Hawaiine/mihomo-rules/main"
+_RULESET_URL_RE = re.compile(
+    "^" + re.escape(RULESET_URL_BASE) + r"/ruleset/([^/]+)/([^/]+)\.yaml$")
 EXPECTED_MODES = {"android": "strict", "nikki": "off"}
 PODCAST_MATCHER_SUFFIX = "Media/Xiaoyuzhou/Xiaoyuzhou.png"
 APPLE_PODCASTS_ICON_SUFFIX = "Apple/ApplePodcasts/ApplePodcasts.png"
@@ -116,13 +122,19 @@ def _rule_providers_of(config: dict) -> dict[str, dict]:
     return {key: value for key, value in providers.items() if isinstance(value, dict)}
 
 
-def _remote_rule_set_brand(url: str) -> str | None:
-    """Extract <Brand> from a raw.githubusercontent ruleset URL (…/ruleset/<Brand>/<Brand>.yaml).
+def ruleset_url_for(provider_key: str) -> str:
+    """生成器契约中 provider key 唯一合法的规则集 URL。"""
+    return f"{RULESET_URL_BASE}/ruleset/{provider_key}/{provider_key}.yaml"
 
-    目录名与文件名必须一致：``ruleset/Alibaba/AlibabaX.yaml`` 这种错配返回 None，
-    以免错误品牌 URL 冒充另一个品牌的 provider。
+
+def _remote_rule_set_brand(url: str) -> str | None:
+    """Extract <Brand> from a *canonical* ruleset URL (…/ruleset/<Brand>/<Brand>.yaml).
+
+    必须同时满足：主机 + 仓库 owner/repo + ref 完全等于 ``RULESET_URL_BASE``，
+    且目录名与文件名相同。任何主机/仓库/ref 漂移或目录文件名错配都返回 None——
+    宽泛的后缀正则会把外部主机的同名路径当成合法规则集 URL。
     """
-    match = re.search(r"/ruleset/([^/]+)/([^/]+)\.yaml$", url or "")
+    match = _RULESET_URL_RE.match(url or "")
     if match and match.group(1) == match.group(2):
         return match.group(1)
     return None
@@ -137,6 +149,11 @@ def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str =
     passes as long as the three sources of truth agree. It is independent of
     generate_config.py and therefore cannot share its failure modes.
 
+    每个 provider 的 key、URL、path 与 head 树中的规则集文件必须指向**同一个**
+    Technical ID：URL 必须精确等于 :func:`ruleset_url_for`，path 必须精确等于
+    ``./ruleset/<key>.yaml``。只检查「差异路径是否在白名单内」不够——URL 指向
+    另一个品牌（品牌互换）、主机/仓库/ref 漂移都必须失败。
+
     ``label`` 是被校验配置的路径，用于让四份配置各自的失败信息可区分。
     """
     problems: list[str] = []
@@ -146,9 +163,16 @@ def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str =
 
     tree_rule_files = {path for path in tree_files if path.startswith(ruleset_root)}
 
-    provider_brands: dict[str, str] = {}
+    provider_keys: set[str] = set()
     for name, entry in sorted(providers.items()):
         url = entry.get("url", "")
+        # URL 必须精确等于规范模板：主机 / 仓库路径 / ref / {ID}/{ID}.yaml 任一项
+        # 漂移（含跨品牌映射、错误主机、错误 ref）都不能通过。
+        expected_url = ruleset_url_for(name)
+        if url != expected_url:
+            problems.append(
+                f"{label}: rule-provider `{name}`: url must be {expected_url!r}, "
+                f"got {_short(url)}")
         # path 必须符合生成器约定 ./ruleset/<key>.yaml（URL 或 path 改错任一项都不能通过）
         expected_path = f"./ruleset/{name}.yaml"
         if entry.get("path") != expected_path:
@@ -156,19 +180,20 @@ def config_tree_problems(config: dict, tree_files: set[str], ruleset_root: str =
                 f"{label}: rule-provider `{name}`: path must be {expected_path!r}, "
                 f"got {_short(entry.get('path'))!r}")
         brand = _remote_rule_set_brand(url)
-        if brand is None:
-            problems.append(f"{label}: rule-provider `{name}`: url is not a ruleset URL: {_short(url)}")
+        if brand != name:
+            # URL 已在上面报错；此处不登记该 provider，避免跨品牌映射冒充覆盖，
+            # 把真正缺失的 provider 掩盖过去。
             continue
         remote_file = f"{ruleset_root}{brand}/{brand}.yaml"
         if remote_file not in tree_rule_files:
             problems.append(
                 f"{label}: rule-provider `{name}`: remote ruleset {remote_file!r} is missing from the head tree")
-        provider_brands[brand] = name
+        provider_keys.add(name)
 
     # every brand directory in the head tree must be served by exactly one provider
     tree_brands = {path.split("/", 2)[1] for path in tree_rule_files}
     for brand in sorted(tree_brands):
-        if brand not in provider_brands:
+        if brand not in provider_keys:
             problems.append(f"{label}: ruleset brand {brand!r} has no rule-provider entry")
 
     return problems
