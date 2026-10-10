@@ -703,44 +703,96 @@ def check_icons_exist(lines, variant, icon_ref):
     return True
 
 
-def pinned_icon_revision():
-    """图标存在性校验所用的**固定 revision**——唯一来源是 manifest。
+# 图标校验基准必须是**完整的 40 位十六进制 commit SHA**。
+#
+# 符号引用（`main`/`HEAD`）、缩写 SHA、空值、非十六进制字符串一律不接受：
+# 本地 Git 能解析 `main`/`HEAD`/缩写 SHA，这正是「看起来通过、实际校验的不是
+# 被审阅快照」的来源。格式检查必须在任何 Git 对象检查**之前**完成。
+_FULL_REVISION = re.compile(r'\A[0-9a-fA-F]{40}\Z')
 
-    复用 ``match_icons.load_manifest()``（不在本文件另写一份解析逻辑，避免第二份
-    可独立漂移的 SHA 常量）。不可用时返回 ``None``，由调用方 fail-closed。
+_MISSING_REVISION = '缺少固定 Oasisic revision（scripts/config_contract/oasisic_revision.json）'
 
-    注意：这与**生产 URL ref**（``main``）是两个不同概念——校验基准必须是
-    可复现的固定快照，而不是会随时间移动的分支。
+_BASELINE_HINT = '无法确定图标存在性的校验基准（不回退 main/HEAD，也不扫描工作区）'
+
+
+def _revision_format_problem(revision):
+    """返回 revision 的**格式**问题描述；``None`` 表示格式合法。
+
+    只判断格式，不触碰 Git——因此非法格式在任何 git 调用之前失败，且失败信息
+    是「格式不合法」，不会误报成误导性的「固定 revision 不存在」。
+    """
+    if revision is None:
+        return _MISSING_REVISION
+    if not isinstance(revision, str) or not revision.strip():
+        return f'revision 格式不合法: {revision!r}（必须是非空的完整 40 位十六进制 commit SHA）'
+    if not _FULL_REVISION.match(revision.strip()):
+        return (f'revision 格式不合法: {revision!r}（必须是完整 40 位十六进制 commit SHA；'
+                '不接受 main/HEAD 等符号引用或缩写 SHA）')
+    return None
+
+
+def _manifest_revision():
+    """从 manifest 读出**原始** revision（不做格式校验）；不可用时 ``None``。
+
+    复用 ``match_icons.load_manifest()``——不在本文件另写第二份可独立漂移的
+    manifest 解析逻辑，也不新增硬编码的批准 SHA；独立 pin 信任锚仍由
+    ``scripts/ci/verify_general_pr.py`` 的 ``PINNED_OASIC`` 承担。
     """
     try:
         manifest = match_icons.load_manifest()
     except (RuntimeError, OSError, ValueError):
         return None
     revision = manifest.get('revision') if isinstance(manifest, dict) else None
-    return revision if isinstance(revision, str) and revision.strip() else None
+    return revision if isinstance(revision, str) else None
+
+
+def pinned_icon_revision():
+    """图标存在性校验所用的**固定 revision**——唯一来源是 manifest。
+
+    只在 revision **格式合法**（完整 40 位十六进制 commit SHA）时返回它，
+    否则返回 ``None``，由调用方 fail-closed。
+
+    注意：这与**生产 URL ref**（``main``）是两个不同概念——校验基准必须是
+    可复现的固定快照，而不是会随时间移动的分支。
+    """
+    raw = _manifest_revision()
+    if not isinstance(raw, str) or _revision_format_problem(raw) is not None:
+        return None
+    return raw.strip()
 
 
 def load_icon_reference(root=None, environ=None, revision=None):
     """返回 ``(icon 相对路径集合, 来源描述)``；不可用时返回 ``(None, 原因)``。
 
-    基准**固定**为 manifest 的 discovery revision（完整 40 位 SHA）：
+    基准**固定**为 manifest 的 discovery revision，且必须是**完整 40 位十六进制
+    commit SHA**：
 
-    - **不回退** ``origin/main`` / ``main`` / ``HEAD``（旧实现按此顺序探测，
-      因此「本机看起来通过」实际校验的是浮动分支，不是被审阅的快照）；
+    - **格式检查先于任何 Git 调用**：``main`` / ``HEAD`` / 缩写 SHA / 空值 /
+      非十六进制字符串一律在触碰 Git 之前失败（本地 Git 能解析符号引用与缩写
+      SHA，正是「看起来通过、实际校验的不是被审阅快照」的来源）；
+    - **不回退** ``origin/main`` / ``main`` / ``HEAD``（旧实现按此顺序探测）；
     - **不**扫描工作区（旧实现会据此把上游已删除的残留文件当成存在）；
     - **不**用生产 ``main`` 兜底读取失败。
 
-    任一环节不可用（缺 revision / 路径不存在 / 非 git 工作树 / 固定 revision
-    不可读 / git 失败 / 无 png）都返回 ``(None, 原因)``，调用方必须 fail-closed。
+    任一环节不可用（缺 revision / 格式非法 / 路径不存在 / 非 git 工作树 /
+    固定 revision 不可读 / git 失败 / 无 png）都返回 ``(None, 原因)``，
+    调用方必须 fail-closed。
     """
     import subprocess
 
     env = os.environ if environ is None else environ
     project_root = ROOT if root is None else Path(root)
-    pinned = revision if revision is not None else pinned_icon_revision()
-    if not pinned:
-        return None, ('缺少固定 Oasisic revision（scripts/config_contract/oasisic_revision.json）；'
-                      '无法确定图标存在性的校验基准')
+    if revision is None:
+        pinned = pinned_icon_revision()
+        if pinned is None:
+            raw = _manifest_revision()
+            detail = _MISSING_REVISION if raw is None else _revision_format_problem(raw)
+            return None, f'{detail}；{_BASELINE_HINT}'
+    else:
+        problem = _revision_format_problem(revision)
+        if problem is not None:
+            return None, f'{problem}；{_BASELINE_HINT}'
+        pinned = revision.strip()
     repo = icon_repo.resolve_icon_repo(environ=env, root=project_root)
     problems = icon_repo.icon_repo_problems(repo, pinned)
     if problems:

@@ -232,7 +232,7 @@ class TestVerifyConfigsHardening(unittest.TestCase):
         """manifest 取不到 revision → 必须失败，不得跳过检查。"""
         with tempfile.TemporaryDirectory() as tmp:
             with patch.object(verify_configs, "ROOT", Path(tmp)), patch.dict("os.environ", {}, clear=True), \
-                 patch.object(verify_configs, "pinned_icon_revision", return_value=None):
+                 patch.object(verify_configs, "_manifest_revision", return_value=None):
                 paths, source = verify_configs.load_icon_reference()
             self.assertIsNone(paths)
             self.assertIn("缺少固定 Oasisic revision", source)
@@ -281,6 +281,85 @@ class TestVerifyConfigsHardening(unittest.TestCase):
             self.assertIsNone(paths)
             self.assertIn("无法执行 git 校验固定 revision", source)
             self.assertFalse(verify_configs.check_icons_exist([], "x", (paths, source)))
+
+    def test_revision_format_is_validated_before_any_git_call(self):
+        """main / HEAD / 缩写 SHA / 空值 / 非十六进制 → 必须在触碰 Git 之前失败。"""
+        bad = ['main', 'HEAD', 'master', 'develop', 'f0f3bc2',
+               'f0f3bc2a44616885682ee5f0e5921540b964e2d8x', 'z' * 40,
+               '1234567890abcdef1234567890abcdef1234567', '', '   ']
+        for revision in bad:
+            with self.subTest(revision=revision):
+                touched = []
+                with tempfile.TemporaryDirectory() as tmp, \
+                     patch.object(verify_configs.icon_repo, 'resolve_icon_repo',
+                                  side_effect=lambda **kw: touched.append('resolve') or 'x'), \
+                     patch.object(verify_configs.icon_repo, 'icon_repo_problems',
+                                  side_effect=lambda *a: touched.append('git') or []):
+                    paths, source = verify_configs.load_icon_reference(
+                        root=tmp, environ={}, revision=revision)
+                self.assertIsNone(paths)
+                self.assertIn('格式不合法', source)
+                self.assertEqual(touched, [], '格式非法时不得触碰 Git')
+                self.assertFalse(verify_configs.check_icons_exist([], 'x', (paths, source)))
+
+    def test_full_sha_reaches_the_git_object_check(self):
+        """完整 40 位 SHA 必须继续进入 Git 对象检查（格式合法 ≠ 一定可用）。"""
+        touched = []
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(verify_configs.icon_repo, 'resolve_icon_repo',
+                          side_effect=lambda **kw: touched.append('resolve') or 'x'), \
+             patch.object(verify_configs.icon_repo, 'icon_repo_problems',
+                          side_effect=lambda *a: touched.append('git')
+                          or ['固定 revision 在检出中不可读: x']):
+            paths, source = verify_configs.load_icon_reference(
+                root=tmp, environ={}, revision='A' * 40)
+        self.assertIsNone(paths)
+        self.assertEqual(touched, ['resolve', 'git'])
+        self.assertIn('无法读取固定 revision', source)
+        self.assertNotIn('格式不合法', source)
+
+    def test_manifest_revision_format_is_validated(self):
+        """manifest 里写 main/HEAD/缩写 SHA → 按格式失败，不被本地 Git 解析掉。"""
+        for bad in ('main', 'HEAD', 'f0f3bc2', '', 'z' * 40):
+            with self.subTest(revision=bad):
+                with tempfile.TemporaryDirectory() as tmp, \
+                     patch.object(verify_configs, 'ROOT', Path(tmp)), \
+                     patch.dict('os.environ', {}, clear=True), \
+                     patch.object(verify_configs, '_manifest_revision', return_value=bad), \
+                     patch.object(verify_configs.icon_repo, 'resolve_icon_repo',
+                                  side_effect=AssertionError('格式非法时不得触碰 Git')):
+                    paths, source = verify_configs.load_icon_reference()
+                self.assertIsNone(paths)
+                self.assertIn('格式不合法', source)
+                self.assertFalse(verify_configs.check_icons_exist([], 'x', (paths, source)))
+
+    def test_pinned_icon_revision_only_accepts_full_sha(self):
+        for bad in ('main', 'HEAD', 'f0f3bc2', '', 'z' * 40, None, 12345, '   '):
+            with self.subTest(revision=bad):
+                with patch.object(verify_configs, '_manifest_revision', return_value=bad):
+                    self.assertIsNone(verify_configs.pinned_icon_revision())
+        with patch.object(verify_configs, '_manifest_revision', return_value='A' * 40):
+            self.assertEqual(verify_configs.pinned_icon_revision(), 'A' * 40)
+
+    def test_real_manifest_revision_is_a_full_sha(self):
+        revision = verify_configs.pinned_icon_revision()
+        self.assertIsNotNone(revision, '真实 manifest 的 revision 必须是完整 40 位 SHA')
+        self.assertRegex(revision or '', r'\A[0-9a-f]{40}\Z')
+
+    def test_no_hardcoded_approved_sha_in_verify_configs(self):
+        """校验基准只来自 manifest：不得在 verify_configs.py 里硬编码批准 SHA。"""
+        revision = verify_configs.pinned_icon_revision()
+        self.assertIsNotNone(revision)
+        source = Path(verify_configs.__file__).read_text(encoding='utf-8')
+        self.assertNotIn(revision, source)
+        self.assertNotIn('APPROVED_OASIC_REPOSITORY', source)
+
+    def test_manifest_revision_is_read_through_the_shared_manifest(self):
+        """不得复制 manifest 解析逻辑：仍走 match_icons.load_manifest()。"""
+        with patch.object(verify_configs.match_icons, 'load_manifest',
+                          return_value={'revision': 'B' * 40}) as loader:
+            self.assertEqual(verify_configs.pinned_icon_revision(), 'B' * 40)
+        loader.assert_called_once()
 
     def test_comment_order_length_mismatch_fails(self):
         """注释 RULE-SET 少于品牌组 → 必须 FAIL（旧实现 zip 截断后 PASS）"""
