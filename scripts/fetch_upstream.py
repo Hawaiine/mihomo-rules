@@ -16,6 +16,7 @@ fetch_upstream.py — 只管抓取 + 完整性校验
 """
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -256,6 +257,29 @@ def upstream_commit(local_dir: str, deadline: float | None = None) -> str:
     return out.strip() if code == 0 else ""
 
 
+# ── SHA 校验（M7 最小防护） ───────────────────────────────────
+#
+# upstream_commit() 在命令失败或输出为空时返回空串且不抛异常；调用方若不做校验，
+# 就会把「读不到 SHA」当成成功（阶段十一 M7）。
+# 这里只校验**可读性与格式**：非空且匹配 ^[0-9a-f]{40}$ 才允许作为成功留痕。
+# ⚠️ 格式合法 **不等于** 该 SHA 已获批准：预期 SHA 比对属另一不变量，本文件未实现。
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def require_valid_sha(sha: str) -> str:
+    """校验 upstream_commit() 的返回值；返回问题描述，空串表示通过。
+
+    用 `fullmatch()` 而非 `match()`：`^…$` 配合 `match()` 会接受
+    「40 位十六进制 + 恰好一个结尾换行」（Python 的 `$` 允许匹配结尾换行之前）。
+    当前生产路径不可达（`upstream_commit()` 已 `strip()`），此处为契约收紧。
+    """
+    if not sha:
+        return "无法读取上游 commit SHA（git rev-parse HEAD 失败或输出为空）"
+    if not SHA_RE.fullmatch(sha):
+        return f"上游 commit SHA 格式非法: {sha[:64]!r}（要求 40 位小写十六进制）"
+    return ""
+
+
 # git 操作锁文件：进程被 kill / 磁盘满时可能残留，导致后续所有 fetch 失败
 GIT_LOCK_FILES = ("shallow.lock", "index.lock", "config.lock", "HEAD.lock")
 
@@ -478,13 +502,29 @@ def fetch_upstream(
                 commit=upstream_commit(local_dir, deadline=deadline),
             )
 
+        commit = upstream_commit(local_dir, deadline=deadline)
+
+        # M7 最小防护：读不到或格式非法的 SHA 不得当作成功
+        sha_problem = require_valid_sha(commit)
+        if sha_problem:
+            return FetchResult(
+                upstream=name,
+                success=False,
+                file_count=file_count,
+                total_bytes=total_bytes,
+                error="SHA 校验失败: " + sha_problem,
+                elapsed=time.time() - start,
+                checks=(sha_problem,),
+                commit=commit,
+            )
+
         return FetchResult(
             upstream=name,
             success=True,
             file_count=file_count,
             total_bytes=total_bytes,
             elapsed=time.time() - start,
-            commit=upstream_commit(local_dir, deadline=deadline),
+            commit=commit,
         )
 
     except Exception as e:
