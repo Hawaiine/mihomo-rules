@@ -566,11 +566,14 @@ class WorkflowSecurityGuardTest(unittest.TestCase):
     def test_abnormal_trigger_inputs_fail_closed(self):
         # `on` parsing to a non-mapping (null / list / bool) must fail closed:
         # never crash, and always report rather than silently pass.
+        # 整段替换 `on:` 区块（而不是只替换 pull_request 子键），这样新增其他触发器
+        # （例如 workflow_dispatch）也不会让 fixture 变成非法 YAML 而误判为 unparseable。
         for label, value in (("null", "null"), ("empty-list", "[]"), ("false", "false")):
             with self.subTest(trigger=label):
-                text = self._workflow().replace(
-                    "on:\n  pull_request:\n    branches:\n      - main\n",
+                text = re.sub(
+                    r"(?ms)^on:.*?(?=^permissions:)",
                     f"on: {value}\n",
+                    self._workflow(),
                 )
                 problems = guard.workflow_problems(text)
                 self.assertIn(

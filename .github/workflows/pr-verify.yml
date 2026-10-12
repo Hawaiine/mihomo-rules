@@ -1,33 +1,84 @@
 name: General PR verification
 
+# 必需检查（ruleset 精确引用，见 .github/required-checks.json）：
+#   general-pr-verify / workflow-policy-guard / trusted-baseline-guard
+# job id 与 job name 必须一致，否则 check 名漂移、ruleset 引用失效。
+#
+# 触发：
+#   * pull_request → 常规 PR 验证。
+#   * workflow_dispatch(pr_number, base_sha, head_sha) → 由 candidate-pr-sync 显式触发。
+#     原因：GITHUB_TOKEN 创建的 PR 不会自动触发 pull_request workflow。
+#     base/head SHA 由触发方传入（本 workflow 因此不需要任何 API 读取权限，
+#     也不需要 pull-requests 权限），被检内容即该 head SHA。
+#
+# 安全姿态（由 scripts/ci/verify_general_pr.py 的 workflow-security-guard 强制）：
+#   permissions 恰为 contents: read；无任何写命令；不使用指向分支名的浮动 ref；
+#   所有脚本来自被检提交自身；Oasisic-Icons 检出使用已批准 pin。
+
 on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: '候选 PR 编号（由 candidate-pr-sync 显式触发时使用）'
+        required: true
+        type: string
+      base_sha:
+        description: 'PR base SHA（触发方传入，本 workflow 不查询 API）'
+        required: true
+        type: string
+      head_sha:
+        description: 'PR head SHA（被检提交）'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: general-pr-verify-${{ github.event.pull_request.number }}
+  group: general-pr-verify-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 
 env:
   TZ: Asia/Shanghai
-  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
   general-pr-verify:
     name: general-pr-verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+        id: pr
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            NUM="${{ github.event.pull_request.number }}"
+          else
+            BASE="${{ inputs.base_sha }}"
+            HEAD="${{ inputs.head_sha }}"
+            NUM="${{ inputs.pr_number }}"
+          fi
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          printf '%s' "$NUM"  | grep -Eq '^[0-9]+$'     || { echo "❌ PR 编号非法"; exit 1; }
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "number=${NUM}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=${NUM}" >> "$GITHUB_ENV"
+          echo "PR #${NUM} base=${BASE:0:12} head=${HEAD:0:12}"
+
       - name: 📥 检出 PR head（完整历史，用于 head 树自洽校验）
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr.outputs.head }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -74,3 +125,130 @@ jobs:
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
         run: python3 -m unittest discover -s scripts/tests
+
+  workflow-policy-guard:
+    name: workflow-policy-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+        id: pr
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            NUM="${{ github.event.pull_request.number }}"
+          else
+            BASE="${{ inputs.base_sha }}"
+            HEAD="${{ inputs.head_sha }}"
+            NUM="${{ inputs.pr_number }}"
+          fi
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+
+      - name: 📥 检出 PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: python3 -m pip install pyyaml
+
+      - name: 🔐 workflow 策略 guard（权限 / 触发 / 目标分支 / 必需检查 / 防绕过 / 候选分支约束）
+        run: python3 scripts/ci/verify_workflow_policy.py --json "$RUNNER_TEMP/workflow-policy.json"
+
+      - name: ⬆️ 上传策略检查结果
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: workflow-policy-result
+          path: ${{ runner.temp }}/workflow-policy.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  trusted-baseline-guard:
+    name: trusted-baseline-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+        id: pr
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            NUM="${{ github.event.pull_request.number }}"
+          else
+            BASE="${{ inputs.base_sha }}"
+            HEAD="${{ inputs.head_sha }}"
+            NUM="${{ inputs.pr_number }}"
+          fi
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=${NUM}" >> "$GITHUB_ENV"
+
+      - name: 📥 检出 PR head（完整历史；可信 guard 逻辑来自 base 提交，不检出浮动 ref）
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: python3 -m pip install pyyaml
+
+      - name: 📥 确认 base 提交可用（可信逻辑的来源）
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "${PR_BASE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --quiet origin "+refs/heads/*:refs/remotes/origin/*" || true
+          fi
+          git cat-file -e "${PR_BASE_SHA}^{commit}"
+          git cat-file -e "${PR_HEAD_SHA}^{commit}"
+          echo "✅ base/head 提交已就位"
+
+      - name: 🔐 可信基线 guard（用 **base 提交** 的 guard 逻辑校验候选树 + 削弱硬失败断言）
+        run: |
+          set -euo pipefail
+          if git cat-file -e "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" 2>/dev/null; then
+            echo "使用 PR base 提交上的可信基线 guard（已合并、可信）"
+            git show "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+          else
+            echo "⚠️ base 提交尚无该 guard（本 PR 首次引入）：临时改用 PR head 版本运行，"
+            echo "   并在 PR 中声明该一次性限制；合并后即由 base/main 版本接管。"
+            git show "${PR_HEAD_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+          fi
+          python3 "$RUNNER_TEMP/verify_policy_baseline.py" \
+            --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}" --repo-root . \
+            --json "$RUNNER_TEMP/trusted-baseline.json"
+
+      - name: ⬆️ 上传基线检查结果
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: trusted-baseline-result
+          path: ${{ runner.temp }}/trusted-baseline.json
+          retention-days: 7
+          if-no-files-found: ignore

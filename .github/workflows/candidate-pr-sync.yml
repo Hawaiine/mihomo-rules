@@ -1,0 +1,331 @@
+name: 候选分支更新（PR-first）
+
+# 运行时设计（详见 docs/pr-first-automation.md）：
+#   * 只创建/更新候选分支与 PR，绝不推送 main；push 前有硬断言。
+#   * 定时与手动触发都由仓库变量 CANDIDATE_SYNC_ENABLED 门控；未设置或非 "true" 时整体跳过。
+#   * generate job 只读；publish job 持最小写权限，且**不执行候选内容**（只应用数据补丁）。
+#   * 自动合并由独立的 CANDIDATE_AUTOMERGE_ENABLED 变量二次门控，且必须先用真实
+#     check run ↔ head SHA 绑定验证通过；验证不通过即不合并（fail-closed）。
+#   * ChatGPT 不在日常运行路径中。
+#
+# 关于基线 ref：generate/publish 都基于当前默认分支（main）——这是**生成器**而非门禁，
+# 其输出只能进入候选分支，无法直接影响 main。门禁（pr-verify.yml）则一律只检出被检 SHA。
+
+on:
+  schedule:
+    - cron: '45 22 * * *'   # 06:45 北京 = 22:45 UTC，与旧 daily-sync（22:00 UTC）错开
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidate-pr-sync
+  cancel-in-progress: false
+
+env:
+  TZ: Asia/Shanghai
+  CANDIDATE_BRANCH: candidate/rules-update
+  BASE_BRANCH: main
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: 🔒 启用开关检查（默认安全关闭）
+        id: check
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.CANDIDATE_SYNC_ENABLED }}" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "✅ CANDIDATE_SYNC_ENABLED=true：继续候选更新"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⏸️ CANDIDATE_SYNC_ENABLED 未启用：候选更新保持关闭（安全默认）"
+          fi
+
+  generate:
+    name: generate
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.pack.outputs.changed }}
+      base_sha: ${{ steps.pack.outputs.base_sha }}
+    steps:
+      - name: 📥 检出 main（候选变更的基线）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: python3 -m pip install pyyaml
+
+      - name: 🎨 拉取固定版本 Oasisic-Icons
+        uses: actions/checkout@v7
+        with:
+          repository: Hawaiine/Oasisic-Icons
+          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
+          path: Oasisic-Icons
+          persist-credentials: false
+
+      - name: 🛡️ 生成前只读 guard（workflow 策略 / 通用 guard / 配置 / 规则集 / README 口径 / 单测）
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+          # verify_general_pr.py 需要 PR_BASE_SHA / PR_HEAD_SHA（无 origin/main 回退）；
+          # 候选生成以当前 main tip 为基线，故两者都取 github.sha。
+          PR_BASE_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/verify_workflow_policy.py
+          python3 scripts/ci/verify_general_pr.py
+          python3 scripts/verify_configs.py
+          python3 scripts/verify_rulesets.py
+          python3 scripts/readme_stats.py --check
+          python3 -m unittest discover -s scripts/tests -q
+
+      - name: 🔄 执行上游同步（写入候选工作树，不提交、不推送、不通知）
+        run: python3 scripts/batch_update.py --no-commit
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: 📊 刷新 README 统计口径
+        run: python3 scripts/readme_stats.py --update
+
+      - name: 🔍 生成后复检（配置 / 规则集 / README 口径 / 单测）
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_configs.py
+          python3 scripts/verify_rulesets.py
+          python3 scripts/readme_stats.py --check
+          python3 -m unittest discover -s scripts/tests -q
+
+      - name: 📦 产出候选补丁（纯数据，供 publish 应用）
+        id: pack
+        run: |
+          set -euo pipefail
+          echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git add -A ruleset configs README.md
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "⏸️ 无候选变更"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --binary > "$RUNNER_TEMP/candidate.patch"
+            git diff --cached --name-only | sort > "$RUNNER_TEMP/changed-files.txt"
+            echo "变更文件数：$(wc -l < "$RUNNER_TEMP/changed-files.txt")"
+          fi
+
+      - name: ⬆️ 上传候选补丁
+        if: steps.pack.outputs.changed == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: candidate-patch
+          path: |
+            ${{ runner.temp }}/candidate.patch
+            ${{ runner.temp }}/changed-files.txt
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs: [gate, generate]
+    if: needs.gate.outputs.enabled == 'true' && needs.generate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      head_sha: ${{ steps.push.outputs.head_sha }}
+    steps:
+      - name: 📥 检出 main（**不**检出候选内容；本 job 不执行候选代码）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: ⬇️ 下载候选补丁
+        uses: actions/download-artifact@v5
+        with:
+          name: candidate-patch
+          path: ${{ runner.temp }}
+
+      - name: 🌿 创建/更新候选分支（幂等：按树摘要比对；禁止 main）
+        id: push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 硬断言：候选分支绝不等于目标分支
+          if [ "$CANDIDATE_BRANCH" = "main" ] || [ "$CANDIDATE_BRANCH" = "$BASE_BRANCH" ]; then
+            echo "❌ 候选分支名非法：$CANDIDATE_BRANCH"; exit 1
+          fi
+          git config user.name "mihomo-candidate-bot"
+          git config user.email "candidate-bot@users.noreply.github.com"
+          git checkout -B "$CANDIDATE_BRANCH"
+          git apply --index "$RUNNER_TEMP/candidate.patch"
+          git commit -m "🔄 候选规则更新 $(date +'%Y-%m-%d %H:%M:%S')"
+          NEW_TREE="$(git rev-parse 'HEAD^{tree}')"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads origin "$CANDIDATE_BRANCH" >/dev/null 2>&1; then
+            git fetch --quiet origin "$CANDIDATE_BRANCH"
+            if [ "$NEW_TREE" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then
+              echo "⏸️ 候选分支内容（树摘要）未变化，跳过推送"
+              echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          # 只推送候选分支；绝不推送 main（分支名已在上面断言）
+          git push --force-with-lease origin "HEAD:refs/heads/$CANDIDATE_BRANCH"
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "✅ 已推送候选分支 $CANDIDATE_BRANCH（head=$(git rev-parse --short HEAD)）"
+
+      - name: 🔁 创建或更新 PR（幂等，目标 main）
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          BODY_FILE="$RUNNER_TEMP/pr-body.md"
+          {
+            echo "## 候选规则更新（PR-first 自动化）"
+            echo
+            echo "- 由 \`candidate-pr-sync\` 自动创建/更新；来源分支 \`${CANDIDATE_BRANCH}\`，目标 \`${BASE_BRANCH}\`。"
+            echo "- \`.github/workflows/daily-sync.yml\` **保持禁用**（未重新启用直推 main）。"
+            echo "- 新系统只通过候选分支与 PR 工作，绝不直接推送 \`main\`。"
+            echo "- Auto-merge 只依赖 GitHub Ruleset 与真实 required checks；ChatGPT 不在日常运行路径中。"
+            echo "- 变更文件："
+            sed 's/^/- `/' "$RUNNER_TEMP/changed-files.txt" | sed 's/$/`/'
+          } > "$BODY_FILE"
+          EXISTING="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${API}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${CANDIDATE_BRANCH}&base=${BASE_BRANCH}")"
+          NUMBER="$(printf '%s' "$EXISTING" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["number"] if d else "")')"
+          export BODY_FILE HEAD_BR="$CANDIDATE_BRANCH" BASE_BR="$BASE_BRANCH"
+          export PR_TITLE="🔄 候选规则更新（PR-first 自动）"
+          if [ -n "$NUMBER" ]; then
+            PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"body":open(os.environ["BODY_FILE"],encoding="utf-8").read()}))')"
+            curl -sS -X PATCH -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
+              "${API}/pulls/${NUMBER}" -d "$PAYLOAD" > /dev/null
+            echo "♻️ 已更新 PR #${NUMBER}"
+          else
+            PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"title":os.environ["PR_TITLE"],"head":os.environ["HEAD_BR"],"base":os.environ["BASE_BR"],"body":open(os.environ["BODY_FILE"],encoding="utf-8").read()}))')"
+            RESP="$(curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
+              "${API}/pulls" -d "$PAYLOAD")"
+            NUMBER="$(printf '%s' "$RESP" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("number",""))')"
+            test -n "$NUMBER" || { echo "❌ 创建 PR 失败：$RESP"; exit 1; }
+            echo "✅ 已创建 PR #${NUMBER}"
+          fi
+          echo "pr_number=${NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: 🧪 显式触发 PR 验证（GITHUB_TOKEN 创建的 PR 不会自动触发 pull_request workflow）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 用 workflow_dispatch 显式触发，并把 base/head SHA 一并传入：
+          # 被检内容即该 head SHA，pr-verify 因此不需要任何 API 读取权限。
+          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/pr-verify.yml/dispatches" \
+            -d "$(PR_NUM='${{ steps.pr.outputs.pr_number }}' BASE_SHA='${{ needs.generate.outputs.base_sha }}' HEAD_SHA='${{ steps.push.outputs.head_sha }}' python3 -c 'import json,os;print(json.dumps({"ref":"main","inputs":{"pr_number":os.environ["PR_NUM"],"base_sha":os.environ["BASE_SHA"],"head_sha":os.environ["HEAD_SHA"]}}))')"
+          echo "✅ 已触发 pr-verify（pr=#${{ steps.pr.outputs.pr_number }}）"
+
+      - name: 📊 状态摘要（artifact；不含任何秘密）
+        run: |
+          set -euo pipefail
+          python3 -c 'import json,os,sys; print(json.dumps({
+            "candidate_branch": os.environ["CANDIDATE_BRANCH"],
+            "base_branch": os.environ["BASE_BRANCH"],
+            "base_sha": os.environ["BASE_SHA"],
+            "pr_number": os.environ["PR_NUMBER"],
+            "head_sha": os.environ["HEAD_SHA"],
+            "auto_merge_enabled": os.environ.get("AUTOMERGE_FLAG", "")}, ensure_ascii=False, indent=2))' > "$RUNNER_TEMP/candidate-summary.json"
+          cat "$RUNNER_TEMP/candidate-summary.json"
+        env:
+          BASE_SHA: ${{ needs.generate.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.push.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          AUTOMERGE_FLAG: ${{ vars.CANDIDATE_AUTOMERGE_ENABLED }}
+
+      - name: ⬆️ 上传状态摘要
+        uses: actions/upload-artifact@v5
+        with:
+          name: candidate-summary
+          path: ${{ runner.temp }}/candidate-summary.json
+          retention-days: 7
+
+  request-auto-merge:
+    name: request-auto-merge
+    needs: [gate, publish]
+    if: needs.gate.outputs.enabled == 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 📥 检出 main（只用其脚本；不执行候选内容）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 🔒 自动合并前置验证（required check ↔ head SHA 绑定；失败即不合并）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/verify_required_checks.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ needs.publish.outputs.pr_number }}" \
+            --head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --json "$RUNNER_TEMP/required-checks.json"
+
+      - name: 🚦 启用 auto-merge（仅在绑定验证通过后；实际合并仍由 GitHub 按 ruleset 执行）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR="${{ needs.publish.outputs.pr_number }}"
+          NODE_ID="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR}" \
+            | python3 -c 'import json,sys;print(json.load(sys.stdin)["node_id"])')"
+          export NODE_ID
+          PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"query":"mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}","variables":{"id":os.environ["NODE_ID"]}}))')"
+          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
+            "https://api.github.com/graphql" -d "$PAYLOAD" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "errors" not in d, d; print("✅ 已请求 auto-merge（等待 GitHub 按 ruleset 合并）")'
+
+      - name: 📊 合并后回读（PR 状态 / merge commit / main HEAD）
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR="${{ needs.publish.outputs.pr_number }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" "${API}/pulls/${PR}" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps({"state":d["state"],"merged":d["merged"],"merge_commit_sha":d.get("merge_commit_sha"),"head_sha":d["head"]["sha"]},ensure_ascii=False))'
+          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" "${API}/git/ref/heads/${BASE_BRANCH}" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps({"main_head":d["object"]["sha"]}))'
