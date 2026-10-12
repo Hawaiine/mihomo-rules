@@ -1,0 +1,16 @@
+{
+  "schema": "mihomo-rules-required-checks",
+  "version": 1,
+  "workflow": ".github/workflows/pr-verify.yml",
+  "required": [
+    "general-pr-verify",
+    "workflow-policy-guard",
+    "trusted-baseline-guard"
+  ],
+  "notes": [
+    "main 的 Ruleset 必须精确引用以上 check 名（require status checks to pass）。",
+    "job id 与 job name 必须保持一致，否则 check 名会漂移、ruleset 引用失效。",
+    "任何新增必需检查都必须先在此登记，再由 Ruleset 引用；删除检查属于破坏契约。",
+    "scripts/ci/verify_workflow_policy.py 会校验本文件与 pr-verify.yml 的 job 集合完全一致。"
+  ]
+}
