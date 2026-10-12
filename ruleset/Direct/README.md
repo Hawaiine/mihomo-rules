@@ -5,8 +5,8 @@
 |------|------|
 | DOMAIN-KEYWORD | 0 |
 | DOMAIN-REGEX | 0 |
-| DOMAIN | 406 |
-| DOMAIN-SUFFIX | 111154 |
+| DOMAIN | 407 |
+| DOMAIN-SUFFIX | 110354 |
 | IP-CIDR | 0 |
 | IP-CIDR6 | 0 |
 | IP-ASN | 0 |
