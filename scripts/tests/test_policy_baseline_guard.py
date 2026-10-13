@@ -40,26 +40,64 @@ jobs:
     name: general-pr-verify
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: |
+          set -euo pipefail
+          printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$' || { echo bad; exit 1; }
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
-      - run: python3 scripts/ci/verify_general_pr.py
+      - uses: actions/checkout@v7
+        with:
+          repository: Hawaiine/Oasisic-Icons
+          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
+          path: Oasisic-Icons
+          persist-credentials: false
+      - run: python3 -m pip install pyyaml
+      - name: guard
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 scripts/ci/verify_general_pr.py
+      - name: configs
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 scripts/verify_configs.py
+      - run: python3 scripts/verify_rulesets.py
+      - run: python3 scripts/icon_urls.py
+      - run: python3 scripts/readme_stats.py --check
+      - name: tests
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 -m unittest discover -s scripts/tests
   workflow-policy-guard:
     name: workflow-policy-guard
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$'
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
+      - run: python3 -m pip install pyyaml
       - run: python3 scripts/ci/verify_workflow_policy.py
   trusted-baseline-guard:
     name: trusted-baseline-guard
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$'
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
-      - run: python3 scripts/ci/verify_policy_baseline.py --base-sha a --head-sha b
+      - run: python3 -m pip install pyyaml
+      - name: baseline
+        run: |
+          set -euo pipefail
+          git cat-file -e "${PR_BASE_SHA}^{commit}"
+          python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"
 """
 
 # 夹具使用**真实的** daily-sync.yml 内容（若可用），使 base-guard 端到端判定只针对被测改动。
@@ -160,9 +198,17 @@ class WeakeningTest(Fixture):
                            {".github/workflows/pr-verify.yml": PR_VERIFY.replace(
                                "  trusted-baseline-guard:\n    name: trusted-baseline-guard\n"
                                "    runs-on: ubuntu-latest\n    steps:\n"
+                               "      - name: sha\n"
+                               "        run: printf '%s' \"a\" | grep -Eq '^[0-9a-f]{40}$'\n"
                                "      - uses: actions/checkout@v7\n        with:\n"
+                               "          ref: ${{ steps.pr.outputs.head }}\n"
                                "          persist-credentials: false\n"
-                               "      - run: python3 scripts/ci/verify_policy_baseline.py --base-sha a --head-sha b\n", "")})
+                               "      - run: python3 -m pip install pyyaml\n"
+                               "      - name: baseline\n        run: |\n"
+                               "          set -euo pipefail\n"
+                               "          git cat-file -e \"${PR_BASE_SHA}^{commit}\"\n"
+                               "          python3 scripts/ci/verify_policy_baseline.py "
+                               "--base-sha \"${PR_BASE_SHA}\" --head-sha \"${PR_HEAD_SHA}\"\n", "")})
 
     def test_job_name_changed(self):
         self.assertProblem("name changed",
@@ -189,8 +235,8 @@ class WeakeningTest(Fixture):
 
     def test_push_to_main_added(self):
         self.assertProblem("adds a push to main", {".github/workflows/pr-verify.yml": PR_VERIFY.replace(
-            "      - run: python3 scripts/ci/verify_general_pr.py",
-            "      - run: git push origin main\n      - run: python3 scripts/ci/verify_general_pr.py")})
+            "        run: python3 scripts/ci/verify_general_pr.py",
+            "        run: git push origin main\n      - name: guard\n        run: python3 scripts/ci/verify_general_pr.py")})
 
     def test_legacy_direct_write_rearmed(self):
         self.assertProblem("legacy direct-write workflow",
@@ -204,7 +250,7 @@ class WeakeningTest(Fixture):
 
     def test_guard_invocation_removed(self):
         self.assertProblem("guard invocation", {".github/workflows/pr-verify.yml": PR_VERIFY.replace(
-            "      - run: python3 scripts/ci/verify_general_pr.py\n", "")})
+            "        run: python3 scripts/ci/verify_general_pr.py\n", "")})
 
 
 class MainTest(Fixture):
@@ -248,3 +294,110 @@ class MainTest(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- Fix B
+JOB_COMMANDS = [
+    ("general-pr-verify", "        run: ", "python3 scripts/ci/verify_general_pr.py"),
+    ("workflow-policy-guard", "      - run: ", "python3 scripts/ci/verify_workflow_policy.py"),
+    ("trusted-baseline-guard", "          ",
+     'python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"'),
+]
+CONFIGS_CMD = "run: python3 scripts/verify_configs.py"
+UNITTEST_CMD = "run: python3 -m unittest discover -s scripts/tests"
+PIP_CMD = "run: python3 -m pip install pyyaml"
+CATFILE_CMD = 'git cat-file -e "${PR_BASE_SHA}^{commit}"'
+
+
+def swap(text: str, needle: str, replacement: str) -> str:
+    assert needle in text, f"fixture 未命中：{needle!r}"
+    return text.replace(needle, replacement)
+
+
+class CommandContractInBaselineGuardTest(Fixture):
+    """Fix B §4.3/§4.4：可信基线 guard 必须校验候选 workflow 的**实际执行命令**。
+
+    该判定使用 guard 自带的**独立严格解析**（不 import 候选树代码），
+    因此候选无法通过修改自己的 guard 来自证安全。
+    """
+
+    def expect_rejected(self, pr_verify: str, job: str):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("没有被真正执行" in p or "缺少必需命令" in p for p in problems),
+                        f"{job}: {problems}")
+        return problems
+
+    def test_echo_not_executed_rejected_for_every_job(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                repl = prefix + "'echo \"NOT EXECUTED: " + body + "\"'"
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_command_in_comment_rejected(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, prefix + f"# {body}"), job)
+
+    def test_pipe_true_swallowing_rejected(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, prefix + body + " || true"), job)
+
+    def test_conditional_branch_rejected(self):
+        pr_verify = swap(PR_VERIFY, "        run: python3 scripts/ci/verify_general_pr.py",
+                         "        run: if false; then python3 scripts/ci/verify_general_pr.py; fi")
+        self.expect_rejected(pr_verify, "general-pr-verify")
+
+    def test_heredoc_hidden_command_rejected(self):
+        body = JOB_COMMANDS[2][2]
+        pr_verify = swap(PR_VERIFY, "          " + body,
+                         "          cat <<'EOF' > /tmp/x\n          " + body + "\n          EOF")
+        self.expect_rejected(pr_verify, "trusted-baseline-guard")
+
+    def test_fake_step_name_without_execution_rejected(self):
+        pr_verify = swap(PR_VERIFY, "      - run: python3 scripts/ci/verify_workflow_policy.py",
+                         "      - name: 🔐 workflow 策略 guard（结构化）\n        run: echo ok")
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("缺少必需命令" in p for p in problems), problems)
+
+    def test_missing_required_command_rejected(self):
+        pr_verify = swap(PR_VERIFY, CONFIGS_CMD, "run: echo skipped")
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("verify_configs.py" in p for p in problems), problems)
+
+    def test_unittest_noop_rejected(self):
+        pr_verify = swap(PR_VERIFY, UNITTEST_CMD,
+                         'run: echo "python3 -m unittest discover -s scripts/tests"')
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("unittest" in p for p in problems), problems)
+
+    def test_dependency_install_noop_rejected(self):
+        pr_verify = swap(PR_VERIFY, PIP_CMD, 'run: echo "python3 -m pip install pyyaml"')
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("pip install pyyaml" in p for p in problems), problems)
+
+    def test_base_availability_check_removed_rejected(self):
+        pr_verify = swap(PR_VERIFY, CATFILE_CMD, "true")
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("git cat-file" in p for p in problems), problems)
+
+    def test_baseline_missing_base_sha_flag_rejected(self):
+        pr_verify = swap(PR_VERIFY, "--base-sha", "--bogus")
+        problems = self.problems_after({".github/workflows/pr-verify.yml": pr_verify})
+        self.assertTrue(any("verify_policy_baseline.py" in p for p in problems), problems)
+
+    def test_contract_parser_is_independent_of_candidate_code(self):
+        """guard 自带解析实现，不 import 候选树模块（候选无法自证安全）。"""
+        src = (ROOT / "scripts" / "ci" / "verify_policy_baseline.py").read_text(encoding="utf-8")
+        self.assertNotIn("import workflow_command_contract", src)
+        self.assertNotIn("from workflow_command_contract", src)
+        self.assertTrue(hasattr(bl, "check_command_contract"))
+        self.assertTrue(hasattr(bl, "executed_commands"))
+
+    def test_benign_readme_change_still_passes(self):
+        self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])
+
+    def test_real_pr_verify_passes_contract(self):
+        real = (ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+        import yaml
+        self.assertEqual(bl.check_command_contract(yaml.safe_load(real)), [])

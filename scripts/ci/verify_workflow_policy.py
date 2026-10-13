@@ -25,6 +25,11 @@
   P10 pr-verify.yml 的 permissions 恰为 contents: read。
   P11 禁止直接改写 main 的常见路径（gh api/curl 改 refs、gh pr merge、push main、强制推送）。
   P12 图标仓库检出必须使用已批准 pin（不得用分支/标签）。
+  P13 必需 job 的**命令合同**：必需命令必须被真正执行（拒绝 echo/printf/true/注释/引号文本/
+      here-doc/条件分支/`|| true` 等空跑或执行语义绕过），辅助命令（安装依赖、SHA 解析、
+      base 提交可用性）按合同逐项声明并满足先后顺序。
+  P14 全局检查名唯一性：三个必需检查名/job 名只允许出现在 pr-verify.yml 的预期 job 中；
+      任何其它 workflow 声明同名 job 即失败（防止同名检查冒充必需检查）。
 
 用法：
   python3 scripts/ci/verify_workflow_policy.py [--root <仓库根>] [--json <输出路径>]
@@ -40,6 +45,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from workflow_command_contract import check_required_jobs  # noqa: E402
 
 WORKFLOW_DIR = ".github/workflows"
 REQUIRED_CHECKS_PATH = ".github/required-checks.json"
@@ -65,7 +73,10 @@ PINNED_ICONS_SHA = "f0f3bc2a44616885682ee5f0e5921540b964e2d8"
 ICONS_REPO = "Hawaiine/Oasisic-Icons"
 
 PR_VERIFY_WRITE_ALLOW: dict[str, str] = {"contents": "read"}
-AUTOMERGE_WRITE_ALLOW: dict[str, str] = {"contents": "read", "pull-requests": "write", "checks": "read"}
+# auto-merge job 需要：checks: read（check runs）+ actions: read（workflow run/job 身份认证）
+# + pull-requests: write（enablePullRequestAutoMerge）。绝不包含 actions: write / write-all。
+AUTOMERGE_WRITE_ALLOW: dict[str, str] = {"contents": "read", "pull-requests": "write",
+                                         "checks": "read", "actions": "read"}
 PUBLISH_WRITE_ALLOW: dict[str, str] = {"contents": "read"}
 
 AUTOMERGE_MARKERS = ("enablePullRequestAutoMerge", "request_automerge.py", "/auto_merge")
@@ -261,8 +272,11 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
     if is_candidate:
         if _write_scopes(top_perm):
             problems.append(f"{name}: 候选更新 workflow 顶层必须只读")
-        if "actions: write" in text:
-            problems.append(f"{name}: 不得声明 actions: write")
+        # 结构化：任何层级（顶层或 job）出现 actions: write 即失败
+        for scope, perm in [("顶层", top_perm)] + [(f"job '{j}'", _permissions(doc, job))
+                                                  for j, job in jobs.items()]:
+            if _perm_map(perm).get("actions") == "write":
+                problems.append(f"{name}: {scope} 不得声明 actions: write")
         publish = jobs.get("publish") or {}
         pperms = _perm_map(_permissions(doc, publish))
         if pperms != PUBLISH_WRITE_ALLOW:
@@ -318,6 +332,11 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
             if ref != PINNED_ICONS_SHA:
                 problems.append(f"{name}: {ICONS_REPO} 检出必须使用已批准 pin {PINNED_ICONS_SHA}"
                                 f"（实际 ref={ref!r}）")
+
+    # P13：必需 job 的命令合同（只有 pr-verify.yml 承载必需检查）
+    if is_pr_verify:
+        contract_problems, _contract_report = check_required_jobs(doc)
+        problems.extend(contract_problems)
 
     # P11：直接改写 main 的路径（全部 workflow 生效；旧直推 workflow 由 pin 保证不变）
     if not waive_legacy_patterns:
@@ -378,6 +397,28 @@ def check_required_checks_file(path: Path) -> tuple[list[str], list[str], list[d
     return problems, names, checks
 
 
+def check_check_name_uniqueness(docs: dict[str, dict], required: list[str]) -> list[str]:
+    """P14：必需检查名/job 名只能出现在 pr-verify.yml 的预期 job 中。"""
+    problems: list[str] = []
+    pr_verify_name = Path(PR_VERIFY).name
+    for fname, doc in docs.items():
+        if fname == pr_verify_name:
+            continue
+        for jid, job in (doc.get("jobs") or {}).items():
+            if not isinstance(job, dict):
+                continue
+            names = {str(jid)}
+            if job.get("name"):
+                names.add(str(job.get("name")))
+            for required_name in required:
+                if required_name in names:
+                    problems.append(
+                        f"{WORKFLOW_DIR}/{fname}: job '{jid}' 声明了必需检查名 {required_name!r} —— "
+                        f"必需检查名只允许出现在 {PR_VERIFY} 的预期 job 中"
+                        f"（否则其它 workflow 的同名成功检查可能冒充必需检查）")
+    return problems
+
+
 def check_legacy_daily_sync(root: Path) -> list[str]:
     """P3b：旧直推 workflow 必须逐字节不变（pin sha256）。"""
     path = root / LEGACY_DIRECT_WRITE
@@ -401,6 +442,7 @@ def run(root: Path) -> tuple[list[str], dict]:
     if not files:
         problems.append(f"{WORKFLOW_DIR}: 未找到 workflow 文件")
     checked: list[str] = []
+    docs: dict[str, dict] = {}
     for path in files:
         text = path.read_text(encoding="utf-8")
         try:
@@ -412,9 +454,14 @@ def run(root: Path) -> tuple[list[str], dict]:
             problems.append(f"{WORKFLOW_DIR}/{path.name}: workflow 必须是映射")
             continue
         checked.append(path.name)
+        docs[path.name] = doc
         problems.extend(check_workflow(path.relative_to(root), text, doc, required,
                                        waive_legacy_patterns=(legacy_pinned and path == legacy_path)))
+    problems.extend(check_check_name_uniqueness(docs, required))
     info = {"workflows_checked": checked, "required_checks": required,
+            "required_check_name_uniqueness": "P14：必需检查名仅允许出现在 pr-verify.yml",
+            "command_contract": "P13：必需命令必须被真正执行（拒绝 echo/printf/true/注释/引号文本/"
+                                "here-doc/条件分支/|| true 等空跑或执行语义绕过）",
             "expected_check_source": {"app_slug": EXPECTED_CHECK_APP_SLUG, "app_id": EXPECTED_CHECK_APP_ID},
             "legacy_daily_sync_pin": PINNED_LEGACY_DAILY_SYNC_SHA256,
             "legacy_daily_sync_pinned_ok": legacy_pinned,

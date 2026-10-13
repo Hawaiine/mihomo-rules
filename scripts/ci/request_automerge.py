@@ -67,19 +67,75 @@ def _require_dict(status: int, body: object, what: str, problems: list[str]) -> 
     return body
 
 
+def _pre_mutation_reconcile(*, repo: str, pr: int, head_sha: str, base_branch: str, required_manifest: str,
+                            token: str, api_base: str, getter, log=print) -> tuple[bool, list[str], dict]:
+    """发送 GraphQL mutation **紧邻之前**的只读状态对账（Fix C）。
+
+    必须确认：PR 仍 open、目标分支仍为 base_branch、`PR.base.sha` 与 `refs/heads/<base>` 当前 SHA
+    一致（base 未漂移）、`PR.head.sha` 仍等于完成检查时的 SHA、node_id 存在，
+    并**重新执行一次严格必需检查**（含 workflow/job 身份认证）。
+    任一 GET 失败、字段缺失或 SHA 不一致 ⇒ 返回 False（禁止 mutation）。
+    """
+    problems: list[str] = []
+    info: dict = {"phase": "pre-mutation"}
+    status, body = getter(f"{api_base}/repos/{repo}/pulls/{pr}", token)
+    pr_obj = _require_dict(status, body, "GET PR（mutation 前对账）", problems)
+    if pr_obj is None:
+        return False, problems, info
+    base_ref = (pr_obj.get("base") or {}).get("ref")
+    base_sha = (pr_obj.get("base") or {}).get("sha")
+    pr_head = (pr_obj.get("head") or {}).get("sha")
+    info.update({"pr_state": pr_obj.get("state"), "base_ref": base_ref, "base_sha": base_sha,
+                 "pr_head_sha": pr_head})
+    if pr_obj.get("state") != "open":
+        problems.append(f"mutation 前：PR 状态为 {pr_obj.get('state')!r}，非 open")
+    if pr_obj.get("merged"):
+        problems.append("mutation 前：PR 已被合并")
+    if base_ref != base_branch:
+        problems.append(f"mutation 前：PR 目标分支为 {base_ref!r}，非 {base_branch!r}")
+    if pr_head != head_sha:
+        problems.append(f"mutation 前：head SHA 漂移（{pr_head} != {head_sha}）")
+    if not pr_obj.get("node_id"):
+        problems.append("mutation 前：PR 缺少 node_id")
+    status, ref = getter(f"{api_base}/repos/{repo}/git/ref/heads/{base_branch}", token)
+    ref_obj = _require_dict(status, ref, f"GET refs/heads/{base_branch}（mutation 前对账）", problems)
+    if ref_obj is None:
+        return False, problems, info
+    main_sha = (ref_obj.get("object") or {}).get("sha")
+    info[f"refs_heads_{base_branch}"] = main_sha
+    if not main_sha:
+        problems.append(f"mutation 前：refs/heads/{base_branch} 响应缺少 sha")
+    elif base_sha != main_sha:
+        problems.append(f"mutation 前：PR base SHA {base_sha} != refs/heads/{base_branch} 当前 SHA "
+                        f"{main_sha}（base 漂移）")
+    if problems:
+        return False, problems, info
+    # 紧邻 mutation 前再次执行严格必需检查（来源/身份 + base 一致性）
+    ok, sub_report, sub_problems = vrc.verify(repo=repo, pr=int(pr), expected_head=head_sha,
+                                              required_manifest=required_manifest, token=token,
+                                              base_branch=base_branch, api_base=api_base, getter=getter,
+                                              log=log)
+    info["required_checks"] = sub_report
+    if not ok:
+        return False, [f"mutation 前必需检查复核未通过：{p}" for p in sub_problems], info
+    return True, [], info
+
+
 def run(*, repo: str, pr: int, head_sha: str, required_manifest: str, token: str, method: str = "SQUASH",
         api_base: str = "https://api.github.com", graphql_url: str | None = None, dry_run: bool = False,
-        getter=http_get_json, poster=http_post_json, log=print) -> dict:
+        base_branch: str = "main", getter=http_get_json, poster=http_post_json, log=print) -> dict:
     api_base = api_base.rstrip("/")
     graphql_url = graphql_url or f"{api_base}/graphql"
     report: dict = {"repo": repo, "pr": int(pr), "head_sha": head_sha, "method": method,
+                    "base_branch": base_branch,
                     "graphql_request_ok": False, "auto_merge_enabled": False, "merged": False,
                     "problems": [], "writes_performed": []}
 
     # 1) 严格必需检查（前置条件，fail-closed）
     ok, sub_report, problems = vrc.verify(repo=repo, pr=int(pr), expected_head=head_sha,
                                           required_manifest=required_manifest, token=token,
-                                          api_base=api_base, getter=getter, log=log)
+                                          base_branch=base_branch, api_base=api_base, getter=getter,
+                                          log=log)
     report["required_checks"] = sub_report
     if not ok:
         report["problems"] = [f"必需检查未满足：{p}" for p in problems]
@@ -104,12 +160,23 @@ def run(*, repo: str, pr: int, head_sha: str, required_manifest: str, token: str
         report["problems"].append("PR 缺少 node_id")
         report["reason"] = "无法取得 node_id（fail-closed）"
         return report
+
+    # 3) **mutation 紧邻之前**的只读对账（Fix C）：base 未漂移 + 必需检查来源/身份复核
+    ok, problems, recon = _pre_mutation_reconcile(
+        repo=repo, pr=int(pr), head_sha=head_sha, base_branch=base_branch,
+        required_manifest=required_manifest, token=token, api_base=api_base, getter=getter, log=log)
+    report["pre_mutation_reconciliation"] = recon
+    if not ok:
+        report["problems"] = list(report["problems"]) + problems
+        report["reason"] = "mutation 前状态对账失败（base/head 漂移或必需检查复核未通过）：不发送 mutation"
+        return report
+
     if dry_run:
-        report["reason"] = "dry-run：已完成全部只读校验，未发送 GraphQL 请求"
+        report["reason"] = "dry-run：已完成全部只读校验（含 mutation 前对账），未发送 GraphQL 请求"
         report["dry_run"] = True
         return report
 
-    # 3) GraphQL mutation：必须同时检查 HTTP 状态与 data 内容
+    # 4) GraphQL mutation：必须同时检查 HTTP 状态与 data 内容
     status, body = poster(graphql_url, token,
                           {"query": MUTATION, "variables": {"id": node_id, "method": method}})
     report["writes_performed"].append("POST /graphql enablePullRequestAutoMerge")
@@ -128,7 +195,7 @@ def run(*, repo: str, pr: int, head_sha: str, required_manifest: str, token: str
         return report
     report["graphql_request_ok"] = True
 
-    # 4) 回读确认 GitHub 是否真的接受（auto_merge 非空）
+    # 5) 回读确认 GitHub 是否真的接受（auto_merge 非空）
     status, body = getter(f"{api_base}/repos/{repo}/pulls/{pr}", token)
     after = _require_dict(status, body, "GET PR（回读）", report["problems"])
     if after is None:
@@ -139,13 +206,14 @@ def run(*, repo: str, pr: int, head_sha: str, required_manifest: str, token: str
     report["merged"] = bool(after.get("merged"))
     report["pr_state_after"] = after.get("state")
 
-    # 5) 只有真实合并后才报告 merge commit 与 main HEAD
+    # 6) 只有真实合并后才报告 merge commit 与 main HEAD
     if report["merged"]:
         report["merge_commit_sha"] = after.get("merge_commit_sha")
-        status, ref = getter(f"{api_base}/repos/{repo}/git/ref/heads/main", token)
-        ref_obj = _require_dict(status, ref, "GET ref heads/main", report["problems"])
+        status, ref = getter(f"{api_base}/repos/{repo}/git/ref/heads/{base_branch}", token)
+        ref_obj = _require_dict(status, ref, f"GET ref heads/{base_branch}", report["problems"])
         if ref_obj is not None:
             report["main_head_sha"] = (ref_obj.get("object") or {}).get("sha")
+            report["main_advanced"] = report["main_head_sha"] != recon.get("base_sha")
         report["reason"] = "PR 已真实合并（GitHub 已按 Ruleset 完成合并）"
         return report
     if not report["auto_merge_enabled"]:
@@ -167,6 +235,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--head-sha", required=True)
     ap.add_argument("--required-checks", default=vrc.DEFAULT_MANIFEST)
     ap.add_argument("--method", default="SQUASH", choices=["SQUASH", "MERGE", "REBASE"])
+    ap.add_argument("--base-branch", default="main")
     ap.add_argument("--api-base", default=os.environ.get("GITHUB_API_URL", "https://api.github.com"))
     ap.add_argument("--json")
     ap.add_argument("--dry-run", action="store_true")
@@ -176,7 +245,8 @@ def main(argv: list[str] | None = None) -> int:
         print("❌ 缺少 GITHUB_TOKEN", file=sys.stderr)
         return 1
     report = run(repo=a.repo, pr=a.pr, head_sha=a.head_sha, required_manifest=a.required_checks,
-                 token=token, method=a.method, api_base=a.api_base, dry_run=a.dry_run)
+                 token=token, method=a.method, api_base=a.api_base, dry_run=a.dry_run,
+                 base_branch=a.base_branch)
     text = json.dumps(report, ensure_ascii=False, indent=2)
     print(text)
     if a.json:

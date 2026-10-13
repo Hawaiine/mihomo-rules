@@ -47,27 +47,64 @@ jobs:
     name: general-pr-verify
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: |
+          set -euo pipefail
+          printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$' || { echo bad; exit 1; }
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
-      - run: python3 scripts/ci/verify_general_pr.py
+      - uses: actions/checkout@v7
+        with:
+          repository: Hawaiine/Oasisic-Icons
+          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
+          path: Oasisic-Icons
+          persist-credentials: false
+      - run: python3 -m pip install pyyaml
+      - name: guard
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 scripts/ci/verify_general_pr.py
+      - name: configs
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 scripts/verify_configs.py
+      - run: python3 scripts/verify_rulesets.py
+      - run: python3 scripts/icon_urls.py
+      - run: python3 scripts/readme_stats.py --check
+      - name: tests
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: python3 -m unittest discover -s scripts/tests
   workflow-policy-guard:
     name: workflow-policy-guard
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$'
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
+      - run: python3 -m pip install pyyaml
       - run: python3 scripts/ci/verify_workflow_policy.py
   trusted-baseline-guard:
     name: trusted-baseline-guard
     runs-on: ubuntu-latest
     steps:
+      - name: sha
+        run: printf '%s' "a" | grep -Eq '^[0-9a-f]{40}$'
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
-      - run: python3 scripts/ci/verify_policy_baseline.py --base-sha a --head-sha b
+      - run: python3 -m pip install pyyaml
+      - name: baseline
+        run: |
+          set -euo pipefail
+          git cat-file -e "${PR_BASE_SHA}^{commit}"
+          python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"
 """
 
 CANDIDATE = """name: 候选分支更新（PR-first）
@@ -113,6 +150,7 @@ jobs:
       contents: read
       pull-requests: write
       checks: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -125,7 +163,8 @@ jobs:
 
 
 def build_root(tmp: str, pr_verify: str = PR_VERIFY, candidate: str = CANDIDATE,
-               manifest: object = None, legacy: str | None = None) -> Path:
+               manifest: object = None, legacy: str | None = None,
+               extra: dict | None = None) -> Path:
     root = Path(tmp)
     (root / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
     (root / ".github" / "required-checks.json").write_text(
@@ -134,6 +173,8 @@ def build_root(tmp: str, pr_verify: str = PR_VERIFY, candidate: str = CANDIDATE,
     (root / ".github" / "workflows" / "candidate-pr-sync.yml").write_text(candidate, encoding="utf-8")
     if legacy is not None:
         (root / ".github" / "workflows" / "daily-sync.yml").write_text(legacy, encoding="utf-8")
+    for fname, text in (extra or {}).items():
+        (root / ".github" / "workflows" / fname).write_text(text, encoding="utf-8")
     return root
 
 
@@ -207,9 +248,9 @@ class RequiredChecksTest(Fixture):
         self.assertProblem("验证步骤不得带 if 条件", pr_verify=pr_verify)
 
     def test_removed_verification_step_is_rejected(self):
-        pr_verify = PR_VERIFY.replace("      - run: python3 scripts/ci/verify_general_pr.py\n", "")
+        pr_verify = PR_VERIFY.replace("        run: python3 scripts/ci/verify_general_pr.py\n", "")
         problems = self.problems(pr_verify=pr_verify)
-        self.assertTrue(any("verify_general_pr" in p or "必需检查" in p for p in problems), problems)
+        self.assertTrue(any("verify_general_pr" in p or "必需命令" in p for p in problems), problems)
 
     def test_job_id_mismatch_is_rejected(self):
         pr_verify = PR_VERIFY.replace("  general-pr-verify:\n    name: general-pr-verify\n",
@@ -342,20 +383,15 @@ class BypassTest(Fixture):
         self.assertProblem("persist-credentials: false", pr_verify=pr_verify)
 
     def test_icons_checkout_must_be_pinned(self):
-        pr_verify = PR_VERIFY.replace(
-            "      - run: python3 scripts/ci/verify_general_pr.py",
-            "      - uses: actions/checkout@v7\n        with:\n          repository: Hawaiine/Oasisic-Icons\n"
-            "          ref: main\n          persist-credentials: false\n"
-            "      - run: python3 scripts/ci/verify_general_pr.py")
+        pr_verify = PR_VERIFY.replace(f"          ref: {ICONS_SHA}", "          ref: main")
+        self.assertProblem("已批准 pin", pr_verify=pr_verify)
+
+    def test_icons_checkout_with_floating_tag_is_rejected(self):
+        pr_verify = PR_VERIFY.replace(f"          ref: {ICONS_SHA}", "          ref: v1.2.3")
         self.assertProblem("已批准 pin", pr_verify=pr_verify)
 
     def test_icons_checkout_with_pin_passes(self):
-        pr_verify = PR_VERIFY.replace(
-            "      - run: python3 scripts/ci/verify_general_pr.py",
-            f"      - uses: actions/checkout@v7\n        with:\n          repository: Hawaiine/Oasisic-Icons\n"
-            f"          ref: {ICONS_SHA}\n          persist-credentials: false\n"
-            "      - run: python3 scripts/ci/verify_general_pr.py")
-        self.assertEqual(self.problems(pr_verify=pr_verify), [])
+        self.assertEqual(self.problems(), [])
 
 
 class LegacyPinTest(Fixture):
@@ -385,3 +421,221 @@ class LegacyPinTest(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- P13
+# (job, YAML 前缀, 命令体) —— 篡改只替换命令体，保留 YAML 结构合法
+JOB_COMMANDS = [
+    ("general-pr-verify", "        run: ", "python3 scripts/ci/verify_general_pr.py"),
+    ("workflow-policy-guard", "      - run: ", "python3 scripts/ci/verify_workflow_policy.py"),
+    ("trusted-baseline-guard", "          ",
+     'python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"'),
+]
+GENERAL_CMD = "run: python3 scripts/ci/verify_general_pr.py"
+CONFIGS_CMD = "run: python3 scripts/verify_configs.py"
+POLICY_CMD = "- run: python3 scripts/ci/verify_workflow_policy.py"
+BASELINE_CMD = 'python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"'
+UNITTEST_CMD = "run: python3 -m unittest discover -s scripts/tests"
+README_CMD = "run: python3 scripts/readme_stats.py --check"
+PIP_CMD = "run: python3 -m pip install pyyaml"
+CATFILE_CMD = 'git cat-file -e "${PR_BASE_SHA}^{commit}"'
+
+
+def swap(text: str, needle: str, replacement: str) -> str:
+    """替换（要求命中，避免静默无效的 fixture）。"""
+    assert needle in text, f"fixture 未命中：{needle!r}"
+    return text.replace(needle, replacement)
+
+
+class CommandContractTest(Fixture):
+    """Fix B：必需命令必须**真正执行**；空跑/执行语义绕过必须被拒绝（三个必需 job 逐一覆盖）。"""
+
+    def each_job(self):
+        return JOB_COMMANDS
+
+    def expect_rejected(self, pr_verify: str, job: str):
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems),
+                        f"{job}: {problems}")
+        return problems
+
+    def test_echo_not_executed_rejected_for_every_required_job(self):
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                # YAML 侧用单引号包裹（值内含 ": "，否则不是合法 YAML 标量）
+                repl = prefix + "'echo \"NOT EXECUTED: " + body + "\"'"
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_printf_placeholder_rejected_for_every_required_job(self):
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          prefix + 'printf "%s\\n" "placeholder"'), job)
+
+    def test_comment_only_rejected_for_every_required_job(self):
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, prefix + f"# {body}"), job)
+
+    def test_quoted_text_only_rejected_for_every_required_job(self):
+        """把命令塞进引号里的说明文本（不执行）。"""
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                repl = prefix + "'\"" + body + "\"'"
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_true_placeholder_rejected_for_every_required_job(self):
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                problems = self.problems(pr_verify=swap(PR_VERIFY, prefix + body, prefix + "true"))
+                self.assertTrue(any("缺少必需命令" in p for p in problems), f"{job}: {problems}")
+
+    def test_pipe_true_swallowing_rejected_for_every_required_job(self):
+        for job, prefix, body in self.each_job():
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, prefix + body + " || true"), job)
+
+    def test_conditional_branch_rejected(self):
+        pr_verify = swap(PR_VERIFY, GENERAL_CMD,
+                         "run: if false; then python3 scripts/ci/verify_general_pr.py; fi")
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("没有被实际执行" in p for p in problems), problems)
+
+    def test_heredoc_hidden_command_rejected(self):
+        pr_verify = swap(PR_VERIFY, BASELINE_CMD,
+                         "cat <<'EOF' > /tmp/x\n          python3 scripts/ci/verify_policy_baseline.py "
+                         '--base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"\n          EOF')
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("没有被实际执行" in p for p in problems), problems)
+
+    def test_fake_step_name_without_execution_rejected(self):
+        """伪造步骤名称但实际不执行命令（§4.4.7）。"""
+        pr_verify = swap(PR_VERIFY, "      - run: python3 scripts/ci/verify_workflow_policy.py",
+                         "      - name: 🔐 workflow 策略 guard（结构化）\n        run: echo ok")
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("缺少必需命令" in p for p in problems), problems)
+
+    def test_unittest_replaced_by_noop_with_step_name_kept_rejected(self):
+        pr_verify = swap(PR_VERIFY, UNITTEST_CMD,
+                         'run: echo "python3 -m unittest discover -s scripts/tests"')
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("全量单元测试" in p for p in problems), problems)
+
+    def test_missing_configs_command_rejected(self):
+        pr_verify = swap(PR_VERIFY, CONFIGS_CMD, "run: echo skipped")
+        self.assertTrue(any("verify_configs.py" in p for p in self.problems(pr_verify=pr_verify)))
+
+    def test_readme_check_flag_removed_rejected(self):
+        pr_verify = swap(PR_VERIFY, README_CMD, "run: python3 scripts/readme_stats.py")
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("README 统计口径" in p for p in problems), problems)
+
+    def test_dependency_install_noop_rejected(self):
+        pr_verify = swap(PR_VERIFY, PIP_CMD, 'run: echo "python3 -m pip install pyyaml"')
+        self.assertTrue(any("安装依赖 pyyaml" in p for p in self.problems(pr_verify=pr_verify)))
+
+    def test_sha_validation_noop_rejected(self):
+        pr_verify = swap(PR_VERIFY, "run: printf '%s' \"a\" | grep -Eq '^[0-9a-f]{40}$'",
+                         'run: echo "grep -Eq ^[0-9a-f]{40}$"')
+        self.assertTrue(any("SHA 格式" in p for p in self.problems(pr_verify=pr_verify)))
+
+    def test_base_availability_check_removed_rejected(self):
+        pr_verify = swap(PR_VERIFY, CATFILE_CMD, "true")
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("base/head 提交可用" in p for p in problems), problems)
+
+    def test_base_check_moved_after_baseline_rejected(self):
+        """把 base 可用性检查放到基线 guard **之后**必须失败（步骤级顺序合同）。"""
+        pr_verify = PR_VERIFY.replace(
+            "      - name: baseline\n        run: |\n          set -euo pipefail\n"
+            "          git cat-file -e \"${PR_BASE_SHA}^{commit}\"\n"
+            "          python3 scripts/ci/verify_policy_baseline.py --base-sha \"${PR_BASE_SHA}\" "
+            "--head-sha \"${PR_HEAD_SHA}\"\n",
+            "      - name: baseline\n        run: |\n          set -euo pipefail\n"
+            "          python3 scripts/ci/verify_policy_baseline.py --base-sha \"${PR_BASE_SHA}\" "
+            "--head-sha \"${PR_HEAD_SHA}\"\n"
+            "      - name: late-base-check\n        run: git cat-file -e \"${PR_BASE_SHA}^{commit}\"\n")
+        assert pr_verify != PR_VERIFY, "fixture 未命中：baseline 步骤块"
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("必须位于" in p for p in problems), problems)
+
+    def test_real_layout_satisfies_contract_for_all_three_jobs(self):
+        self.assertEqual(self.problems(), [])
+
+
+# --------------------------------------------------------------------------- P14
+class CheckNameUniquenessTest(Fixture):
+    """Fix A.2：必需检查名只允许出现在 pr-verify.yml 的预期 job 中。"""
+
+    OTHER_JOB_SAME_ID = """name: other verification
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  general-pr-verify:
+    name: general-pr-verify
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"""
+
+    OTHER_JOB_SAME_NAME = """name: other verification
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  helper:
+    name: general-pr-verify
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"""
+
+    OTHER_JOB_BENIGN = """name: other verification
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"""
+
+    def test_other_workflow_declaring_required_job_id_rejected(self):
+        problems = self.problems(extra={"other-verify.yml": self.OTHER_JOB_SAME_ID})
+        self.assertTrue(any("声明了必需检查名" in p for p in problems), problems)
+
+    def test_other_workflow_declaring_required_job_name_rejected(self):
+        problems = self.problems(extra={"other-verify.yml": self.OTHER_JOB_SAME_NAME})
+        self.assertTrue(any("声明了必需检查名" in p for p in problems), problems)
+
+    def test_other_workflow_without_required_names_passes(self):
+        self.assertEqual(self.problems(extra={"other-verify.yml": self.OTHER_JOB_BENIGN}), [])
+
+    def test_all_three_names_are_protected(self):
+        for name in ("general-pr-verify", "workflow-policy-guard", "trusted-baseline-guard"):
+            with self.subTest(name=name):
+                text = (f"name: x\non:\n  pull_request:\npermissions:\n  contents: read\n"
+                        f"jobs:\n  {name}:\n    name: {name}\n"
+                        f"    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n")
+                problems = self.problems(extra={"other-verify.yml": text})
+                self.assertTrue(any("声明了必需检查名" in p for p in problems), problems)
+
+
+class AutoMergePermissionsWithActionsReadTest(Fixture):
+    def test_automerge_requires_actions_read_and_rejects_actions_write(self):
+        good = self.problems()
+        self.assertEqual(good, [])
+        with_write = swap(CANDIDATE, "      actions: read", "      actions: write")
+        problems = self.problems(candidate=with_write)
+        self.assertTrue(any("permissions 必须恰为" in p for p in problems), problems)
+
+    def test_missing_actions_read_rejected(self):
+        without = swap(CANDIDATE, "      actions: read\n", "")
+        problems = self.problems(candidate=without)
+        self.assertTrue(any("permissions 必须恰为" in p for p in problems), problems)

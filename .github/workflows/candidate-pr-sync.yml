@@ -421,6 +421,9 @@ jobs:
       contents: read
       pull-requests: write
       checks: read
+      # provenance 身份认证需要读取 workflow run / job 元数据（actions/runs、actions/runs/{id}/jobs）。
+      # 仅只读；绝不使用 actions: write / write-all。
+      actions: read
     steps:
       - name: 📥 检出默认分支（只用其脚本；不执行候选内容）
         uses: actions/checkout@v7

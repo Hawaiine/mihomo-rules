@@ -26,6 +26,8 @@ import tarfile
 import tempfile
 from pathlib import Path
 
+import yaml
+
 SENSITIVE_PREFIXES = (
     ".github/workflows/",
     ".github/required-checks.json",
@@ -141,6 +143,253 @@ def check_entries(text: str) -> dict[str, dict]:
     return {str(n): {} for n in ((doc or {}).get("required") or [])}
 
 
+def _strip_comment(line: str) -> str:
+    """去掉行尾注释（考虑引号状态）。"""
+    out, quote = [], None
+    for ch in line:
+        if quote:
+            out.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            out.append(ch)
+        elif ch == "#" and (not out or out[-1].isspace()):
+            break
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _logical_lines(script: str) -> list[str]:
+    """把 run 脚本切成逻辑命令行（去注释、合并续行、排除 here-doc 正文）。"""
+    import shlex
+
+    raw = script.split("\n")
+    logical: list[str] = []
+    buf = ""
+    for line in raw:
+        stripped = _strip_comment(line)
+        if not stripped.strip():
+            continue
+        if stripped.rstrip().endswith("\\"):
+            buf += stripped.rstrip()[:-1] + " "
+            continue
+        logical.append(buf + stripped)
+        buf = ""
+    if buf:
+        logical.append(buf)
+    out: list[str] = []
+    heredoc: str | None = None
+    for text in logical:
+        if heredoc is not None:
+            if text.strip() == heredoc:
+                heredoc = None
+            continue
+        try:
+            tokens = shlex.split(text, comments=False, posix=True)
+        except ValueError:
+            tokens = text.split()
+        hd = next((t for t in tokens if t.startswith("<<")), None)
+        if hd is not None:
+            heredoc = hd.lstrip("<").lstrip("-").strip("'\"") or "EOF"
+            continue
+        out.append(text)
+    return out
+
+
+def _segments(text: str) -> list[list[str]]:
+    """按 shell 操作符切成简单命令段。"""
+    import shlex
+
+    ops = {"|", "||", "&&", ";", "&", ">>", ">", "<", "<<"}
+    try:
+        tokens = shlex.split(text, comments=False, posix=True)
+    except ValueError:
+        tokens = text.split()
+    segs: list[list[str]] = [[]]
+    for tok in tokens:
+        if tok in ops:
+            if segs[-1]:
+                segs.append([])
+            continue
+        segs[-1].append(tok)
+    return [s for s in segs if s]
+
+
+NOOP_COMMANDS = {"echo", "printf", "true", "false", ":", "cat", "tee", "test", "[", "exit",
+                 "set", "return", "sleep", "ls", "pwd", "which", "type", "help"}
+INTERPRETERS = {"python", "python3", "bash", "sh", "dash", "zsh", "node", "ruby", "perl"}
+WRAPPERS = {"env", "sudo", "time", "command", "exec", "nohup"}
+
+
+def _command_word(seg: list[str]) -> str | None:
+    i = 0
+    while i < len(seg):
+        tok = seg[i]
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-"):
+                i += 1
+            continue
+        return tok
+    return None
+
+
+def executed_commands(doc: dict) -> list[tuple[str, list[str]]]:
+    """返回该 workflow 中**真正执行**的 (命令词, 参数) 列表。
+
+    严格口径：只接受单一简单命令（无 shell 操作符）、命令词不是空操作命令、
+    参数中不含带空白的「整段字符串」（防止把命令塞进引号/echo 文本）。
+    """
+    out: list[tuple[str, list[str]]] = []
+    for job in (doc.get("jobs") or {}).values():
+        for step in ((job or {}).get("steps") or []):
+            run = step.get("run") if isinstance(step, dict) else None
+            if not isinstance(run, str):
+                continue
+            for line in _logical_lines(run):
+                segs = _segments(line)
+                if len(segs) != 1:
+                    continue
+                cw = _command_word(segs[0])
+                if cw is None:
+                    continue
+                base_cw = cw.rsplit("/", 1)[-1]
+                if base_cw in NOOP_COMMANDS:
+                    continue
+                out.append((base_cw, segs[0][1:]))
+    return out
+
+
+# 必需命令合同（与 scripts/ci/workflow_command_contract.py 的集合保持一致；此处是
+# **独立实现**，不 import 候选树代码，以保证用 base 可信逻辑判定候选树）。
+REQUIRED_JOB_COMMANDS: dict[str, dict] = {
+    "general-pr-verify": {
+        "required_commands": [
+            {"script": "verify_general_pr.py"},
+            {"script": "verify_configs.py"},
+            {"script": "verify_rulesets.py"},
+            {"script": "icon_urls.py"},
+            {"script": "readme_stats.py", "args": ["--check"]},
+            {"tokens": ["-m", "unittest", "discover", "-s", "scripts/tests"]},
+        ],
+        "required_aux": [
+            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+             "before": "verify_general_pr.py"},
+            {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
+             "before": "verify_general_pr.py"},
+        ],
+    },
+    "workflow-policy-guard": {
+        "required_commands": [{"script": "verify_workflow_policy.py"}],
+        "required_aux": [
+            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+             "before": "verify_workflow_policy.py"},
+            {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
+             "before": "verify_workflow_policy.py"},
+        ],
+    },
+    "trusted-baseline-guard": {
+        "required_commands": [
+            {"script": "verify_policy_baseline.py", "args": ["--base-sha", "--head-sha"]},
+        ],
+        "required_aux": [
+            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+             "before": "verify_policy_baseline.py"},
+            {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
+             "before": "verify_policy_baseline.py"},
+            {"tokens": ["git", "cat-file", "-e"], "desc": "base/head 提交可用性检查",
+             "before": "verify_policy_baseline.py"},
+        ],
+    },
+}
+EXECUTABLE_SCRIPT_COMMANDS = {"verify_general_pr.py", "verify_configs.py", "verify_rulesets.py",
+                              "icon_urls.py", "readme_stats.py", "verify_workflow_policy.py",
+                              "verify_policy_baseline.py"}
+
+
+def executed_commands_indexed(doc: dict) -> list[dict]:
+    """逐**简单命令段**记录实际执行命令：{step, line, seg, cw, args, clean}。
+
+    `clean=True` 表示该行是**单一简单命令**（不含 `|`/`||`/`&&`/`;` 等操作符）——
+    必需命令要求 clean（防止 `|| true` 吞掉失败）；辅助命令允许出现在流水线/条件中。
+    """
+    out: list[dict] = []
+    for job in (doc.get("jobs") or {}).values():
+        for si, step in enumerate((job or {}).get("steps") or []):
+            run = step.get("run") if isinstance(step, dict) else None
+            if not isinstance(run, str):
+                continue
+            for ci, line in enumerate(_logical_lines(run)):
+                segs = _segments(line)
+                clean = len(segs) == 1
+                for gi, seg in enumerate(segs):
+                    cw = _command_word(seg)
+                    if cw is None:
+                        continue
+                    base_cw = cw.rsplit("/", 1)[-1]
+                    if base_cw in NOOP_COMMANDS:
+                        continue
+                    out.append({"step": si, "line": ci, "seg": gi, "cw": base_cw,
+                                "args": seg[1:], "clean": clean})
+    return out
+
+
+def _invokes(entry: dict, script: str) -> bool:
+    toks = [entry["cw"]] + entry["args"]
+    return any(_basename(t) == script and " " not in t and "\t" not in t for t in toks)
+
+
+def check_command_contract(doc: dict) -> list[str]:
+    """Fix B：候选 pr-verify.yml 的必要命令必须**真正执行**（不是只出现脚本名）。"""
+    problems: list[str] = []
+    jobs = doc.get("jobs") or {}
+    for job_id, spec in REQUIRED_JOB_COMMANDS.items():
+        job = jobs.get(job_id)
+        if not isinstance(job, dict):
+            problems.append(f"{PR_VERIFY}: required job {job_id!r} missing")
+            continue
+        indexed = executed_commands_indexed({"jobs": {job_id: job}})
+        text = " ".join(str(s.get("run") or "") for s in ((job.get("steps") or [])))
+        for want in spec["required_commands"]:
+            if "script" in want:
+                hits = [e for e in indexed if e["clean"] and _invokes(e, want["script"])]
+            else:
+                hits = [e for e in indexed if e["clean"]
+                        and all(t in ([e["cw"]] + e["args"]) for t in want["tokens"])]
+            need = want.get("args", [])
+            ok = any(all(any(a in t for t in e["args"]) for a in need) for e in hits)
+            if not ok:
+                label = want.get("script") or " ".join(want["tokens"])
+                if label in text:
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {label} 只出现脚本名"
+                                    f"但**没有被真正执行**（echo/注释/引号文本/here-doc/条件分支/"
+                                    f"|| true 等空跑或执行语义绕过）")
+                else:
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少必需命令 {label}")
+        for aux in spec["required_aux"]:
+            hits = [e for e in indexed if all(t in ([e["cw"]] + e["args"]) for t in aux["tokens"])]
+            if not hits:
+                problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少必需辅助命令 "
+                                f"{' '.join(aux['tokens'])}（{aux.get('desc', '')}）")
+                continue
+            if "before" in aux:
+                targets = [e for e in indexed if _invokes(e, aux["before"])]
+                if not targets:
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {aux.get('desc', '')} 要求 "
+                                    f"{aux['before']} 存在，但未找到该命令")
+                elif min((e["step"], e["line"]) for e in hits) >= min((e["step"], e["line"])
+                                                                      for e in targets):
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {aux.get('desc', '')} 必须位于 "
+                                    f"{aux['before']} 之前（步骤级顺序合同）")
+    return problems
+
+
+def _basename(token: str) -> str:
+    return token.rsplit("/", 1)[-1]
+
+
 def weakening_problems(base: str, head: str, root: Path) -> list[str]:
     problems: list[str] = []
 
@@ -197,8 +446,6 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
     base_prv = file_at(base, PR_VERIFY, root)
     head_prv = file_at(head, PR_VERIFY, root)
     if base_prv is not None and head_prv is not None:
-        import yaml  # 局部导入：仅此处需要
-
         def job_ids(text: str) -> dict[str, object]:
             doc = yaml.safe_load(text) or {}
             return {str(k): (v or {}).get("name") for k, v in (doc.get("jobs") or {}).items()}
@@ -259,11 +506,14 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
     if head_count < base_count:
         problems.append(f"scripts/tests: test case count shrank ({base_count} -> {head_count})")
 
-    # guard 调用不得被移除
+    # guard 调用不得被移除（同时由 check_command_contract 做「真正执行」判定）
     if head_prv is not None:
         for script in ("scripts/ci/verify_general_pr.py", BASE_GUARD):
             if script not in head_prv:
                 problems.append(f"{PR_VERIFY}: guard invocation {script} missing")
+        # Fix B：候选 pr-verify.yml 的必要命令必须**真正执行**
+        # （本 guard 自带独立严格解析，不 import 候选树代码，避免候选自证安全）
+        problems.extend(check_command_contract(yaml.safe_load(head_prv) or {}))
     return problems
 
 
