@@ -11,7 +11,8 @@
   4. 该 workflow run 的 `head_sha` 等于当前 PR head SHA；
   5. check run 的 `id` 能映射到该 workflow run 的 **job 记录**（Actions 中 check run id == job id），
      且该 job 的 `name` 等于 manifest 声明的 job 身份；
-  6. 该 job 的 `head_sha` 等于当前 PR head SHA，且 job 与 check run 的状态/结论不矛盾；
+  6. 该 job 记录的 `id`/`name`/`head_sha`/`status`/`conclusion` **全部存在**且与 check run 一致
+     （任一字段缺失/类型异常 ⇒ fail-closed，绝不当作兼容成功路径）；
   7. 该 check run 的 `app.slug`/`app.id` 等于 manifest 声明的来源（GitHub Actions）；
   8. 以上任一项缺失、不一致、无法查询或 API 异常 ⇒ **fail-closed**（禁止自动合并）。
 
@@ -190,6 +191,11 @@ def verify_check_run_provenance(*, check_run: dict, entry: dict, runs_by_suite: 
     if check_run.get("head_sha") != expected_head or pr_head != expected_head:
         problems.append(f"{name}: head SHA 不符（check={check_run.get('head_sha')} "
                         f"pr={pr_head} 期望={expected_head}）")
+    # C1：check run 自身的 status/conclusion 必需字段不得缺失（缺失即 fail-closed）
+    if check_run.get("status") is None:
+        problems.append(f"{name}: check run 缺少 status（fail-closed，不得当作兼容成功路径）")
+    if check_run.get("status") == "completed" and check_run.get("conclusion") is None:
+        problems.append(f"{name}: check run status=completed 但缺少 conclusion（fail-closed）")
 
     suite = (check_run.get("check_suite") or {}).get("id")
     info["check_suite_id"] = suite
@@ -219,18 +225,38 @@ def verify_check_run_provenance(*, check_run: dict, entry: dict, runs_by_suite: 
         return False, problems, info
     info["job_id"] = job.get("id")
     info["job_name"] = job.get("name")
+    info["job_status"] = job.get("status")
     info["job_conclusion"] = job.get("conclusion")
-    if job.get("name") != entry["job_id"]:
+    info["job_head_sha"] = job.get("head_sha")
+    # C1：job 记录的**完整身份字段**必须存在且一致；缺失/类型异常一律 fail-closed。
+    # 绝不能把「字段缺失」当成可兼容的成功路径。
+    if job.get("id") is None:
+        problems.append(f"{name}: job 记录缺少 id（fail-closed）")
+    elif int(job["id"]) != int(check_run["id"]):
+        problems.append(f"{name}: job id 与 check run id 不一致（job={job.get('id')} "
+                        f"check={check_run.get('id')}）")
+    if not job.get("name"):
+        problems.append(f"{name}: job 记录缺少 name（无法完成 job 身份认证，fail-closed）")
+    elif job.get("name") != entry["job_id"]:
         problems.append(f"{name}: job 身份不符（实际 job name {job.get('name')!r}，"
                         f"期望 {entry['job_id']!r}）")
-    if job.get("head_sha") not in (None, expected_head):
+    if job.get("head_sha") is None:
+        problems.append(f"{name}: job 记录缺少 head_sha（fail-closed）")
+    elif job.get("head_sha") != expected_head:
         problems.append(f"{name}: job head SHA 不符（{job.get('head_sha')} != {expected_head}）")
-    if job.get("status") is not None and check_run.get("status") is not None \
-            and job.get("status") != check_run.get("status"):
+    if job.get("status") is None:
+        problems.append(f"{name}: job 记录缺少 status（fail-closed）")
+    elif check_run.get("status") is None:
+        problems.append(f"{name}: check run 缺少 status，无法与 job 比对（fail-closed）")
+    elif job.get("status") != check_run.get("status"):
         problems.append(f"{name}: job 与 check run 状态不一致"
                         f"（job={job.get('status')} check={check_run.get('status')}）")
-    if job.get("conclusion") is not None and check_run.get("conclusion") is not None \
-            and job.get("conclusion") != check_run.get("conclusion"):
+    if job.get("conclusion") is None:
+        if job.get("status") == "completed":
+            problems.append(f"{name}: job 记录 status=completed 但缺少 conclusion（fail-closed）")
+    elif check_run.get("conclusion") is None:
+        problems.append(f"{name}: check run 缺少 conclusion，无法与 job 比对（fail-closed）")
+    elif job.get("conclusion") != check_run.get("conclusion"):
         problems.append(f"{name}: job 与 check run 结论不一致"
                         f"（job={job.get('conclusion')} check={check_run.get('conclusion')}）")
     return (not problems), problems, info
@@ -261,7 +287,12 @@ def select_checks(*, check_runs: list[dict], manifest: list[dict], workflow_runs
                           "expected_source": {"app_slug": entry["app_slug"], "app_id": entry["app_id"]},
                           "expected_workflow": entry["workflow"], "expected_job_id": entry["job_id"]}
         if not verified:
-            if any(c.get("status") != "completed" for c in candidates):
+            if any(c.get("status") is None for c in candidates):
+                # C1：status 字段缺失 = 响应不完整，绝不能降级成「还在跑」这种可等待状态
+                info_out["state"] = STATE_UNVERIFIED
+                info_out["detail"] = "同名检查缺少 status 字段：响应不完整，拒绝采信（fail-closed）"
+                problems.append(f"{name}: {info_out['detail']}")
+            elif any(c.get("status") != "completed" for c in candidates):
                 info_out["state"] = STATE_IN_PROGRESS
                 info_out["detail"] = "同名检查尚未完成，来源认证待其完成后判定"
                 problems.append(f"{name}: {info_out['detail']}"
@@ -289,7 +320,11 @@ def select_checks(*, check_runs: list[dict], manifest: list[dict], workflow_runs
                          "job_id": latest_info.get("job_id"), "job_name": latest_info.get("job_name"),
                          "details_url": latest.get("details_url"),
                          "superseded_verified_runs": superseded})
-        if latest.get("status") != "completed":
+        if latest.get("status") is None:
+            info_out["state"] = STATE_UNVERIFIED
+            info_out["detail"] = "check run 缺少 status（fail-closed）"
+            problems.append(f"{name}: {info_out['detail']}")
+        elif latest.get("status") != "completed":
             info_out["state"] = STATE_IN_PROGRESS
         elif latest.get("conclusion") == STRICT_CONCLUSION:
             info_out["state"] = STATE_SUCCESS

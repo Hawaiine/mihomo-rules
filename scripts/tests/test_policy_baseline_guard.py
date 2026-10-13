@@ -125,6 +125,58 @@ def git(args, cwd):
     return proc.stdout
 
 
+CANDIDATE = """name: candidate sync
+on:
+  schedule:
+    - cron: '45 22 * * *'
+permissions:
+  contents: read
+jobs:
+  request-auto-merge:
+    name: request-auto-merge
+    if: vars.CANDIDATE_SYNC_ENABLED == 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: wait
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s
+      - name: verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s
+      - name: automerge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s
+"""
+CAND_PATH = ".github/workflows/candidate-pr-sync.yml"
+AWAIT_STEP = ("      - name: wait\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+              "        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n")
+VERIFY_STEP = ("      - name: verify\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+               "        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n")
+AUTOMERGE_STEP = ("      - name: automerge\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+                  "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n")
+
+
+def block(prefix: str, body_lines: list[str]) -> str:
+    """把单行命令改写成多行 shell 块（保持 YAML 合法）。"""
+    if "run:" in prefix:
+        head, ind = prefix.rstrip() + " |", " " * (len(prefix) + 2)
+    else:
+        head, ind = None, prefix
+    return "\n".join(([head] if head else []) + [ind + ln for ln in body_lines])
+
+
 class Fixture(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -137,6 +189,7 @@ class Fixture(unittest.TestCase):
         (self.root / "scripts" / "tests").mkdir(parents=True)
         self.write({".github/required-checks.json": json.dumps(MANIFEST, ensure_ascii=False, indent=2),
                     ".github/workflows/pr-verify.yml": PR_VERIFY,
+                    ".github/workflows/candidate-pr-sync.yml": CANDIDATE,
                     ".github/workflows/daily-sync.yml": LEGACY,
                     "scripts/tests/test_sample.py": SAMPLE_TEST,
                     "scripts/ci/verify_workflow_policy.py": (ROOT / "scripts" / "ci" / "verify_workflow_policy.py").read_text(encoding="utf-8"),
@@ -401,3 +454,127 @@ class CommandContractInBaselineGuardTest(Fixture):
         real = (ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
         import yaml
         self.assertEqual(bl.check_command_contract(yaml.safe_load(real)), [])
+
+
+# ------------------------------------------------------------------ Fix A3（第四轮）
+class CommandExecutionProofInBaselineTest(Fixture):
+    """Fix A3：可信基线 guard 的**独立实现**必须拒绝同样的执行语义绕过。"""
+
+    def expect_rejected(self, text: str, label: str):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": text})
+        self.assertTrue(any("没有被真正执行" in p or "缺少必需命令" in p for p in problems),
+                        f"{label}: {problems}")
+        return problems
+
+    def test_py_compile_substitution_rejected_for_every_job(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          prefix + "python3 -m py_compile " + body[len("python3 "):]), job)
+
+    def test_inline_c_substitution_rejected_for_every_job(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          prefix + "python3 -c \"print('noop')\" " + body[len("python3 "):]), job)
+
+    def test_cross_line_if_false_rejected_for_every_job(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          block(prefix, ["if false; then", "  " + body, "fi"])), job)
+
+    def test_uncalled_function_rejected_for_every_job(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          block(prefix, ["g() {", "  " + body, "}"])), job)
+
+    def test_case_branch_rejected(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          block(prefix, ["case \"$X\" in", "  a) " + body + " ;;", "esac"])), job)
+
+    def test_for_loop_rejected(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          block(prefix, ["for i in 1; do", "  " + body, "done"])), job)
+
+    def test_subshell_rejected(self):
+        for job, prefix, body in JOB_COMMANDS:
+            with self.subTest(job=job):
+                self.expect_rejected(swap(PR_VERIFY, prefix + body,
+                                          block(prefix, ["(", "  " + body, ")"])), job)
+
+    def test_brace_group_rejected(self):
+        job, prefix, body = JOB_COMMANDS[2]
+        self.expect_rejected(swap(PR_VERIFY, prefix + body, prefix + "{ " + body + "; }"), job)
+
+    def test_real_layout_passes(self):
+        self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])
+
+
+# ------------------------------------------------------------------ Fix B4/B5（第四轮）
+class AutoMergeContractInBaselineTest(Fixture):
+    """Fix B4/B5：基线 guard 必须独立拒绝 echo 化前置命令与直接 mutation。"""
+
+    def candidate_problems(self, text: str) -> list[str]:
+        return self.problems_after({CAND_PATH: text})
+
+    def test_helper_echoed_rejected(self):
+        for label, step in (("await_checks.py", AWAIT_STEP), ("verify_required_checks.py", VERIFY_STEP),
+                            ("request_automerge.py", AUTOMERGE_STEP)):
+            with self.subTest(helper=label):
+                tail = step.split("        run: python3 scripts/ci/" + label + " ", 1)[1].strip()
+                repl = ("      - name: x\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+                        "        run: |\n          echo \"NOT EXECUTED: " + label + "\" " + tail + "\n")
+                problems = self.candidate_problems(CANDIDATE.replace(step, repl))
+                self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems), problems)
+
+    def test_helper_in_if_false_rejected(self):
+        body = "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"
+        repl = ("      - name: automerge\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+                "        run: |\n          if false; then\n            " + body + "\n          fi\n")
+        problems = self.candidate_problems(CANDIDATE.replace(AUTOMERGE_STEP, repl))
+        self.assertTrue(any("没有被实际执行" in p for p in problems), problems)
+
+    def test_direct_gh_api_graphql_rejected(self):
+        text = CANDIDATE.replace(
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: |\n          gh api graphql -f query='mutation{enablePullRequestAutoMerge}'\n"
+            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+        problems = self.candidate_problems(text)
+        self.assertTrue(any("直接 auto-merge mutation 标记" in p for p in problems), problems)
+
+    def test_direct_rest_merge_rejected(self):
+        text = CANDIDATE.replace(
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: |\n          curl -X PUT https://api.github.com/repos/o/r/pulls/1/merge\n"
+            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+        problems = self.candidate_problems(text)
+        self.assertTrue(any("REST merge 端点" in p for p in problems), problems)
+
+    def test_gh_pr_merge_rejected(self):
+        text = CANDIDATE.replace(
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: |\n          gh pr merge 1 --squash\n"
+            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+        problems = self.candidate_problems(text)
+        self.assertTrue(any("gh pr merge" in p for p in problems), problems)
+
+    def test_curl_graphql_rejected(self):
+        text = CANDIDATE.replace(
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: |\n          curl -sS https://api.github.com/graphql -d @payload.json\n"
+            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+        problems = self.candidate_problems(text)
+        self.assertTrue(any("HTTP 客户端直接发 GraphQL" in p for p in problems), problems)
+
+    def test_missing_helper_rejected(self):
+        problems = self.candidate_problems(CANDIDATE.replace(AUTOMERGE_STEP, ""))
+        self.assertTrue(any("request_automerge.py" in p for p in problems), problems)
+
+    def test_real_candidate_passes(self):
+        self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])

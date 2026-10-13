@@ -156,10 +156,25 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s
-      - run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s
-      - run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s
+      - name: wait
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s
+      - name: verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s
+      - name: automerge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s
 """
+AWAIT_STEP = ("      - name: wait\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+              "        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n")
+VERIFY_STEP = ("      - name: verify\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+               "        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n")
+AUTOMERGE_STEP = ("      - name: automerge\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+                  "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n")
 
 
 def build_root(tmp: str, pr_verify: str = PR_VERIFY, candidate: str = CANDIDATE,
@@ -300,24 +315,17 @@ class SourceBindingTest(Fixture):
 
 class AutoMergeStructureTest(Fixture):
     def test_missing_verify_call_rejected(self):
-        candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n", "")
+        candidate = CANDIDATE.replace(VERIFY_STEP, "")
         self.assertProblem("verify_required_checks.py", candidate=candidate)
 
     def test_missing_await_call_rejected(self):
-        candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n", "")
+        candidate = CANDIDATE.replace(AWAIT_STEP, "")
         self.assertProblem("await_checks.py", candidate=candidate)
 
     def test_mutation_before_verification_rejected(self):
-        candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n"
-            "      - run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n"
-            "      - run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n",
-            "      - run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n"
-            "      - run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n"
-            "      - run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n")
-        self.assertProblem("必须位于 auto-merge mutation 之前", candidate=candidate)
+        candidate = CANDIDATE.replace(AWAIT_STEP + VERIFY_STEP + AUTOMERGE_STEP,
+                                      AUTOMERGE_STEP + AWAIT_STEP + VERIFY_STEP)
+        self.assertProblem("独立步骤", candidate=candidate)
 
     def test_wrong_automerge_permissions_rejected(self):
         candidate = CANDIDATE.replace("      pull-requests: write\n      checks: read\n", "      actions: write\n")
@@ -359,14 +367,14 @@ class PublishIsolationTest(Fixture):
 class BypassTest(Fixture):
     def test_gh_pr_merge_rejected(self):
         candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
-            "      - run: gh pr merge 1 --squash")
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: gh pr merge 1 --squash")
         self.assertProblem("gh pr merge", candidate=candidate)
 
     def test_rest_merge_endpoint_rejected(self):
         candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
-            "      - run: curl -X PUT https://api.github.com/repos/o/r/pulls/1/merge")
+            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: curl -X PUT https://api.github.com/repos/o/r/pulls/1/merge")
         self.assertProblem("merge 端点", candidate=candidate)
 
     def test_pull_request_target_rejected(self):
@@ -639,3 +647,212 @@ class AutoMergePermissionsWithActionsReadTest(Fixture):
         without = swap(CANDIDATE, "      actions: read\n", "")
         problems = self.problems(candidate=without)
         self.assertTrue(any("permissions 必须恰为" in p for p in problems), problems)
+
+
+# --------------------------------------------------------------------------- Fix A（第四轮）
+def block(prefix: str, body_lines: list[str]) -> str:
+    """把单行命令改写成多行 shell 块（保持 YAML 合法）。"""
+    if "run:" in prefix:                     # 普通标量：必须显式块标量
+        head, ind = prefix.rstrip() + " |", " " * (len(prefix) + 2)
+    else:                                    # 已在块标量内
+        head, ind = None, prefix
+    return "\n".join(([head] if head else []) + [ind + ln for ln in body_lines])
+
+
+class CommandExecutionProofTest(Fixture):
+    """Fix A：`-m py_compile`、`-c`、跨行控制流、未调用函数等都不算「执行」。"""
+
+    def expect_rejected(self, pr_verify: str, label: str):
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems),
+                        f"{label}: {problems}")
+        return problems
+
+    def each(self):
+        return JOB_COMMANDS
+
+    def test_py_compile_substitution_rejected_for_every_job(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = prefix + "python3 -m py_compile " + body[len("python3 "):]
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_inline_c_substitution_rejected_for_every_job(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = prefix + "python3 -c \"print('noop')\" " + body[len("python3 "):]
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_cross_line_if_false_rejected_for_every_job(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["if false; then", "  " + body, "fi"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_uncalled_shell_function_rejected_for_every_job(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["run_guard() {", "  " + body, "}"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_case_branch_rejected(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["case \"$X\" in", "  a) " + body + " ;;", "esac"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_for_loop_rejected(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["for i in 1; do", "  " + body, "done"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_while_loop_rejected(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["while false; do", "  " + body, "done"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_subshell_rejected(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["(", "  " + body, ")"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_brace_group_rejected(self):
+        for job, prefix, body in self.each():
+            with self.subTest(job=job):
+                repl = block(prefix, ["{", "  " + body, "}"])
+                self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_single_line_brace_group_rejected(self):
+        job, prefix, body = JOB_COMMANDS[2]          # baseline job（块标量内，无需引号）
+        repl = prefix + "{ " + body + "; }"
+        self.expect_rejected(swap(PR_VERIFY, prefix + body, repl), job)
+
+    def test_real_layout_still_passes(self):
+        self.assertEqual(self.problems(), [])
+
+
+def replace_run(step: str, new_lines: list[str]) -> str:
+    """把 step 的 `run: <cmd>` 换成块标量（避免 YAML 标量转义问题）。"""
+    head, sep, tail = step.partition("        run: ")
+    assert sep, step
+    assert tail.endswith("\n")
+    indent = " " * 10
+    return head + "        run: |\n" + "".join(indent + ln + "\n" for ln in new_lines)
+
+
+class AutoMergeCommandContractTest(Fixture):
+    """Fix B：auto-merge 三个前置命令必须真正执行、顺序正确、独立步骤、带 env。"""
+
+    def test_each_helper_replaced_by_echo_rejected(self):
+        for label, step in (("await_checks.py", AWAIT_STEP), ("verify_required_checks.py", VERIFY_STEP),
+                            ("request_automerge.py", AUTOMERGE_STEP)):
+            with self.subTest(helper=label):
+                body = ("echo \"NOT EXECUTED: " + label + "\" "
+                        + step.split("        run: python3 scripts/ci/" + label + " ", 1)[1].strip())
+                repl = replace_run(step, [body])
+                problems = self.problems(candidate=CANDIDATE.replace(step, repl))
+                self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems), problems)
+
+    def test_helper_in_comment_rejected(self):
+        repl = replace_run(AUTOMERGE_STEP,
+                           ["# python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"])
+        problems = self.problems(candidate=CANDIDATE.replace(AUTOMERGE_STEP, repl))
+        self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems), problems)
+
+    def test_helper_moved_into_if_false_rejected(self):
+        body = "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"
+        repl = replace_run(AUTOMERGE_STEP, ["if false; then", "  " + body, "fi"])
+        problems = self.problems(candidate=CANDIDATE.replace(AUTOMERGE_STEP, repl))
+        self.assertTrue(any("没有被实际执行" in p for p in problems), problems)
+
+    def test_helper_via_uncalled_function_rejected(self):
+        body = "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"
+        repl = replace_run(AUTOMERGE_STEP, ["am() {", "  " + body, "}"])
+        problems = self.problems(candidate=CANDIDATE.replace(AUTOMERGE_STEP, repl))
+        self.assertTrue(any("没有被实际执行" in p for p in problems), problems)
+
+    def test_missing_expected_head_sha_arg_rejected(self):
+        repl = AWAIT_STEP.replace(" --expected-head-sha s", "")
+        problems = self.problems(candidate=CANDIDATE.replace(AWAIT_STEP, repl))
+        self.assertTrue(any("await_checks.py" in p for p in problems), problems)
+
+    def test_missing_env_rejected(self):
+        repl = VERIFY_STEP.replace("        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n", "")
+        problems = self.problems(candidate=CANDIDATE.replace(VERIFY_STEP, repl))
+        self.assertTrue(any("必须声明 env GITHUB_TOKEN" in p for p in problems), problems)
+
+    def test_helpers_collapsed_into_one_step_rejected(self):
+        merged = ("      - name: merged\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+                  "        run: |\n"
+                  "          python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n"
+                  "          python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n"
+                  "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n")
+        problems = self.problems(candidate=CANDIDATE.replace(AWAIT_STEP + VERIFY_STEP + AUTOMERGE_STEP, merged))
+        self.assertTrue(any("独立步骤" in p for p in problems), problems)
+
+    def test_real_candidate_satisfies_automerge_contract(self):
+        self.assertEqual(self.problems(), [])
+
+
+class DirectAutoMergeMutationTest(Fixture):
+    """Fix B3：workflow 内禁止直接发送 auto-merge / 合并 mutation（必须走 helper）。"""
+
+    def inject(self, command: str) -> str:
+        return CANDIDATE.replace(
+            AUTOMERGE_STEP,
+            replace_run(AUTOMERGE_STEP,
+                        [command, "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"]))
+
+    def assert_rejected(self, command: str, needle: str):
+        problems = self.problems(candidate=self.inject(command))
+        self.assertTrue(any(needle in p for p in problems), f"{command!r} -> {problems}")
+
+    def test_gh_api_graphql_enable_auto_merge_rejected(self):
+        self.assert_rejected(
+            'gh api graphql -f query=\'mutation{enablePullRequestAutoMerge(input:{pullRequestId:"x",'
+            'mergeMethod:MERGE})}\'', "直接 auto-merge mutation 标记")
+
+    def test_gh_api_graphql_generic_rejected(self):
+        self.assert_rejected("gh api graphql -f query='query{viewer{login}}'", "gh api graphql")
+
+    def test_rest_merge_endpoint_rejected(self):
+        self.assert_rejected('curl -sS -X PUT -H "Authorization: Bearer $TOKEN" '
+                             '"https://api.github.com/repos/o/r/pulls/1/merge"', "REST merge 端点")
+
+    def test_gh_pr_merge_rejected(self):
+        self.assert_rejected("gh pr merge 1 --squash", "gh pr merge")
+
+    def test_curl_graphql_rejected(self):
+        self.assert_rejected('curl -sS https://api.github.com/graphql -d @payload.json', "HTTP 客户端直接发 GraphQL")
+
+    def test_shell_wrapper_bypass_rejected(self):
+        self.assert_rejected('bash -c "gh api graphql -f query=\'mutation{enablePullRequestAutoMerge}\'"',
+                             "直接 auto-merge mutation 标记")
+
+    def test_interpreter_inline_wrapper_rejected(self):
+        self.assert_rejected('python3 -c "import json;print(\'enablePullRequestAutoMerge\')"',
+                             "直接 auto-merge mutation 标记")
+
+    def test_direct_mutation_in_pr_verify_rejected(self):
+        """任何 workflow 都不得直接 mutation（含 pr-verify.yml）。"""
+        pr_verify = swap(PR_VERIFY, "        run: python3 scripts/ci/verify_general_pr.py",
+                         block("        run: ", ["gh api graphql -f query=\'mutation{"
+                                                "enablePullRequestAutoMerge}\'"]))
+        problems = self.problems(pr_verify=pr_verify)
+        self.assertTrue(any("直接 auto-merge mutation 标记" in p for p in problems), problems)
+
+    def test_real_candidate_has_no_direct_mutation(self):
+        self.assertEqual(self.problems(), [])
+
+    def test_readonly_auto_merge_field_is_not_a_violation(self):
+        """读取 PR 对象的 auto_merge 字段不是 mutation（避免误伤只读回读）。"""
+        candidate = CANDIDATE.replace(
+            AUTOMERGE_STEP,
+            replace_run(AUTOMERGE_STEP, [
+                "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+                'curl -sS "https://api.github.com/repos/o/r/pulls/1" | python3 -c '
+                '\'import json,sys;d=json.load(sys.stdin);print(d.get("auto_merge"))\'']))
+        self.assertEqual(self.problems(candidate=candidate), [])

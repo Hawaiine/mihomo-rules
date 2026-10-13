@@ -14,8 +14,9 @@
   P4  pr-verify.yml 的 job 集合必须与必需检查清单一致，job name == job id；
       必需检查 job **不得**有 job-level `if`，其验证步骤不得带可跳过的 `if`。
   P4b 必需检查清单必须声明预期来源（GitHub Actions integration：app_slug/app_id）。
-  P5  自动合并必须：同 job 内先执行 verify_required_checks.py（且在 mutation 之前），
-      权限恰为 {contents: read, pull-requests: write, checks: read}。
+  P5  自动合并必须：在同一 job 内**真正执行**（顶层简单命令、解释器位置参数）
+      await_checks.py → verify_required_checks.py → request_automerge.py（顺序、独立步骤、env），
+      权限恰为 {contents: read, pull-requests: write, checks: read, actions: read}。
   P6  候选更新 workflow：顶层只读；publish 不得持有 actions: write、不得检出 PR head、
       不得执行候选内容（apply 之后不得运行仓库脚本）；禁止任何 push main 路径。
   P7  检出 PR head 的 job 不得同时持有 contents: write。
@@ -30,6 +31,9 @@
       base 提交可用性）按合同逐项声明并满足先后顺序。
   P14 全局检查名唯一性：三个必需检查名/job 名只允许出现在 pr-verify.yml 的预期 job 中；
       任何其它 workflow 声明同名 job 即失败（防止同名检查冒充必需检查）。
+  P15 任何 workflow 都不得直接发送 auto-merge / 合并 mutation（gh api graphql、
+      REST merge 端点、curl graphql、gh pr merge 及其包装形态）——必须通过
+      scripts/ci/request_automerge.py 执行。
 
 用法：
   python3 scripts/ci/verify_workflow_policy.py [--root <仓库根>] [--json <输出路径>]
@@ -47,7 +51,9 @@ from typing import Any
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from workflow_command_contract import check_required_jobs  # noqa: E402
+from workflow_command_contract import (  # noqa: E402
+    check_automerge_job, check_required_jobs, direct_mutation_problems,
+)
 
 WORKFLOW_DIR = ".github/workflows"
 REQUIRED_CHECKS_PATH = ".github/required-checks.json"
@@ -79,10 +85,9 @@ AUTOMERGE_WRITE_ALLOW: dict[str, str] = {"contents": "read", "pull-requests": "w
                                          "checks": "read", "actions": "read"}
 PUBLISH_WRITE_ALLOW: dict[str, str] = {"contents": "read"}
 
+# 用于**定位** auto-merge job 的标记（判定本身由 workflow_command_contract 的严格合同完成，
+# 这里不再用子串作为「已调用」的证据）。
 AUTOMERGE_MARKERS = ("enablePullRequestAutoMerge", "request_automerge.py", "/auto_merge")
-REQUIRED_CHECKS_CALL = "scripts/ci/verify_required_checks.py"
-AWAIT_CALL = "scripts/ci/await_checks.py"
-AUTOMERGE_CALL = "scripts/ci/request_automerge.py"
 
 # 直接改写 main 的常见路径（结构无关的显式禁止）
 DIRECT_MAIN_PATTERNS = (
@@ -247,26 +252,20 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
         if _perm_map(top_perm) != PR_VERIFY_WRITE_ALLOW:
             problems.append(f"{name}: permissions 必须恰为 {PR_VERIFY_WRITE_ALLOW}（实际 {top_perm!r}）")
 
-    # P5：自动合并（结构：同 job 内先验证，权限恰为允许集合）
+    # P5：自动合并（Fix B —— 三个前置命令必须**真正执行**、顺序正确、且不得绕过 helper）
+    # 判定基于解析后的 run 块（顶层简单命令 + 解释器位置参数），不再使用任何子串搜索。
     for jid, job in jobs.items():
         job_text = " ".join(_step_text(s) for s in _steps(job))
-        if not any(m in job_text for m in AUTOMERGE_MARKERS):
+        if not any(m in job_text for m in AUTOMERGE_MARKERS) and jid != "request-auto-merge":
             continue
-        runs = [str(s.get("run") or "") for s in _steps(job)]
-        idx_verify = next((i for i, r in enumerate(runs) if REQUIRED_CHECKS_CALL in r), None)
-        idx_mutate = next((i for i, s in enumerate(_steps(job))
-                           if any(m in _step_text(s) for m in AUTOMERGE_MARKERS)), None)
-        if idx_verify is None:
-            problems.append(f"{name}: job '{jid}' 启用 auto-merge 前必须调用 {REQUIRED_CHECKS_CALL}")
-        elif idx_mutate is not None and idx_verify > idx_mutate:
-            problems.append(f"{name}: job '{jid}' 的必需检查验证必须位于 auto-merge mutation 之前")
-        if AWAIT_CALL not in job_text:
-            problems.append(f"{name}: job '{jid}' 必须先调用 {AWAIT_CALL}（有界等待，不得在检查完成前请求合并）")
-        if AUTOMERGE_CALL not in job_text:
-            problems.append(f"{name}: job '{jid}' 必须通过 {AUTOMERGE_CALL} 请求 auto-merge（严格三态区分）")
+        am_problems, _am_details = check_automerge_job(doc, jid)
+        problems.extend(f"{name}: {p}" for p in am_problems)
         perms = _perm_map(_permissions(doc, job))
         if perms != AUTOMERGE_WRITE_ALLOW:
             problems.append(f"{name}: job '{jid}' permissions 必须恰为 {AUTOMERGE_WRITE_ALLOW}（实际 {perms!r}）")
+
+    # P15：任何 workflow 都不得自己直接发送 auto-merge / 合并 mutation（必须走 helper）
+    problems.extend(direct_mutation_problems(doc, name))
 
     # P6：候选更新 workflow
     if is_candidate:
@@ -461,7 +460,11 @@ def run(root: Path) -> tuple[list[str], dict]:
     info = {"workflows_checked": checked, "required_checks": required,
             "required_check_name_uniqueness": "P14：必需检查名仅允许出现在 pr-verify.yml",
             "command_contract": "P13：必需命令必须被真正执行（拒绝 echo/printf/true/注释/引号文本/"
-                                "here-doc/条件分支/|| true 等空跑或执行语义绕过）",
+                                "here-doc/条件分支/|| true、以及 `-m py_compile`/`-c`/非顶层"
+                                "（if/for/while/case/子 shell/函数体）等执行语义绕过）",
+            "automerge_command_contract": "P5：await_checks → verify_required_checks → "
+                                          "request_automerge 必须真正执行且顺序/步骤/env 正确",
+            "direct_mutation_guard": "P15：workflow 内禁止直接 auto-merge/合并 mutation",
             "expected_check_source": {"app_slug": EXPECTED_CHECK_APP_SLUG, "app_id": EXPECTED_CHECK_APP_ID},
             "legacy_daily_sync_pin": PINNED_LEGACY_DAILY_SYNC_SHA256,
             "legacy_daily_sync_pinned_ok": legacy_pinned,

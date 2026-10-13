@@ -24,6 +24,7 @@
 """
 from __future__ import annotations
 
+import re
 import shlex
 from dataclasses import dataclass, field
 from typing import Any
@@ -101,6 +102,9 @@ class CommandLine:
     line_no: int
     index: int = 0            # 该 job 内所有逻辑命令行的**全局**序号（用于跨步骤顺序判定）
     from_heredoc: bool = False
+    depth: int = 0            # shell 块嵌套深度（0 = 顶层）
+    top_level: bool = True    # 是否位于顶层（只有顶层命令才算「确实执行」）
+    block_header: bool = False  # 该行本身是块头（if/for/while/case/函数定义/`{`/`(`）
 
     @property
     def clean(self) -> bool:
@@ -210,6 +214,90 @@ def command_word(tokens: list[str]) -> str | None:
     return None
 
 
+BLOCK_OPENERS = {"if", "for", "while", "until", "case", "select"}
+BLOCK_CLOSERS = {"fi", "done", "esac"}
+
+
+def _opens_block(tokens: list[str]) -> bool:
+    """该行是否是 shell 块的开头（if/for/while/case/函数定义/`{`/`(`）。"""
+    if not tokens:
+        return False
+    first = tokens[0]
+    if first in BLOCK_OPENERS or first in ("{", "(", "function"):
+        return True
+    return "()" in first or (len(tokens) > 1 and tokens[1] == "()")
+
+
+def _closes_block(tokens: list[str]) -> bool:
+    if not tokens:
+        return False
+    return tokens[0] in BLOCK_CLOSERS or tokens[0] in ("}", ")")
+
+
+def annotate_structure(lines: list[CommandLine]) -> None:
+    """标注每条逻辑命令行的 shell 结构层级（Fix A2）。
+
+    保守口径：命令只要出现在条件分支、循环、case、子 shell、函数体或单行块内，
+    就**不算**「在顶层执行」。无法证明执行语义时 fail-closed ——
+    这覆盖 `if false; then … fi`、`run_guard() { … }`（未调用）、`case`、`for/while`、
+    子 shell `( … )`、单行块 `{ …; }` 等全部「可能不执行」的上下文。
+    """
+    depth = 0
+    for cmd in lines:
+        toks = cmd.tokens
+        header = _opens_block(toks)
+        if _closes_block(toks) and not header:
+            depth = max(0, depth - 1)
+        cmd.depth = depth
+        cmd.block_header = header
+        cmd.top_level = (depth == 0 and not header)
+        if header:
+            depth += 1
+            if toks and toks[-1] in BLOCK_CLOSERS | {"}", ")"}:
+                depth = max(0, depth - 1)     # 单行块：if x; then y; fi
+
+
+def _command_word_index(seg: list[str]) -> int | None:
+    """命令词在段内的下标（跳过 env/sudo/time 等包装）。"""
+    i = 0
+    while i < len(seg):
+        tok = seg[i]
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-"):
+                i += 1
+            if i < len(seg) and seg[i].startswith("-"):
+                i += 1
+                if i < len(seg) and not seg[i].startswith("-") and tok == "sudo":
+                    i += 1
+            continue
+        return i
+    return None
+
+
+def interpreter_target(seg: list[str]) -> str | None:
+    """解释器**真正执行的目标**（第一个位置参数）；`-m`/`-c` 形态返回 None。
+
+    这样 `python3 -m py_compile x.py`、`python3 -c "print(1)" x.py` 中的
+    x.py 不会被误判为「正在执行」——它只是普通参数。
+    """
+    idx = _command_word_index(seg)
+    if idx is None:
+        return None
+    i = idx + 1
+    while i < len(seg):
+        tok = seg[i]
+        if tok == "--":
+            return seg[i + 1] if i + 1 < len(seg) else None
+        if tok in ("-m", "-c"):
+            return None
+        if tok.startswith("-") and tok != "-":
+            i += 1
+            continue
+        return tok
+    return None
+
+
 def _basename(token: str) -> str:
     return token.rsplit("/", 1)[-1]
 
@@ -220,28 +308,38 @@ def _is_path_token(token: str) -> bool:
 
 
 def invokes_script(cmd: CommandLine, script: str) -> bool:
-    """该行是否**真正执行**了 `script`（basename 匹配 + 命令词是解释器或脚本自身）。"""
-    if not cmd.clean or cmd.from_heredoc:
+    """该行是否**真正执行**了 `script`。
+
+    必须同时满足（Fix A1/A2）：
+      1. 单一简单命令（无 `|`/`||`/`&&`/`;` 等操作符）且不是 here-doc 正文；
+      2. 位于**顶层**（不在 if/for/while/case/子 shell/函数体/单行块内）；
+      3. 命令词是解释器或脚本自身，且脚本路径必须是解释器的**第一个位置参数**
+         （`-m py_compile`、`-c "..."` 等形态中的脚本名只是普通参数，不算执行）。
+    """
+    if not cmd.clean or cmd.from_heredoc or not cmd.top_level:
         return False
-    cw = cmd.command_word()
-    if cw is None or cw in NOOP_COMMANDS:
-        return False
-    tokens = cmd.segments[0]
-    matched = [t for t in tokens if _is_path_token(t) and _basename(t) == script]
-    if not matched:
+    seg = cmd.segments[0]
+    cw = command_word(seg)
+    if cw is None or _basename(cw) in NOOP_COMMANDS:
         return False
     if _basename(cw) == script:
-        return True                      # 直接执行 ./scripts/...
-    return _basename(cw) in INTERPRETERS
+        return _is_path_token(cw)                       # 直接执行 ./scripts/x.py
+    if _basename(cw) not in INTERPRETERS:
+        return False
+    target = interpreter_target(seg)
+    return target is not None and _is_path_token(target) and _basename(target) == script
 
 
-def matches_tokens(cmd: CommandLine, tokens: list[str], want_cw: str | None = None) -> bool:
+def matches_tokens(cmd: CommandLine, tokens: list[str], want_cw: str | None = None,
+                   require_top_level: bool = False) -> bool:
     """该行（任一简单命令段）是否**真实执行**了指定命令。
 
     判定：该段的命令词不是空操作命令，且段内**精确包含**全部指定 token
     （精确匹配，不做子串匹配——`echo "pip install pyyaml"` 不算执行）。
     若给出 `want_cw`，还要求该段命令词的 basename 等于它。
     """
+    if require_top_level and not cmd.top_level:
+        return False
     for seg in cmd.segments:
         cw = command_word(seg)
         if cw is None or _basename(cw) in NOOP_COMMANDS:
@@ -262,7 +360,9 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
     for si, step in enumerate(steps):
         run = step.get("run")
         if isinstance(run, str):
-            for cmd in split_command_lines(run):
+            step_lines = split_command_lines(run)
+            annotate_structure(step_lines)     # 结构按 step 独立标注，避免跨 step 串扰
+            for cmd in step_lines:
                 cmd.step = step.get("name")  # type: ignore[attr-defined]
                 cmd.step_index = si            # type: ignore[attr-defined]
                 cmd.index = len(lines) + 1
@@ -280,7 +380,8 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
                     if all(any(a in t for t in cmd.segments[0]) for a in req.get("args", [])):
                         executed.append(cmd)
             elif "tokens" in req:
-                if matches_tokens(cmd, req["tokens"], want_cw=req.get("command_word")):
+                if matches_tokens(cmd, req["tokens"], want_cw=req.get("command_word"),
+                                  require_top_level=True):
                     executed.append(cmd)
         entry = {"desc": desc, "script": req.get("script"), "tokens": req.get("tokens"),
                  "executed_lines": [c.line_no for c in executed], "ok": bool(executed)}
@@ -290,7 +391,8 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
                 needle in str(s.get("run") or "") for s in steps)
             if present:
                 problems.append(f"{job_id}: {desc} —— 脚本/命令名出现但**没有被实际执行**"
-                                f"（疑似 echo/注释/引号文本/占位空跑）：{needle}")
+                                f"（echo/注释/引号文本/占位空跑/编译目标或普通参数/"
+                                f"条件分支或函数体等非顶层上下文）：{needle}")
             else:
                 problems.append(f"{job_id}: 缺少必需命令 —— {desc}（{needle}）")
             details["required_commands"].append(entry)
@@ -376,3 +478,107 @@ def check_required_jobs(doc: dict) -> tuple[list[str], dict]:
         problems.extend(f"pr-verify.yml: {p}" for p in probs)
         report[job_id] = details
     return problems, report
+
+
+# ============================================================ Fix B：auto-merge 命令合同
+AUTOMERGE_JOB_ID = "request-auto-merge"
+# 自动合并请求的安全顺序（必须是**真正执行**的独立步骤）
+AUTOMERGE_REQUIRED_STEPS: list[dict[str, Any]] = [
+    {"script": "await_checks.py", "args": ["--repo", "--pr", "--expected-head-sha"],
+     "desc": "有界等待必需检查完成（只读轮询）"},
+    {"script": "verify_required_checks.py", "args": ["--repo", "--pr", "--head-sha"],
+     "desc": "严格必需检查验证（来源/身份/状态复核）"},
+    {"script": "request_automerge.py", "args": ["--repo", "--pr", "--head-sha"],
+     "desc": "请求 auto-merge（唯一允许的 mutation 路径）"},
+]
+AUTOMERGE_ENV = "GITHUB_TOKEN"
+
+# 直接触发 auto-merge / 合并的形态：workflow 内**一律**禁止（只能由 helper 执行 mutation）。
+# 注意：这里只认「写」形态（GraphQL mutation 名 / REST merge 端点 / gh pr merge），
+# 不把 PR 对象的只读字段（如 REST 的 auto_merge、auto_merge_gate）当作违规。
+DIRECT_MUTATION_MARKERS = ("enablePullRequestAutoMerge", "disablePullRequestAutoMerge")
+DIRECT_MUTATION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bgh\s+pr\s+merge\b"), "gh pr merge（绕过 helper 的合并路径）"),
+    (re.compile(r"\bgh\s+api\b[^\n]*\bgraphql\b"), "gh api graphql（workflow 内直接 GraphQL）"),
+    (re.compile(r"\bgh\s+api\b[^\n]*(-X|--method)\s*(PUT|POST|PATCH|DELETE)[^\n]*\bmerge\b"),
+     "gh api 写请求命中 merge"),
+    (re.compile(r"/(?:repos/[^\s\"\']+/)?pulls/[^\s\"\']*/merge\b"), "REST merge 端点"),
+    (re.compile(r"\b(?:curl|wget|http|httpie)\b[^\n]*\bgraphql\b"), "HTTP 客户端直接发 GraphQL"),
+)
+
+
+def _steps_of(job: Any) -> list[dict]:
+    return [s for s in ((job or {}).get("steps") or []) if isinstance(s, dict)]
+
+
+def direct_mutation_problems(doc: dict, name: str = "") -> list[str]:
+    """禁止任何 workflow 自己直接发送 auto-merge / 合并 mutation（Fix B3）。"""
+    problems: list[str] = []
+    for jid, job in (doc.get("jobs") or {}).items():
+        for step in _steps_of(job):
+            run = step.get("run")
+            if not isinstance(run, str):
+                continue
+            for cmd in split_command_lines(run):
+                text = cmd.text
+                marks = [m for m in DIRECT_MUTATION_MARKERS if m in text]
+                if marks:
+                    problems.append(
+                        f"{name}: job '{jid}' step={step.get('name')!r} 出现直接 auto-merge mutation 标记 "
+                        f"{marks} —— mutation 只能由 scripts/ci/request_automerge.py 执行")
+                    continue
+                for pattern, why in DIRECT_MUTATION_PATTERNS:
+                    if pattern.search(text):
+                        problems.append(f"{name}: job '{jid}' step={step.get('name')!r} 命中直接合并路径"
+                                        f"（{why}）：{text.strip()[:120]!r}")
+    return problems
+
+
+def check_automerge_job(doc: dict, job_id: str = AUTOMERGE_JOB_ID) -> tuple[list[str], dict]:
+    """Fix B：auto-merge 前置命令必须**真正执行**、顺序正确、且不得绕过 helper。"""
+    problems: list[str] = []
+    details: dict[str, Any] = {"job_id": job_id}
+    job = (doc.get("jobs") or {}).get(job_id)
+    if not isinstance(job, dict):
+        return [f"{job_id}: 缺少 auto-merge job（无法验证前置命令合同）"], details
+    steps = _steps_of(job)
+    lines: list[CommandLine] = []
+    for si, step in enumerate(steps):
+        run = step.get("run")
+        if isinstance(run, str):
+            step_lines = split_command_lines(run)
+            annotate_structure(step_lines)
+            for cmd in step_lines:
+                cmd.step = step.get("name")          # type: ignore[attr-defined]
+                cmd.step_index = si                  # type: ignore[attr-defined]
+                cmd.index = len(lines) + 1
+                lines.append(cmd)
+    found: list[dict] = []
+    for want in AUTOMERGE_REQUIRED_STEPS:
+        label = want["script"]
+        hits = [c for c in lines if invokes_script(c, label)
+                and all(any(a in t for t in c.segments[0]) for a in want["args"])]
+        if not hits:
+            present = any(label in c.text for c in lines) or any(
+                label in str(s.get("run") or "") for s in steps)
+            if present:
+                problems.append(f"{job_id}: {want['desc']} —— {label} 出现但**没有被实际执行**"
+                                f"（echo/注释/引号文本/非顶层上下文/缺参数 "
+                                f"{' '.join(want['args'])}）")
+            else:
+                problems.append(f"{job_id}: 缺少必需命令 —— {want['desc']}"
+                                f"（{label} {' '.join(want['args'])}）")
+            continue
+        hit = hits[0]
+        env = steps[hit.step_index].get("env") or {}
+        if AUTOMERGE_ENV not in env:
+            problems.append(f"{job_id}: {want['desc']} 所在步骤必须声明 env {AUTOMERGE_ENV}")
+        found.append({"script": label, "step_index": hit.step_index, "line_no": hit.line_no,
+                      "step_name": steps[hit.step_index].get("name"), "ok": True})
+    if len(found) == len(AUTOMERGE_REQUIRED_STEPS):
+        order = [f["step_index"] for f in found]
+        if len(set(order)) != len(order) or order != sorted(order):
+            problems.append(f"{job_id}: 三个前置命令必须按 await_checks → verify_required_checks → "
+                            f"request_automerge 的顺序位于**独立步骤**中（实际 step={order}）")
+    details["required_steps"] = found
+    return problems, details

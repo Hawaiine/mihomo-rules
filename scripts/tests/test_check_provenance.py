@@ -252,3 +252,152 @@ class RerunAndSupersedeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------- Fix C（第四轮）
+class JobIdentityFieldCompletenessTest(unittest.TestCase):
+    """Fix C1：job / check run 的**必需身份字段**缺失或矛盾一律 fail-closed。
+
+    覆盖：job.head_sha / job.status / job.conclusion / job.name / job.id 缺失，
+    check run 自身 status / conclusion 缺失，以及 job 与 check run 的 id/head/status/conclusion
+    不一致。全部必须 state != success 且 overall_state != success（禁止自动合并）。
+    """
+
+    def _jobs_without(self, name: str, *keys: str) -> list[dict]:
+        jobs = []
+        for n in fx.NAMES:
+            j = fx.job(n)
+            if n == name:
+                for k in keys:
+                    j.pop(k, None)
+            jobs.append(j)
+        return jobs
+
+    def _jobs_with(self, name: str, **changes) -> list[dict]:
+        return [({**fx.job(n), **changes} if n == name else fx.job(n)) for n in fx.NAMES]
+
+    def _select_with_job(self, name: str, job: dict):
+        """把某个 job 记录按 **check run id** 放进索引（复刻平台按 id 映射 job 的路径）。"""
+        index = fx.jobs_index(fx.all_jobs())
+        index[fx.JOB_IDS[name]] = job
+        return cp.select_checks(check_runs=fx.all_checks(), manifest=manifest(),
+                                workflow_runs=[fx.workflow_run()], jobs_by_id=index,
+                                expected_head=fx.HEAD, pr_head=fx.HEAD)
+
+    def assert_fail_closed(self, per, problems, needle: str, name: str = "general-pr-verify"):
+        self.assertNotEqual(per[name]["state"], "success", f"{name} 不应被判定成功：{per[name]}")
+        self.assertNotEqual(cp.overall_state(per), "success", "整体状态不得为 success")
+        self.assertTrue(any(needle in p for p in problems), f"未命中 {needle!r}：{problems}")
+
+    def test_missing_job_head_sha_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_without("general-pr-verify", "head_sha"))
+        self.assert_fail_closed(per, problems, "缺少 head_sha")
+
+    def test_missing_job_status_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_without("general-pr-verify", "status"))
+        self.assert_fail_closed(per, problems, "缺少 status")
+
+    def test_missing_job_conclusion_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_without("general-pr-verify", "conclusion"))
+        self.assert_fail_closed(per, problems, "缺少 conclusion")
+
+    def test_missing_job_name_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_without("general-pr-verify", "name"))
+        self.assert_fail_closed(per, problems, "缺少 name")
+
+    def test_missing_job_id_rejected(self):
+        job = {k: v for k, v in fx.job("general-pr-verify").items() if k != "id"}
+        per, problems = self._select_with_job("general-pr-verify", job)
+        self.assert_fail_closed(per, problems, "缺少 id")
+
+    def test_job_id_mismatch_rejected(self):
+        per, problems = self._select_with_job("general-pr-verify", {**fx.job("general-pr-verify"), "id": 999999})
+        self.assert_fail_closed(per, problems, "job id 与 check run id 不一致")
+
+    def test_job_head_sha_mismatch_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_with("general-pr-verify", head_sha="c" * 40))
+        self.assert_fail_closed(per, problems, "job head SHA 不符")
+
+    def test_job_status_mismatch_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_with("general-pr-verify", status="in_progress"))
+        self.assert_fail_closed(per, problems, "job 与 check run 状态不一致")
+
+    def test_job_conclusion_mismatch_rejected(self):
+        per, problems = select(fx.all_checks(), jobs=self._jobs_with("general-pr-verify", conclusion="failure"))
+        self.assert_fail_closed(per, problems, "job 与 check run 结论不一致")
+
+    def test_missing_check_run_status_rejected(self):
+        checks = [fx.check_run("general-pr-verify", status=None)]
+        per, problems = select(checks)
+        self.assert_fail_closed(per, problems, "缺少 status 字段")
+
+    def test_missing_check_run_conclusion_rejected(self):
+        checks = [fx.check_run("general-pr-verify", conclusion=None)]
+        per, problems = select(checks)
+        self.assert_fail_closed(per, problems, "缺少 conclusion")
+
+    def test_missing_check_run_head_sha_rejected(self):
+        checks = [fx.check_run("general-pr-verify", sha=None)]
+        per, problems = select(checks)
+        self.assert_fail_closed(per, problems, "head SHA 不符")
+
+    def test_each_required_check_is_protected(self):
+        """三个必需检查逐一删除 head_sha 都必须 fail-closed（不能只保护一个）。"""
+        for name in fx.NAMES:
+            with self.subTest(check=name):
+                per, problems = select(fx.all_checks(), jobs=self._jobs_without(name, "head_sha"))
+                self.assert_fail_closed(per, problems, "缺少 head_sha", name=name)
+
+    def test_real_platform_shape_still_accepted(self):
+        per, problems = select(fx.all_checks())
+        self.assertEqual(problems, [])
+        self.assertEqual(cp.overall_state(per), "success")
+
+
+class ManifestIdentityFieldCompletenessTest(unittest.TestCase):
+    """Fix C1：manifest 的必需身份字段缺失/降级必须 fail-closed（load_manifest 抛错）。"""
+
+    def _write(self, mutate) -> str:
+        import json
+        import tempfile
+        doc = json.loads(Path(MANIFEST).read_text(encoding="utf-8"))
+        mutate(doc)
+        fd, path = tempfile.mkstemp(suffix=".json")
+        with open(fd, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, ensure_ascii=False)
+        return path
+
+    def test_missing_workflow_rejected(self):
+        path = self._write(lambda d: d["checks"][0].pop("workflow"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_missing_job_id_rejected(self):
+        path = self._write(lambda d: d["checks"][0].pop("job_id"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_missing_source_rejected(self):
+        path = self._write(lambda d: d["checks"][0].pop("source"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_source_without_app_id_rejected(self):
+        path = self._write(lambda d: d["checks"][0]["source"].pop("app_id"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_missing_name_rejected(self):
+        path = self._write(lambda d: d["checks"][0].pop("name"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_wrong_workflow_path_rejected(self):
+        path = self._write(lambda d: d["checks"][0].__setitem__("workflow", ".github/workflows/other.yml"))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)
+
+    def test_legacy_downgrade_rejected(self):
+        path = self._write(lambda d: d.__setitem__("checks", []) or d.__setitem__("required", list(fx.NAMES)))
+        with self.assertRaises(cp.ManifestError):
+            cp.load_manifest(path)

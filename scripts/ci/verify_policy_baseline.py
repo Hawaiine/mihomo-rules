@@ -43,6 +43,7 @@ SENSITIVE_PREFIXES = (
 )
 REQUIRED_CHECKS_PATH = ".github/required-checks.json"
 PR_VERIFY = ".github/workflows/pr-verify.yml"
+CANDIDATE_SYNC = ".github/workflows/candidate-pr-sync.yml"
 LEGACY_DIRECT_WRITE = ".github/workflows/daily-sync.yml"
 BASE_GUARD = "scripts/ci/verify_workflow_policy.py"
 PUSH_MAIN_RE = re.compile(r"git\s+push[^\n]*(?:\bmain\b|\$\{\{\s*github\.ref_name\s*\}\}|HEAD:main)")
@@ -219,6 +220,83 @@ def _segments(text: str) -> list[list[str]]:
 
 NOOP_COMMANDS = {"echo", "printf", "true", "false", ":", "cat", "tee", "test", "[", "exit",
                  "set", "return", "sleep", "ls", "pwd", "which", "type", "help"}
+BLOCK_OPENERS = {"if", "for", "while", "until", "case", "select"}
+BLOCK_CLOSERS = {"fi", "done", "esac"}
+
+
+def _opens_block(tokens: list[str]) -> bool:
+    if not tokens:
+        return False
+    first = tokens[0]
+    if first in BLOCK_OPENERS or first in ("{", "(", "function"):
+        return True
+    return "()" in first or (len(tokens) > 1 and tokens[1] == "()")
+
+
+def _closes_block(tokens: list[str]) -> bool:
+    return bool(tokens) and (tokens[0] in BLOCK_CLOSERS or tokens[0] in ("}", ")"))
+
+
+def _annotate(texts: list[str]) -> list[dict]:
+    """给逻辑命令行标注 (text, tokens, depth, top_level) —— Fix A2 的独立实现。
+
+    出现在 if/for/while/case/子 shell/函数体/单行块内的命令**不算顶层执行**。
+    """
+    import shlex
+
+    out: list[dict] = []
+    depth = 0
+    for text in texts:
+        try:
+            tokens = shlex.split(text, comments=False, posix=True)
+        except ValueError:
+            tokens = text.split()
+        header = _opens_block(tokens)
+        if _closes_block(tokens) and not header:
+            depth = max(0, depth - 1)
+        out.append({"text": text, "tokens": tokens, "depth": depth,
+                    "top_level": depth == 0 and not header})
+        if header:
+            depth += 1
+            if tokens and tokens[-1] in (BLOCK_CLOSERS | {"}", ")"}):
+                depth = max(0, depth - 1)
+    return out
+
+
+def _interpreter_target(seg: list[str]) -> str | None:
+    """解释器真正执行的目标（第一个位置参数）；`-m`/`-c` 形态返回 None。"""
+    idx = _command_word_index(seg)
+    if idx is None:
+        return None
+    i = idx + 1
+    while i < len(seg):
+        tok = seg[i]
+        if tok == "--":
+            return seg[i + 1] if i + 1 < len(seg) else None
+        if tok in ("-m", "-c"):
+            return None
+        if tok.startswith("-") and tok != "-":
+            i += 1
+            continue
+        return tok
+    return None
+
+
+def _command_word_index(seg: list[str]) -> int | None:
+    i = 0
+    while i < len(seg):
+        tok = seg[i]
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-"):
+                i += 1
+            if i < len(seg) and seg[i].startswith("-"):
+                i += 1
+                if i < len(seg) and not seg[i].startswith("-") and tok == "sudo":
+                    i += 1
+            continue
+        return i
+    return None
 INTERPRETERS = {"python", "python3", "bash", "sh", "dash", "zsh", "node", "ruby", "perl"}
 WRAPPERS = {"env", "sudo", "time", "command", "exec", "nohup"}
 
@@ -321,8 +399,8 @@ def executed_commands_indexed(doc: dict) -> list[dict]:
             run = step.get("run") if isinstance(step, dict) else None
             if not isinstance(run, str):
                 continue
-            for ci, line in enumerate(_logical_lines(run)):
-                segs = _segments(line)
+            for ci, ann in enumerate(_annotate(_logical_lines(run))):
+                segs = _segments(ann["text"])
                 clean = len(segs) == 1
                 for gi, seg in enumerate(segs):
                     cw = _command_word(seg)
@@ -332,13 +410,26 @@ def executed_commands_indexed(doc: dict) -> list[dict]:
                     if base_cw in NOOP_COMMANDS:
                         continue
                     out.append({"step": si, "line": ci, "seg": gi, "cw": base_cw,
-                                "args": seg[1:], "clean": clean})
+                                "args": seg[1:], "seg_tokens": seg, "clean": clean,
+                                "top_level": ann["top_level"], "depth": ann["depth"]})
     return out
 
 
 def _invokes(entry: dict, script: str) -> bool:
-    toks = [entry["cw"]] + entry["args"]
-    return any(_basename(t) == script and " " not in t and "\t" not in t for t in toks)
+    """Fix A1/A2（独立实现）：必须**顶层**单一简单命令，且脚本是解释器的第一个位置参数。
+
+    `python3 -m py_compile x.py`、`python3 -c "..." x.py`、函数体/条件分支里的调用、
+    echo/注释/引号文本中的脚本名，一律不算「正在执行」。
+    """
+    if not entry["clean"] or not entry.get("top_level"):
+        return False
+    cw = entry["cw"]
+    if _basename(cw) == script:
+        return " " not in cw and "\t" not in cw
+    if _basename(cw) not in INTERPRETERS:
+        return False
+    target = _interpreter_target(entry.get("seg_tokens") or [])
+    return target is not None and _basename(target) == script and " " not in target and "\t" not in target
 
 
 def check_command_contract(doc: dict) -> list[str]:
@@ -388,6 +479,84 @@ def check_command_contract(doc: dict) -> list[str]:
 
 def _basename(token: str) -> str:
     return token.rsplit("/", 1)[-1]
+
+
+# ---------------------------------------------------- Fix B（独立实现）：auto-merge 合同
+AUTOMERGE_JOB_ID = "request-auto-merge"
+AUTOMERGE_ENV = "GITHUB_TOKEN"
+AUTOMERGE_REQUIRED_STEPS: list[dict] = [
+    {"script": "await_checks.py", "args": ["--repo", "--pr", "--expected-head-sha"],
+     "desc": "有界等待必需检查完成（只读轮询）"},
+    {"script": "verify_required_checks.py", "args": ["--repo", "--pr", "--head-sha"],
+     "desc": "严格必需检查验证（来源/身份/状态复核）"},
+    {"script": "request_automerge.py", "args": ["--repo", "--pr", "--head-sha"],
+     "desc": "请求 auto-merge（唯一允许的 mutation 路径）"},
+]
+# 只认「写」形态：GraphQL mutation 名 / REST merge 端点 / gh pr merge / 直接 graphql 请求
+DIRECT_MUTATION_MARKERS = ("enablePullRequestAutoMerge", "disablePullRequestAutoMerge")
+DIRECT_MUTATION_PATTERNS = (
+    (re.compile(r"\bgh\s+pr\s+merge\b"), "gh pr merge（绕过 helper 的合并路径）"),
+    (re.compile(r"\bgh\s+api\b[^\n]*\bgraphql\b"), "gh api graphql（workflow 内直接 GraphQL）"),
+    (re.compile(r"\bgh\s+api\b[^\n]*(-X|--method)\s*(PUT|POST|PATCH|DELETE)[^\n]*\bmerge\b"),
+     "gh api 写请求命中 merge"),
+    (re.compile(r"/(?:repos/[^\s\"\']+/)?pulls/[^\s\"\']*/merge\b"), "REST merge 端点"),
+    (re.compile(r"\b(?:curl|wget|http|httpie)\b[^\n]*\bgraphql\b"), "HTTP 客户端直接发 GraphQL"),
+)
+
+
+def workflow_files_at(revision: str, root: Path) -> list[str]:
+    out = git(["ls-tree", "-r", "--name-only", revision, "--", ".github/workflows"], root)
+    return [ln.strip() for ln in out.splitlines() if ln.strip().endswith((".yml", ".yaml"))]
+
+
+def direct_mutation_problems(doc: dict, name: str) -> list[str]:
+    """Fix B3（独立实现）：workflow 内禁止直接发送 auto-merge / 合并 mutation。"""
+    problems: list[str] = []
+    for jid, job in (doc.get("jobs") or {}).items():
+        for step in ((job or {}).get("steps") or []):
+            run = step.get("run") if isinstance(step, dict) else None
+            if not isinstance(run, str):
+                continue
+            for line in _logical_lines(run):
+                marks = [m for m in DIRECT_MUTATION_MARKERS if m in line]
+                if marks:
+                    problems.append(f"{name}: job '{jid}' 出现直接 auto-merge mutation 标记 {marks}"
+                                    f" —— mutation 只能由 scripts/ci/request_automerge.py 执行")
+                    continue
+                for pattern, why in DIRECT_MUTATION_PATTERNS:
+                    if pattern.search(line):
+                        problems.append(f"{name}: job '{jid}' 命中直接合并路径（{why}）：{line.strip()[:120]!r}")
+    return problems
+
+
+def check_automerge_contract(doc: dict) -> list[str]:
+    """Fix B1/B2（独立实现）：三个前置命令必须真正执行、顺序正确、独立步骤、带 env。"""
+    problems: list[str] = []
+    job = (doc.get("jobs") or {}).get(AUTOMERGE_JOB_ID)
+    if not isinstance(job, dict):
+        return [f"{CANDIDATE_SYNC}: 缺少 auto-merge job（无法验证前置命令合同）"]
+    steps = [s for s in (job.get("steps") or []) if isinstance(s, dict)]
+    indexed = executed_commands_indexed({"jobs": {AUTOMERGE_JOB_ID: job}})
+    found: list[int] = []
+    for want in AUTOMERGE_REQUIRED_STEPS:
+        label = want["script"]
+        hits = [e for e in indexed if _invokes(e, label)
+                and all(any(a in t for t in e["seg_tokens"]) for a in want["args"])]
+        if not hits:
+            present = any(label in str(s.get("run") or "") for s in steps)
+            problems.append(f"{CANDIDATE_SYNC}: {want['desc']} —— {label} "
+                            + ("出现但**没有被实际执行**（echo/注释/引号文本/非顶层上下文/缺参数）"
+                               if present else f"缺少必需命令（{' '.join(want['args'])}）"))
+            continue
+        hit = hits[0]
+        if AUTOMERGE_ENV not in (steps[hit["step"]].get("env") or {}):
+            problems.append(f"{CANDIDATE_SYNC}: {want['desc']} 所在步骤必须声明 env {AUTOMERGE_ENV}")
+        found.append(hit["step"])
+    if len(found) == len(AUTOMERGE_REQUIRED_STEPS) and (len(set(found)) != len(found)
+                                                        or found != sorted(found)):
+        problems.append(f"{CANDIDATE_SYNC}: 三个前置命令必须按 await_checks → verify_required_checks → "
+                        f"request_automerge 的顺序位于**独立步骤**中（实际 step={found}）")
+    return problems
 
 
 def weakening_problems(base: str, head: str, root: Path) -> list[str]:
@@ -505,6 +674,21 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
     head_count = len(TEST_DEF_RE.findall(git_grep(r"^\s*def test_", head, "scripts/tests", root)))
     if head_count < base_count:
         problems.append(f"scripts/tests: test case count shrank ({base_count} -> {head_count})")
+
+    # Fix B5：候选树中所有 workflow 的直接 mutation 与 auto-merge 命令合同，
+    # 由本 guard 用**独立实现**判定（base 上存在该 guard 后即持续生效）。
+    for wf in workflow_files_at(head, root):
+        text = file_at(head, wf, root)
+        if text is None:
+            continue
+        try:
+            wf_doc = yaml.safe_load(text) or {}
+        except yaml.YAMLError as exc:
+            problems.append(f"{wf}: 无法解析候选 workflow YAML（fail-closed）：{exc}")
+            continue
+        problems.extend(direct_mutation_problems(wf_doc, wf))
+        if wf == CANDIDATE_SYNC:
+            problems.extend(check_automerge_contract(wf_doc))
 
     # guard 调用不得被移除（同时由 check_command_contract 做「真正执行」判定）
     if head_prv is not None:
