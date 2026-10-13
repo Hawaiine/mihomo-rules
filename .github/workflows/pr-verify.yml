@@ -4,41 +4,30 @@ name: General PR verification
 #   general-pr-verify / workflow-policy-guard / trusted-baseline-guard
 # job id 与 job name 必须一致，否则 check 名漂移、ruleset 引用失效。
 #
-# 触发：
-#   * pull_request → 常规 PR 验证。
-#   * workflow_dispatch(pr_number, base_sha, head_sha) → 由 candidate-pr-sync 显式触发。
-#     原因：GITHUB_TOKEN 创建的 PR 不会自动触发 pull_request workflow。
-#     base/head SHA 由触发方传入（本 workflow 因此不需要任何 API 读取权限，
-#     也不需要 pull-requests 权限），被检内容即该 head SHA。
+# 触发（**只有 pull_request**）：
+#   * 官方文档明确保证：workflow_dispatch 触发的 workflow 产生的检查不会出现在 PR 的
+#     checks 中，也不满足 ruleset 必需检查（见 github/docs 的
+#     troubleshooting-required-status-checks）。因此本 workflow 不声明 workflow_dispatch，
+#     必需检查一律由 pull_request 事件产生。
+#   * 候选 PR 由专用最小权限 GitHub App installation token 创建/更新，其产生的事件会正常
+#     触发 pull_request 验证（GITHUB_TOKEN 创建的 PR 不会）。
 #
-# 安全姿态（由 scripts/ci/verify_general_pr.py 的 workflow-security-guard 强制）：
+# 安全姿态（由 scripts/ci/verify_general_pr.py 的 workflow-security-guard 与
+# scripts/ci/verify_workflow_policy.py 共同强制）：
 #   permissions 恰为 contents: read；无任何写命令；不使用指向分支名的浮动 ref；
-#   所有脚本来自被检提交自身；Oasisic-Icons 检出使用已批准 pin。
+#   所有脚本来自被检提交自身；Oasisic-Icons 检出使用已批准 pin；必需检查 job 不带
+#   job-level if（不可能被跳过）。
 
 on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: '候选 PR 编号（由 candidate-pr-sync 显式触发时使用）'
-        required: true
-        type: string
-      base_sha:
-        description: 'PR base SHA（触发方传入，本 workflow 不查询 API）'
-        required: true
-        type: string
-      head_sha:
-        description: 'PR head SHA（被检提交）'
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: general-pr-verify-${{ github.event.pull_request.number || inputs.pr_number }}
+  group: general-pr-verify-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 env:
@@ -51,19 +40,13 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
         id: pr
         run: |
           set -euo pipefail
-          if [ -n "${{ github.event.pull_request.number }}" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-            NUM="${{ github.event.pull_request.number }}"
-          else
-            BASE="${{ inputs.base_sha }}"
-            HEAD="${{ inputs.head_sha }}"
-            NUM="${{ inputs.pr_number }}"
-          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          NUM="${{ github.event.pull_request.number }}"
           printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
           printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
           printf '%s' "$NUM"  | grep -Eq '^[0-9]+$'     || { echo "❌ PR 编号非法"; exit 1; }
@@ -132,19 +115,12 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
         id: pr
         run: |
           set -euo pipefail
-          if [ -n "${{ github.event.pull_request.number }}" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-            NUM="${{ github.event.pull_request.number }}"
-          else
-            BASE="${{ inputs.base_sha }}"
-            HEAD="${{ inputs.head_sha }}"
-            NUM="${{ inputs.pr_number }}"
-          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
           printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
           printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
           echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
@@ -166,7 +142,7 @@ jobs:
       - name: 📦 安装依赖
         run: python3 -m pip install pyyaml
 
-      - name: 🔐 workflow 策略 guard（权限 / 触发 / 目标分支 / 必需检查 / 防绕过 / 候选分支约束）
+      - name: 🔐 workflow 策略 guard（结构化：权限 / 触发 / 门控表达式 / 必需检查 / 来源绑定 / 防绕过）
         run: python3 scripts/ci/verify_workflow_policy.py --json "$RUNNER_TEMP/workflow-policy.json"
 
       - name: ⬆️ 上传策略检查结果
@@ -184,25 +160,18 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: 🧭 解析 PR base/head SHA（pull_request 或 workflow_dispatch 输入）
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
         id: pr
         run: |
           set -euo pipefail
-          if [ -n "${{ github.event.pull_request.number }}" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-            NUM="${{ github.event.pull_request.number }}"
-          else
-            BASE="${{ inputs.base_sha }}"
-            HEAD="${{ inputs.head_sha }}"
-            NUM="${{ inputs.pr_number }}"
-          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
           printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
           printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
           echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
           echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
           echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
-          echo "PR_NUMBER=${NUM}" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
 
       - name: 📥 检出 PR head（完整历史；可信 guard 逻辑来自 base 提交，不检出浮动 ref）
         uses: actions/checkout@v7

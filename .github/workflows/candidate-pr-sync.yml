@@ -1,15 +1,21 @@
 name: 候选分支更新（PR-first）
 
 # 运行时设计（详见 docs/pr-first-automation.md）：
-#   * 只创建/更新候选分支与 PR，绝不推送 main；push 前有硬断言。
+#   * 只创建/更新候选分支与 PR，绝不推送默认分支；push 前有硬断言。
 #   * 定时与手动触发都由仓库变量 CANDIDATE_SYNC_ENABLED 门控；未设置或非 "true" 时整体跳过。
-#   * generate job 只读；publish job 持最小写权限，且**不执行候选内容**（只应用数据补丁）。
-#   * 自动合并由独立的 CANDIDATE_AUTOMERGE_ENABLED 变量二次门控，且必须先用真实
-#     check run ↔ head SHA 绑定验证通过；验证不通过即不合并（fail-closed）。
+#   * generate job 只读；publish job 用**专用最小权限 GitHub App installation token** 完成
+#     分支推送与 PR 创建/更新，因此其产生的事件会正常触发 pull_request 验证
+#     （GITHUB_TOKEN 创建的 PR 不会触发）。本 job 不执行候选内容。
+#   * 自动合并由独立的 CANDIDATE_AUTOMERGE_ENABLED 变量二次门控，且必须先在有界等待中
+#     确认三个必需检查在 PR 真实 head SHA 上真实 success（严格口径，不接受 skipped/neutral）。
 #   * ChatGPT 不在日常运行路径中。
 #
-# 关于基线 ref：generate/publish 都基于当前默认分支（main）——这是**生成器**而非门禁，
-# 其输出只能进入候选分支，无法直接影响 main。门禁（pr-verify.yml）则一律只检出被检 SHA。
+# 关于基线 ref：generate/publish 都基于当前默认分支——这是**生成器**而非门禁，
+# 其输出只能进入候选分支，无法直接影响默认分支。门禁（pr-verify.yml）则一律只检出被检 SHA。
+#
+# App 凭据（本轮不创建、不配置；缺失时本流程保持关闭且不失败、不写入）：
+#   secrets.PR_FIRST_APP_ID / secrets.PR_FIRST_APP_PRIVATE_KEY
+#   最小权限：contents: write（推候选分支）、pull-requests: write（建/更新 PR）；仅限本仓库。
 
 on:
   schedule:
@@ -58,8 +64,9 @@ jobs:
     outputs:
       changed: ${{ steps.pack.outputs.changed }}
       base_sha: ${{ steps.pack.outputs.base_sha }}
+      tree_sha: ${{ steps.pack.outputs.tree_sha }}
     steps:
-      - name: 📥 检出 main（候选变更的基线）
+      - name: 📥 检出默认分支（候选变更的基线）
         uses: actions/checkout@v7
         with:
           ref: main
@@ -86,7 +93,7 @@ jobs:
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
           # verify_general_pr.py 需要 PR_BASE_SHA / PR_HEAD_SHA（无 origin/main 回退）；
-          # 候选生成以当前 main tip 为基线，故两者都取 github.sha。
+          # 候选生成以当前默认分支 tip 为基线，故两者都取 github.sha。
           PR_BASE_SHA: ${{ github.sha }}
           PR_HEAD_SHA: ${{ github.sha }}
         run: |
@@ -124,9 +131,11 @@ jobs:
           git add -A ruleset configs README.md
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "tree_sha=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
             echo "⏸️ 无候选变更"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "tree_sha=$(git write-tree)" >> "$GITHUB_OUTPUT"
             git diff --cached --binary > "$RUNNER_TEMP/candidate.patch"
             git diff --cached --name-only | sort > "$RUNNER_TEMP/changed-files.txt"
             echo "变更文件数：$(wc -l < "$RUNNER_TEMP/changed-files.txt")"
@@ -150,14 +159,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
-      pull-requests: write
-      actions: write
+      contents: read          # 写操作全部由 App installation token 完成（最小权限）
     outputs:
       pr_number: ${{ steps.pr.outputs.pr_number }}
-      head_sha: ${{ steps.push.outputs.head_sha }}
+      head_sha: ${{ steps.consistency.outputs.head_sha }}
+      publish_skipped: ${{ steps.creds.outputs.available != 'true' }}
     steps:
-      - name: 📥 检出 main（**不**检出候选内容；本 job 不执行候选代码）
+      - name: 📥 检出默认分支（**不**检出候选内容；本 job 不执行候选代码）
         uses: actions/checkout@v7
         with:
           ref: main
@@ -170,40 +178,130 @@ jobs:
           name: candidate-patch
           path: ${{ runner.temp }}
 
-      - name: 🌿 创建/更新候选分支（幂等：按树摘要比对；禁止 main）
-        id: push
+      - name: 🧷 候选数据存在性检查（缺失即失败，不静默继续）
+        run: |
+          set -euo pipefail
+          test -s "$RUNNER_TEMP/candidate.patch" || { echo "❌ 缺少候选补丁"; exit 1; }
+          test -s "$RUNNER_TEMP/changed-files.txt" || { echo "❌ 缺少变更文件清单"; exit 1; }
+          echo "✅ 候选数据就位（$(wc -l < "$RUNNER_TEMP/changed-files.txt") 个文件）"
+
+      - name: 🔑 App 凭据存在性检查（缺失即跳过发布；不写入、不失败）
+        id: creds
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_ID: ${{ secrets.PR_FIRST_APP_ID }}
+          APP_KEY: ${{ secrets.PR_FIRST_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${APP_ID}" ] && [ -n "${APP_KEY}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 已配置 App 凭据：将用 App installation token 发布候选分支与 PR"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "⏸️ 未配置 PR_FIRST_APP_ID / PR_FIRST_APP_PRIVATE_KEY：候选发布保持关闭"
+            echo "   （不写入任何远端内容，也不使本 workflow 失败）"
+          fi
+
+      - name: 🔑 获取 App installation token（最小权限，仅本仓库）
+        id: app-token
+        if: steps.creds.outputs.available == 'true'
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2
+        with:
+          app-id: ${{ secrets.PR_FIRST_APP_ID }}
+          private-key: ${{ secrets.PR_FIRST_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: 🌿 创建/更新候选分支（幂等；只推候选分支；head SHA 取自真实远端状态）
+        id: push
+        if: steps.creds.outputs.available == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           # 硬断言：候选分支绝不等于目标分支
           if [ "$CANDIDATE_BRANCH" = "main" ] || [ "$CANDIDATE_BRANCH" = "$BASE_BRANCH" ]; then
             echo "❌ 候选分支名非法：$CANDIDATE_BRANCH"; exit 1
           fi
-          git config user.name "mihomo-candidate-bot"
-          git config user.email "candidate-bot@users.noreply.github.com"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+
+          # 可信脚本副本：在应用候选补丁**之前**复制，确保之后执行的不是候选内容
+          mkdir -p "$RUNNER_TEMP/trusted"
+          cp scripts/ci/candidate_sha.py "$RUNNER_TEMP/trusted/"
+
+          # 凭据通过 GIT_ASKPASS 注入（不进入 argv、不进入 remote URL、不落盘）
+          cat > "$RUNNER_TEMP/askpass.sh" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s' "x-access-token" ;;
+            *) printf '%s' "${APP_TOKEN}" ;;
+          esac
+          ASKPASS
+          chmod +x "$RUNNER_TEMP/askpass.sh"
+          export GIT_ASKPASS="$RUNNER_TEMP/askpass.sh"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
+          git config user.name "pr-first-bot[bot]"
+          git config user.email "pr-first-bot[bot]@users.noreply.github.com"
           git checkout -B "$CANDIDATE_BRANCH"
           git apply --index "$RUNNER_TEMP/candidate.patch"
-          git commit -m "🔄 候选规则更新 $(date +'%Y-%m-%d %H:%M:%S')"
+          git commit -q -m "🔄 候选规则更新 $(date +'%Y-%m-%d %H:%M:%S')"
+          LOCAL_SHA="$(git rev-parse HEAD)"
           NEW_TREE="$(git rev-parse 'HEAD^{tree}')"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git ls-remote --exit-code --heads origin "$CANDIDATE_BRANCH" >/dev/null 2>&1; then
-            git fetch --quiet origin "$CANDIDATE_BRANCH"
-            if [ "$NEW_TREE" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then
-              echo "⏸️ 候选分支内容（树摘要）未变化，跳过推送"
-              echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
-          # 只推送候选分支；绝不推送 main（分支名已在上面断言）
-          git push --force-with-lease origin "HEAD:refs/heads/$CANDIDATE_BRANCH"
-          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "✅ 已推送候选分支 $CANDIDATE_BRANCH（head=$(git rev-parse --short HEAD)）"
 
-      - name: 🔁 创建或更新 PR（幂等，目标 main）
+          # 远端候选分支当前状态（只读）
+          REMOTE_EXISTS=false; REMOTE_SHA=""; REMOTE_TREE=""
+          if git ls-remote --exit-code --heads origin "$CANDIDATE_BRANCH" >/dev/null 2>&1; then
+            REMOTE_EXISTS=true
+            git fetch --quiet origin "$CANDIDATE_BRANCH"
+            REMOTE_SHA="$(git rev-parse FETCH_HEAD)"
+            REMOTE_TREE="$(git rev-parse 'FETCH_HEAD^{tree}')"
+          fi
+          TREES_EQUAL=false
+          if [ "$REMOTE_EXISTS" = "true" ] && [ "$NEW_TREE" = "$REMOTE_TREE" ]; then TREES_EQUAL=true; fi
+
+          # 已有 PR 的状态（只读；含 closed，避免自动复活被人工关闭的 PR）
+          PR_STATE="none"; PR_HEAD="-"
+          EXISTING="$(curl -sS -H "Authorization: Bearer ${APP_TOKEN}" -H "Accept: application/vnd.github+json" \
+            -w $'\n%{http_code}' "${API}/pulls?state=all&head=${GITHUB_REPOSITORY_OWNER}:${CANDIDATE_BRANCH}&base=${BASE_BRANCH}")"
+          EXIST_CODE="$(printf '%s' "$EXISTING" | tail -n1)"
+          test "$EXIST_CODE" = "200" || { echo "❌ 查询已有 PR 失败：HTTP $EXIST_CODE"; exit 1; }
+          printf '%s' "$EXISTING" | sed '$d' > "$RUNNER_TEMP/existing-prs.json"
+          read -r PR_STATE PR_HEAD <<<"$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print("%s %s" % (d[0]["state"], d[0]["head"]["sha"]) if d else "none -")' "$RUNNER_TEMP/existing-prs.json")"
+
+          # 幂等决策：树一致则跳过推送，且 head 取**远端 ref SHA**
+          python3 "$RUNNER_TEMP/trusted/candidate_sha.py" decide \
+            --remote-ref-exists "$REMOTE_EXISTS" --remote-ref-sha "${REMOTE_SHA:--}" \
+            --local-sha "$LOCAL_SHA" --trees-equal "$TREES_EQUAL" \
+            --pr-state "$PR_STATE" --pr-head-sha "$PR_HEAD" \
+            --json "$RUNNER_TEMP/candidate-decision.json"
+          DECISION="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["decision"])' "$RUNNER_TEMP/candidate-decision.json")"
+          EXPECTED="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expected_head_sha"])' "$RUNNER_TEMP/candidate-decision.json")"
+
+          case "$DECISION" in
+            skip-push)
+              echo "⏸️ 候选树未变化：跳过推送；实际 head = 远端 ref SHA ${EXPECTED}"
+              ;;
+            push)
+              if [ "$REMOTE_EXISTS" = "true" ]; then
+                git push --force-with-lease="${CANDIDATE_BRANCH}:${REMOTE_SHA}" origin "HEAD:refs/heads/${CANDIDATE_BRANCH}"
+              else
+                git push origin "HEAD:refs/heads/${CANDIDATE_BRANCH}"
+              fi
+              echo "✅ 已推送候选分支 $CANDIDATE_BRANCH（local=${LOCAL_SHA:0:12}）"
+              ;;
+            *)
+              echo "❌ 决策=${DECISION}：fail-closed，不推送"; exit 1
+              ;;
+          esac
+          echo "expected_head_sha=${EXPECTED}" >> "$GITHUB_OUTPUT"
+
+      - name: 🔁 创建或更新 PR（幂等；App 身份创建 ⇒ 正常触发 pull_request 验证）
         id: pr
+        if: steps.creds.outputs.available == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
@@ -212,86 +310,139 @@ jobs:
             echo "## 候选规则更新（PR-first 自动化）"
             echo
             echo "- 由 \`candidate-pr-sync\` 自动创建/更新；来源分支 \`${CANDIDATE_BRANCH}\`，目标 \`${BASE_BRANCH}\`。"
-            echo "- \`.github/workflows/daily-sync.yml\` **保持禁用**（未重新启用直推 main）。"
-            echo "- 新系统只通过候选分支与 PR 工作，绝不直接推送 \`main\`。"
-            echo "- Auto-merge 只依赖 GitHub Ruleset 与真实 required checks；ChatGPT 不在日常运行路径中。"
+            echo "- \`.github/workflows/daily-sync.yml\` **保持禁用**（未重新启用直推默认分支）。"
+            echo "- 新系统只通过候选分支与 PR 工作，绝不直接推送 \`${BASE_BRANCH}\`。"
+            echo "- Auto-merge 只依赖 GitHub Ruleset 与真实 required checks（严格 success 口径）；ChatGPT 不在日常运行路径中。"
             echo "- 变更文件："
             sed 's/^/- `/' "$RUNNER_TEMP/changed-files.txt" | sed 's/$/`/'
           } > "$BODY_FILE"
-          EXISTING="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-            "${API}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${CANDIDATE_BRANCH}&base=${BASE_BRANCH}")"
-          NUMBER="$(printf '%s' "$EXISTING" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["number"] if d else "")')"
+
+          api() {
+            local method="$1" path="$2" data="${3:-}" expect="${4:-200}" out code body
+            if [ -n "$data" ]; then
+              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${APP_TOKEN}" \
+                -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+                -H "Content-Type: application/json" -d "$data" -w $'\n%{http_code}' "${API}${path}")"
+            else
+              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${APP_TOKEN}" \
+                -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+                -w $'\n%{http_code}' "${API}${path}")"
+            fi
+            code="$(printf '%s' "$out" | tail -n1)"
+            body="$(printf '%s' "$out" | sed '$d')"
+            if [ "$code" != "$expect" ]; then
+              printf '❌ %s %s -> HTTP %s（期望 %s）：%s\n' "$method" "$path" "$code" "$expect" "${body:0:400}" >&2
+              return 1
+            fi
+            printf '%s' "$body"
+          }
+
+          EXISTING="$(api GET "/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${CANDIDATE_BRANCH}&base=${BASE_BRANCH}")"
+          NUMBER="$(printf '%s' "$EXISTING" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d[0]["number"] if d else "")')"
           export BODY_FILE HEAD_BR="$CANDIDATE_BRANCH" BASE_BR="$BASE_BRANCH"
           export PR_TITLE="🔄 候选规则更新（PR-first 自动）"
           if [ -n "$NUMBER" ]; then
             PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"body":open(os.environ["BODY_FILE"],encoding="utf-8").read()}))')"
-            curl -sS -X PATCH -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
-              "${API}/pulls/${NUMBER}" -d "$PAYLOAD" > /dev/null
-            echo "♻️ 已更新 PR #${NUMBER}"
+            RESP="$(api PATCH "/pulls/${NUMBER}" "$PAYLOAD" 200)"
+            printf '%s' "$RESP" | python3 -c 'import json,sys;d=json.load(sys.stdin);assert d.get("number"), "PATCH 响应缺少 number";print("♻️ 已更新 PR #%s（body %d 字节）" % (d["number"], len(d.get("body") or "")))'
           else
             PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"title":os.environ["PR_TITLE"],"head":os.environ["HEAD_BR"],"base":os.environ["BASE_BR"],"body":open(os.environ["BODY_FILE"],encoding="utf-8").read()}))')"
-            RESP="$(curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
-              "${API}/pulls" -d "$PAYLOAD")"
-            NUMBER="$(printf '%s' "$RESP" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("number",""))')"
-            test -n "$NUMBER" || { echo "❌ 创建 PR 失败：$RESP"; exit 1; }
-            echo "✅ 已创建 PR #${NUMBER}"
+            RESP="$(api POST "/pulls" "$PAYLOAD" 201)"
+            NUMBER="$(printf '%s' "$RESP" | python3 -c 'import json,sys;d=json.load(sys.stdin);assert d.get("number"), "POST 响应缺少 number";print(d["number"])')"
+            echo "✅ 已创建 PR #${NUMBER}（App 身份，将正常触发 pull_request 验证）"
           fi
           echo "pr_number=${NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: 🧪 显式触发 PR 验证（GITHUB_TOKEN 创建的 PR 不会自动触发 pull_request workflow）
+      - name: 🔎 一致性校验（PR 真实 head SHA / 候选分支 ref / 预期 SHA 三者一致）
+        id: consistency
+        if: steps.creds.outputs.available == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          # 用 workflow_dispatch 显式触发，并把 base/head SHA 一并传入：
-          # 被检内容即该 head SHA，pr-verify 因此不需要任何 API 读取权限。
-          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/pr-verify.yml/dispatches" \
-            -d "$(PR_NUM='${{ steps.pr.outputs.pr_number }}' BASE_SHA='${{ needs.generate.outputs.base_sha }}' HEAD_SHA='${{ steps.push.outputs.head_sha }}' python3 -c 'import json,os;print(json.dumps({"ref":"main","inputs":{"pr_number":os.environ["PR_NUM"],"base_sha":os.environ["BASE_SHA"],"head_sha":os.environ["HEAD_SHA"]}}))')"
-          echo "✅ 已触发 pr-verify（pr=#${{ steps.pr.outputs.pr_number }}）"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          PR_NUM="${{ steps.pr.outputs.pr_number }}"
+          EXPECTED="${{ steps.push.outputs.expected_head_sha }}"
+          get() {
+            local out code body
+            out="$(curl -sS -H "Authorization: Bearer ${APP_TOKEN}" -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" -w $'\n%{http_code}' "$1")"
+            code="$(printf '%s' "$out" | tail -n1)"
+            body="$(printf '%s' "$out" | sed '$d')"
+            test "$code" = "200" || { echo "❌ GET $1 -> HTTP $code" >&2; return 1; }
+            printf '%s' "$body"
+          }
+          PR_HEAD="$(get "${API}/pulls/${PR_NUM}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["head"]["sha"])')"
+          REF_SHA="$(get "${API}/git/ref/heads/${CANDIDATE_BRANCH}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["object"]["sha"])')"
+          python3 "$RUNNER_TEMP/trusted/candidate_sha.py" verify \
+            --expected "$EXPECTED" --pr-head "$PR_HEAD" --branch-ref "$REF_SHA" \
+            --json "$RUNNER_TEMP/candidate-consistency.json"
+          echo "head_sha=${PR_HEAD}" >> "$GITHUB_OUTPUT"
+          echo "✅ 一致性校验通过：head=${PR_HEAD}"
 
       - name: 📊 状态摘要（artifact；不含任何秘密）
+        if: steps.creds.outputs.available == 'true'
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.consistency.outputs.head_sha }}
+          EXPECTED_SHA: ${{ steps.push.outputs.expected_head_sha }}
+          BASE_SHA: ${{ needs.generate.outputs.base_sha }}
+          AUTOMERGE_FLAG: ${{ vars.CANDIDATE_AUTOMERGE_ENABLED }}
         run: |
           set -euo pipefail
-          python3 -c 'import json,os,sys; print(json.dumps({
+          python3 -c 'import json,os; print(json.dumps({
             "candidate_branch": os.environ["CANDIDATE_BRANCH"],
             "base_branch": os.environ["BASE_BRANCH"],
             "base_sha": os.environ["BASE_SHA"],
             "pr_number": os.environ["PR_NUMBER"],
-            "head_sha": os.environ["HEAD_SHA"],
-            "auto_merge_enabled": os.environ.get("AUTOMERGE_FLAG", "")}, ensure_ascii=False, indent=2))' > "$RUNNER_TEMP/candidate-summary.json"
+            "verified_pr_head_sha": os.environ["HEAD_SHA"],
+            "expected_head_sha": os.environ["EXPECTED_SHA"],
+            "auto_merge_gate": os.environ.get("AUTOMERGE_FLAG", ""),
+            "writes": ["candidate branch push (App token)", "PR create/update (App token)"]},
+            ensure_ascii=False, indent=2))' > "$RUNNER_TEMP/candidate-summary.json"
           cat "$RUNNER_TEMP/candidate-summary.json"
-        env:
-          BASE_SHA: ${{ needs.generate.outputs.base_sha }}
-          HEAD_SHA: ${{ steps.push.outputs.head_sha }}
-          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-          AUTOMERGE_FLAG: ${{ vars.CANDIDATE_AUTOMERGE_ENABLED }}
 
       - name: ⬆️ 上传状态摘要
+        if: always()
         uses: actions/upload-artifact@v5
         with:
           name: candidate-summary
           path: ${{ runner.temp }}/candidate-summary.json
           retention-days: 7
+          if-no-files-found: ignore
 
   request-auto-merge:
     name: request-auto-merge
     needs: [gate, publish]
-    if: needs.gate.outputs.enabled == 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
+    if: needs.gate.outputs.enabled == 'true' && needs.publish.outputs.publish_skipped != 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
+      checks: read
     steps:
-      - name: 📥 检出 main（只用其脚本；不执行候选内容）
+      - name: 📥 检出默认分支（只用其脚本；不执行候选内容）
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
           persist-credentials: false
 
-      - name: 🔒 自动合并前置验证（required check ↔ head SHA 绑定；失败即不合并）
+      - name: ⏳ 有界等待必需检查完成（只读轮询；不做任何写请求）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/await_checks.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ needs.publish.outputs.pr_number }}" \
+            --expected-head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --base-branch "$BASE_BRANCH" \
+            --timeout 900 --interval 15 --max-interval 60 \
+            --json "$RUNNER_TEMP/await-checks.json"
+
+      - name: 🔒 严格必需检查验证（success 白名单 + 来源绑定 + head SHA 绑定）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -302,30 +453,26 @@ jobs:
             --head-sha "${{ needs.publish.outputs.head_sha }}" \
             --json "$RUNNER_TEMP/required-checks.json"
 
-      - name: 🚦 启用 auto-merge（仅在绑定验证通过后；实际合并仍由 GitHub 按 ruleset 执行）
+      - name: 🚦 请求 auto-merge（严格区分 请求成功 / 已启用 / 已合并）
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          PR="${{ needs.publish.outputs.pr_number }}"
-          NODE_ID="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR}" \
-            | python3 -c 'import json,sys;print(json.load(sys.stdin)["node_id"])')"
-          export NODE_ID
-          PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"query":"mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}","variables":{"id":os.environ["NODE_ID"]}}))')"
-          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Content-Type: application/json" \
-            "https://api.github.com/graphql" -d "$PAYLOAD" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "errors" not in d, d; print("✅ 已请求 auto-merge（等待 GitHub 按 ruleset 合并）")'
+          python3 scripts/ci/request_automerge.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ needs.publish.outputs.pr_number }}" \
+            --head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --json "$RUNNER_TEMP/automerge.json"
 
-      - name: 📊 合并后回读（PR 状态 / merge commit / main HEAD）
+      - name: 📊 合并后回读（PR 状态 / merge commit / 默认分支 HEAD）
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           PR="${{ needs.publish.outputs.pr_number }}"
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" "${API}/pulls/${PR}" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps({"state":d["state"],"merged":d["merged"],"merge_commit_sha":d.get("merge_commit_sha"),"head_sha":d["head"]["sha"]},ensure_ascii=False))'
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" "${API}/git/ref/heads/${BASE_BRANCH}" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps({"main_head":d["object"]["sha"]}))'
+          curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" "${API}/pulls/${PR}" \
+            | python3 -c 'import json,sys;d=json.load(sys.stdin);print(json.dumps({"state":d["state"],"merged":d["merged"],"merge_commit_sha":d.get("merge_commit_sha"),"head_sha":d["head"]["sha"],"auto_merge":d.get("auto_merge")},ensure_ascii=False))'
+          curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" "${API}/git/ref/heads/${BASE_BRANCH}" \
+            | python3 -c 'import json,sys;d=json.load(sys.stdin);print(json.dumps({"base_head":d["object"]["sha"]}))'

@@ -1,148 +1,93 @@
-# PR-first 全自动更新（设计与运行契约）
+# PR-first 全自动更新系统（运行契约）
 
-本文件描述 `Hawaiine/mihomo-rules` 的日常更新如何在不依赖任何人工/ChatGPT 审批的前提下，
-通过 GitHub 原生 Ruleset + Actions + 自动 PR + Auto-merge 安全运行。
+本文件描述 `Hawaiine/mihomo-rules` 的 PR-first 自动化：**自动更新只能创建候选分支与 PR，
+`main` 由 Ruleset 与真实必需检查把关，日常运行不需要 ChatGPT 或人工审批**。
 
-> 一句话：**自动更新只能提出候选 PR；能不能合并由 GitHub Ruleset 与真实 required checks 决定。**
-
-## 1. 运行时流程
+## 1. 运行路径
 
 ```
-schedule/workflow_dispatch (候选更新, 默认关闭)
-        │  vars.CANDIDATE_SYNC_ENABLED == 'true'
-        ▼
-generate  (contents: read)      ← 只读：拉上游、生成规则、跑全量 guard 与单测
-        │  产出 candidate.patch（纯数据）+ changed-files.txt
-        ▼
-publish   (contents/pull-requests/actions: write)  ← 不执行候选内容，只应用补丁
-        │  1) 建/更新 candidate/rules-update（断言：绝不推 main）
-        │  2) 创建或更新 PR（目标 main，幂等）
-        │  3) workflow_dispatch 显式触发 pr-verify（ref=main）
-        ▼
-pr-verify (contents: read)      ← 三个必需检查：general-pr-verify / workflow-policy-guard / trusted-baseline-guard
-        │
-        ▼
-request-auto-merge (默认关闭, vars.CANDIDATE_AUTOMERGE_ENABLED == 'true')
-        │  1) verify_required_checks.py：真实 check run ↔ PR head SHA 绑定验证
-        │  2) 通过后才调用 GraphQL enablePullRequestAutoMerge
-        ▼
-GitHub Ruleset 判定 → 合并（或保持 PR 待诊断）
-        │
-        ▼
-合并后回读：PR 状态 / merge commit / main HEAD / 必需检查
+[定时/手动] candidate-pr-sync
+  gate      : vars.CANDIDATE_SYNC_ENABLED == 'true'（默认关闭）
+  generate  : 只读 —— 拉上游、生成规则、跑全部 guard 与单测，产出 candidate.patch
+  publish   : 用专用最小权限 GitHub App installation token
+              → 推送候选分支 candidate/rules-update（硬断言 ≠ main）
+              → 创建/更新 PR（App 身份 ⇒ 正常触发 pull_request 验证）
+              → 回读 PR head SHA 与候选分支 ref SHA 并做一致性校验
+  request-auto-merge : vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'（默认关闭）
+              → await_checks.py    有界轮询（只读）
+              → verify_required_checks.py  严格 success + 来源绑定 + head SHA 绑定
+              → request_automerge.py       请求 auto-merge 并区分三种状态
+
+[pull_request] pr-verify  →  三个必需检查（由 pull_request 事件产生）
+  general-pr-verify / workflow-policy-guard / trusted-baseline-guard
+GitHub 按 Ruleset 合并（必需检查 + 禁止 force push / 删除分支，bypass 为空）
 ```
 
-**关键点**：ChatGPT 不在上述任何一步中；日常运行不要求人工或 ChatGPT 审阅、回复、批准。
-ChatGPT 只在本系统**首次实现阶段**做一次性独立审计（即本 PR）。
+## 2. 为什么必须用 App token 触发验证
 
-## 2. 必需检查（Ruleset 精确引用）
+GitHub 官方文档明确保证：**workflow_dispatch 触发的 workflow 产生的检查不会出现在 PR 的
+checks 中，也不满足 branch ruleset 的必需状态检查**，即使该检查运行在 PR head SHA 上。
+同时，用 `GITHUB_TOKEN` 创建/更新的 PR 不会触发 `pull_request` 工作流（防止递归）。
 
-以 `.github/required-checks.json` 为单一来源：
+因此：
+* 候选分支与 PR 一律由**专用最小权限 GitHub App installation token** 创建/更新；
+* `pr-verify.yml` **不声明** `workflow_dispatch`，必需检查只由 `pull_request` 事件产生；
+* 不新增 `pull_request_target`（不允许在持写权限的上下文执行不可信 PR 代码）。
 
-| check 名 | 作用 |
+App 最小权限：`contents: write`（推候选分支）+ `pull-requests: write`（建/更新 PR），
+仅限本仓库。动作固定到完整 commit SHA：`actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349`（v2）。
+
+**待配置的秘密（本轮未创建、未配置）**：`PR_FIRST_APP_ID`、`PR_FIRST_APP_PRIVATE_KEY`。
+缺失时 `publish` 只记录「保持关闭」并正常结束：**不写入、不失败、不触发任何远端变更**。
+
+## 3. 严格口径（fail-closed）
+
+* **必需检查**：只有 `success` 视为满足。`skipped` / `neutral` / `cancelled` / `timed_out` /
+  `failure` / `action_required` / `stale` / queued / in-progress / 未找到 **一律禁止合并**
+  （GitHub 把 `success`、`skipped`、`neutral` 都算作成功状态，因此不能把「检查存在」
+  等同于「检查真正成功」）。
+* **来源绑定**：每个必需检查必须来自预期 integration
+  （`app_slug: github-actions`、`app_id: 15368`，经 `GET /apps/github-actions` 独立核实）。
+  同名但来源不符的 check run 被拒绝采信。
+* **head SHA 绑定**：检查必须发生在 PR **当前** head SHA 上；PR 仍 open、目标仍是 `main`、
+  head 未漂移。
+* **候选 head SHA 取自真实远端**：候选树未变化而跳过推送时，head 取**远端 ref SHA**，
+  而不是本地新建的 commit SHA；创建/更新 PR 后再对
+  「PR 真实 head / 候选分支 ref / 预期 SHA」做一致性校验，任一不一致即 fail-closed。
+* **有界等待**：`request-auto-merge` 先只读轮询（递增间隔、总超时 900s），明确失败立即终止；
+  超时、漂移、403/429/5xx、响应不明一律禁止合并；超时后保留 PR 与诊断证据，不制造 PASS。
+* **三态区分**：`graphql_request_ok`（mutation 成功，且响应含
+  `data.enablePullRequestAutoMerge`）/ `auto_merge_enabled`（回读 `auto_merge` 非空）/
+  `merged`（真实合并）。只有真实合并后才报告 merge commit SHA 与 `main` HEAD。
+
+## 4. 门禁与防自证循环
+
+| 门禁 | 作用 |
 |---|---|
-| `general-pr-verify` | 通用只读 guard、`verify_configs`、`verify_rulesets`、生产图标 URL 可达性、README 统计口径、全量单测 |
-| `workflow-policy-guard` | workflow 权限/触发/目标分支/必需检查/防绕过/候选分支约束 |
-| `trusted-baseline-guard` | 用 **base 版本** guard 逻辑校验候选树 + 削弱硬失败断言 |
+| `verify_general_pr.py` | 树自洽、pin、Oracle 独立、图标基线、**workflow 安全**（pr-verify 权限恰为 `contents: read`、无浮动 ref、无写命令） |
+| `verify_workflow_policy.py` | **结构化**判定：门控必须是真实 `if` 表达式（注释不算）、必需检查 job 集合/命名一致、必需 job 不得有可跳过的 `if`、auto-merge 必须先验证后 mutation、publish 不得执行候选内容、禁止直推 main 路径、图标 pin、`persist-credentials: false`、旧 `daily-sync.yml` 逐字节 pin |
+| `verify_policy_baseline.py` | 用 **PR base 提交** 的 guard 逻辑校验候选树；对删除必需检查/削弱来源绑定/删除或改名 job/新增可跳过 `if`/新增 `pull_request_target`/`write-all`/直推 main/测试删除或数量缩小 硬失败 |
 
-约束：job id 与 job name 必须一致（否则 check 名漂移、ruleset 引用失效）；
-`scripts/ci/verify_workflow_policy.py` 会校验本清单与 `pr-verify.yml` 的 job 集合完全一致。
+旧直推 workflow `.github/workflows/daily-sync.yml`：**平台侧保持 `disabled_manually`**，
+内容按 sha256 固定（`da5c128f…`）；任何改动都会同时触发 pin 失败与内容规则，不可能被悄悄重新武装。
 
-## 3. 可信验证基线（防「自证循环」）
+## 5. 上线顺序（本轮**未**执行）
 
-同一个 PR 若既改检查规则又靠改后的规则通过，就形成自证循环。因此：
+1. 本 PR 通过独立审阅。
+2. 创建 `main` Ruleset：`pull_request` + 三个必需检查（strict）+ `non_fast_forward` + `deletion`，
+   bypass 列表为空；每个必需检查绑定 `github-actions` integration；GET 回读 `enforcement=active`。
+3. 配置 App（仅本仓库安装）与上述两个秘密，跑一次真实候选流程，确认 PR 由 App 身份创建、
+   `pull_request` 验证被触发、三个检查在新 head SHA 上真实 success。
+4. 开启仓库 auto-merge（`allow_auto_merge`），执行含失败门禁的端到端演练。
+5. 全部通过后，才设置 `CANDIDATE_SYNC_ENABLED=true`；`CANDIDATE_AUTOMERGE_ENABLED` 单独评估。
 
-1. 变更触及安全敏感路径（`.github/workflows/**`、`.github/required-checks.json`、`scripts/ci/**`、
-   `scripts/verify_configs.py`、`scripts/verify_rulesets.py`、`scripts/readme_stats.py`、
-   `scripts/lib/policy.py`、`scripts/lib/validators.py`、`scripts/batch_update.py`、
-   `scripts/commit_writer.py`、`scripts/tests/**`）时，`trusted-baseline-guard` 会：
-   - 从 **base 提交** 取出 `scripts/ci`、`scripts/lib`，用 base 逻辑校验 **候选树**；
-   - 执行削弱硬失败断言：必需检查被删除、`pr-verify` job 被删除或改名、
-     新增 `pull_request_target`、新增 `permissions: write-all`、新增直推 `main`、
-     旧 `daily-sync.yml` 被重新武装、测试文件被删除、测试用例数缩小、guard 调用被移除。
-2. 任何一条命中即失败，PR 无法合并。
-3. **一次性限制**：本 PR 首次引入该 guard，因此 main 上还没有可信版本可用，
-   `trusted-baseline-guard` 会在 main 缺该脚本时临时改用 PR head 版本运行并在日志中声明；
-   该 PR 合并后，main 版本即接管，后续 PR 一律由 main 版本判定。
+## 6. 尚未验证 / 治理边界
 
-## 4. 触发策略（GITHUB_TOKEN 创建的 PR）
-
-使用 `GITHUB_TOKEN` 创建/更新的 PR **不会自动触发** `pull_request` workflow。
-因此候选流程在创建 PR 后显式 `workflow_dispatch` 触发 `pr-verify.yml`：
-
-- `workflow_dispatch` 的 **workflow 定义取自 `main`**（可信），避免候选分支自带弱化版检查；
-- 被检内容按 `pr_number` 经 REST 解析为 PR 的 base/head SHA；
-- 三个必需检查都在 **PR head SHA** 上产生 check run。
-
-**尚未验证**：`workflow_dispatch` 产生的 check run 是否被 Ruleset 视为满足
-「require status checks to pass」的必需检查（需要真实 Ruleset 才能验证）。
-在该绑定被真实回读验证之前，**不得**启用 `CANDIDATE_AUTOMERGE_ENABLED`。
-
-## 5. 自动合并契约
-
-`request-auto-merge` 在启用前必须满足：
-
-1. `vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'`（默认未设置 → 关闭）；
-2. `scripts/ci/verify_required_checks.py` 通过：
-   - PR 仍为 `open`、未合并、base 为 `main`；
-   - PR head SHA 与候选流程记录的 head SHA 一致（无漂移）；
-   - 每个必需检查在**该 head SHA** 上有完成的 check run，且结论为成功；
-3. 任一条件不满足 → 不合并，保留 PR 与诊断证据（fail-closed）。
-
-自动合并本身通过 GraphQL `enablePullRequestAutoMerge` 请求（REST API 无对应端点，
-已核验 `github/rest-api-description` 的 OpenAPI 描述：不存在 `auto_merge` 路径）。
-是否真正合并仍由 GitHub 按 Ruleset 决定。
-
-## 6. Ruleset 计划（尚未创建）
-
-> 当前实际状态：`main` **无分支保护**（`GET /branches/main/protection` → 404）、
-> **Rulesets 为空**、仓库 **auto-merge 关闭**（`allow_auto_merge=false`）。
-> 本轮**不创建** Ruleset、不开启 auto-merge —— 按上线顺序，二者在实现 PR 通过审计与 CI 之后进行。
-
-计划（`POST /repos/Hawaiine/mihomo-rules/rulesets`，target `refs/heads/main`，enforcement `active`）：
-
-- `pull_request` 规则：需要 PR 才能合并（`required_approving_review_count: 0`，不强制人工审批）；
-- `required_status_checks`：`general-pr-verify`、`workflow-policy-guard`、`trusted-baseline-guard`
-  （`strict_required_status_checks_policy: true`，避免检查落后于 head）；
-- `non_fast_forward`（禁止 force push）、`deletion`（禁止删除分支）；
-- `bypass_actors: []`（空 —— 不授予任何日常自动化身份、普通 App 或管理员常规绕过）；
-- **不采用 merge queue**，因此不要求 `merge_group` 检查（若未来启用 merge queue，必须同时处理该事件）；
-- 创建后必须 GET 回读：`enforcement` 必须为 `active`（不是 `evaluate`/`disabled`），
-  bypass 列表为空，必需检查名与实际 check run 名一致。
-
-## 7. 尚未验证 / 已知边界（如实记录）
-
-| 项 | 状态 |
-|---|---|
-| Ruleset 创建与实际生效 | **未执行**（本 PR 只实现流程） |
-| 仓库 auto-merge 开关 | **未开启**（当前 `allow_auto_merge=false`） |
-| `workflow_dispatch` check 是否满足 Ruleset 必需检查 | **未验证**（需真实 Ruleset） |
-| Auto-merge 端到端（真实合并） | **未验证**（需 Ruleset + auto-merge 开关 + 端到端演练） |
-| 定时候选更新 | **关闭**（`CANDIDATE_SYNC_ENABLED` 未设置） |
-| `daily-sync.yml` | **保持禁用**（`disabled_manually`，未重新启用） |
-| 仓库所有者/管理员修改自身设置的能力 | **无法由规则集约束**：GitHub 允许具有 admin 权限的身份修改 Ruleset、分支保护与仓库设置。规则集约束的是"合并路径"，不是"所有者权限"本身；该边界必须如实记录，不能声称规则集绝对约束所有者。 |
-| 其他写身份 | GitHub App / 其他凭据无法枚举（`/installation` 需 JWT） |
-
-## 8. 故障处理
-
-| 情况 | 处理 |
-|---|---|
-| 检查失败 / 未启动 / 状态缺失 | 不合并，保留 PR |
-| head SHA 漂移 | `verify_required_checks.py` 失败 → 不合并 |
-| 必需检查名不匹配 / Ruleset 状态未知 | 不合并 |
-| 重复定时运行 / PR 已存在 / 分支已同步 | 幂等：复用分支与 PR，无变更则不推送 |
-| 写入响应未知 | 先只读对账（GET），不盲目重复写请求 |
-| 任何异常 | **不得**回退为直推 `main`，不得绕过检查 |
-
-## 9. 本地/CI 自检命令
-
-```bash
-python3 scripts/ci/verify_workflow_policy.py                 # workflow 策略
-python3 scripts/ci/verify_general_pr.py                      # 通用 guard（需 PR_BASE_SHA/PR_HEAD_SHA）
-python3 scripts/verify_configs.py
-python3 scripts/verify_rulesets.py
-python3 scripts/readme_stats.py --check
-python3 -m unittest discover -s scripts/tests
-python3 scripts/ci/verify_policy_baseline.py --base-sha <base> --head-sha <head> --repo-root .
-python3 scripts/ci/verify_required_checks.py --repo <owner/repo> --pr <n> --head-sha <sha>
-```
+* Ruleset 未创建、auto-merge 未开启、App 未创建、秘密未配置、定时更新关闭。
+* 轮询/SHA 一致性/来源绑定等逻辑由 **mock 测试**覆盖，**不代表真实平台端到端成功**。
+* **Ruleset 不能约束所有者权限本身**：具备 admin 权限的身份仍可修改 Ruleset、分支保护与仓库设置；
+  规则集约束的是**合并路径**。
+* 其他写身份（其他 App / 凭据）无法枚举；任何新 workflow 仍可自行声明 `contents: write`，
+  约束来自必需检查、可信基线 guard 与人工审阅。
+* 一次性限制：本 PR 首次引入 `verify_policy_baseline.py`，base 上尚无该脚本，
+  `trusted-baseline-guard` 临时使用 PR head 版本并在日志中声明；合并后由 base/main 版本接管。

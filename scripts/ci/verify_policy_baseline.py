@@ -121,28 +121,79 @@ def run_base_guard(dest: Path, candidate_root: Path) -> tuple[bool, str]:
     return proc.returncode == 0, (proc.stdout + proc.stderr).strip()
 
 
+def check_entries(text: str) -> dict[str, dict]:
+    """把必需检查清单解析成 {name: source}，兼容 checks[] 与旧 required[]。
+
+    解析失败一律 fail-closed（BaselineError），不静默降级为「无检查」。
+    """
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise BaselineError(f"required-checks manifest unreadable: {exc}") from exc
+    if isinstance(doc, dict) and isinstance(doc.get("checks"), list):
+        out: dict[str, dict] = {}
+        for item in doc["checks"]:
+            if isinstance(item, dict) and item.get("name"):
+                out[str(item["name"])] = dict(item.get("source") or {})
+            elif isinstance(item, str):
+                out[item] = {}
+        return out
+    return {str(n): {} for n in ((doc or {}).get("required") or [])}
+
+
 def weakening_problems(base: str, head: str, root: Path) -> list[str]:
     problems: list[str] = []
 
-    # 必需检查集合不得缩小
+    # 结构化辅助（一律基于解析结果，不认注释里的关键词）
+    def triggers_of(text: str) -> set[str]:
+        doc = yaml.safe_load(text) or {}
+        raw = doc.get("on", doc.get(True))
+        if isinstance(raw, str):
+            return {raw}
+        if isinstance(raw, list):
+            return {str(x) for x in raw}
+        if isinstance(raw, dict):
+            return {str(k) for k in raw}
+        return set()
+
+    def write_all(text: str) -> bool:
+        doc = yaml.safe_load(text) or {}
+        return doc.get("permissions") == "write-all" or any(
+            (job or {}).get("permissions") == "write-all" for job in (doc.get("jobs") or {}).values())
+
+    def run_scripts(text: str) -> list[str]:
+        doc = yaml.safe_load(text) or {}
+        return [str(step.get("run")) for job in (doc.get("jobs") or {}).values()
+                for step in ((job or {}).get("steps") or []) if isinstance(step.get("run"), str)]
+
+    def pushes_main(text: str) -> bool:
+        return any(PUSH_MAIN_RE.search(line) for run in run_scripts(text) for line in run.splitlines())
+
+    # 必需检查集合与**来源绑定**不得被削弱
     base_req = file_at(base, REQUIRED_CHECKS_PATH, root)
     head_req = file_at(head, REQUIRED_CHECKS_PATH, root)
     if base_req is not None:
-        try:
-            base_names = set(json.loads(base_req).get("required") or [])
-        except json.JSONDecodeError as exc:
-            raise BaselineError(f"base {REQUIRED_CHECKS_PATH} unreadable: {exc}") from exc
+        base_checks = check_entries(base_req)
         if head_req is None:
             problems.append(f"{REQUIRED_CHECKS_PATH}: removed (required checks must not disappear)")
         else:
-            try:
-                head_names = set(json.loads(head_req).get("required") or [])
-            except json.JSONDecodeError as exc:
-                raise BaselineError(f"head {REQUIRED_CHECKS_PATH} unreadable: {exc}") from exc
-            for missing in sorted(base_names - head_names):
+            head_checks = check_entries(head_req)
+            for missing in sorted(set(base_checks) - set(head_checks)):
                 problems.append(f"{REQUIRED_CHECKS_PATH}: required check {missing!r} removed")
+            for name, base_src in sorted(base_checks.items()):
+                if name not in head_checks:
+                    continue
+                head_src = head_checks[name]
+                if base_src.get("app_id") is not None:
+                    if head_src.get("app_id") != base_src.get("app_id") or \
+                            head_src.get("app_slug") != base_src.get("app_slug"):
+                        problems.append(
+                            f"{REQUIRED_CHECKS_PATH}: {name} 的预期来源被改变/移除"
+                            f"（base={base_src} head={head_src}）——来源绑定不得削弱")
+                elif not head_src:
+                    problems.append(f"{REQUIRED_CHECKS_PATH}: {name} 缺少来源绑定（source）")
 
-    # pr-verify job 不得删除；job 名必须稳定
+    # pr-verify job 不得删除；job 名必须稳定；必需 job 不得获得可跳过的 job-level if
     base_prv = file_at(base, PR_VERIFY, root)
     head_prv = file_at(head, PR_VERIFY, root)
     if base_prv is not None and head_prv is not None:
@@ -152,31 +203,51 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
             doc = yaml.safe_load(text) or {}
             return {str(k): (v or {}).get("name") for k, v in (doc.get("jobs") or {}).items()}
 
+        def job_conditions(text: str) -> dict[str, str]:
+            doc = yaml.safe_load(text) or {}
+            out: dict[str, str] = {}
+            for key, job in (doc.get("jobs") or {}).items():
+                value = (job or {}).get("if")
+                # 注意：`if: false` 会被 YAML 解析成布尔 False，`False or ""` 会丢信息，
+                # 因此必须显式判 None。
+                out[str(key)] = "" if value is None else str(value)
+            return out
+
         base_jobs, head_jobs = job_ids(base_prv), job_ids(head_prv)
         for job in sorted(set(base_jobs) - set(head_jobs)):
             problems.append(f"{PR_VERIFY}: job {job!r} removed")
         for job, name in head_jobs.items():
             if name != job:
                 problems.append(f"{PR_VERIFY}: job {job!r} name changed to {name!r} (check name must stay stable)")
+        base_conds, head_conds = job_conditions(base_prv), job_conditions(head_prv)
+        for job, cond in head_conds.items():
+            if cond and not base_conds.get(job):
+                problems.append(f"{PR_VERIFY}: job {job!r} 新增 job-level if ({cond!r}) —— "
+                                f"必需检查不得变得可被跳过（跳过的检查可能被算作成功）")
+        if "workflow_dispatch" not in triggers_of(base_prv) and "workflow_dispatch" in triggers_of(head_prv):
+            problems.append(f"{PR_VERIFY}: 新增 workflow_dispatch —— dispatch 触发的检查不满足 "
+                            f"ruleset 必需检查（官方文档）")
 
-    # 禁止新增提权触发 / write-all / 直推 main
-    base_files = changed_files(base, head, root)
-    for path in base_files:
+    # 禁止新增提权触发 / write-all / 直推 main —— 一律基于**解析后的结构**判定，
+    # 不接受「注释里出现关键词」这种脆弱信号。
+    for path in changed_files(base, head, root):
         if not path.endswith((".yml", ".yaml")):
             continue
         before = file_at(base, path, root) or ""
         after = file_at(head, path, root)
         if after is None:
             continue
-        if "pull_request_target" not in before and "pull_request_target" in after:
-            problems.append(f"{path}: adds pull_request_target (forbidden)")
-        if "write-all" not in before and "write-all" in after:
-            problems.append(f"{path}: adds permissions: write-all (forbidden)")
-        if not PUSH_MAIN_RE.search(before) and PUSH_MAIN_RE.search(after):
-            problems.append(f"{path}: adds a push to main (forbidden)")
         if path == LEGACY_DIRECT_WRITE:
-            if "contents: write" in after or PUSH_MAIN_RE.search(after):
-                problems.append(f"{path}: legacy direct-write workflow must only be weakened, never re-armed")
+            # 旧直推 workflow：任何修改都视为「重新武装」风险（内容同时被策略 guard 的
+            # sha256 pin 锁定），不依赖关键词出现。
+            problems.append(f"{path}: legacy direct-write workflow must never be modified or re-armed")
+            continue
+        if "pull_request_target" not in triggers_of(before) and "pull_request_target" in triggers_of(after):
+            problems.append(f"{path}: adds pull_request_target trigger (forbidden)")
+        if not write_all(before) and write_all(after):
+            problems.append(f"{path}: adds permissions: write-all (forbidden)")
+        if not pushes_main(before) and pushes_main(after):
+            problems.append(f"{path}: adds a push to main (forbidden)")
 
     # 测试范围不得缩小
     base_tests = sorted(p for p in changed_files(base, head, root) if p.startswith("scripts/tests/"))
