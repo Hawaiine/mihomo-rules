@@ -355,18 +355,57 @@ _B_BASELINE_SRC = "scripts/ci/verify_policy_baseline.py"
 _B_BASELINE_BASE_REF = "${PR_BASE_SHA}"
 _B_BASELINE_HEAD_REF = "${PR_HEAD_SHA}"
 
+# ---------------------------------------------------------------------------
+# 第六轮（独立实现）：命令遮蔽（shadowing）与真实可执行文件身份
+# ---------------------------------------------------------------------------
+# 与候选树合同**互不共享代码**：这里用自己的一套正则/解析，避免「候选改自己的守卫就自证安全」。
+_B_VERIFIED_PY = "$PY_BIN"
+_B_VERIFIED_GIT = "$GIT_BIN"
+_B_GUARDED = frozenset({
+    "python", "python3", "pip", "pip3", "bash", "sh", "dash", "zsh", "node", "ruby", "perl",
+    "git", "grep", "cat", "test", "[", "printf", "readlink", "cp", "mv", "ln", "install",
+    "chmod", "curl", "wget",
+})
+_B_SHADOW_FUNC = re.compile(r"^\s*(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)")
+_B_SHADOW_FUNC_KW = re.compile(r"^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)")
+_B_SHADOW_ALIAS = re.compile(r"^\s*alias\s+([A-Za-z_][A-Za-z0-9_]*)\s*=")
+_B_SHADOW_EXPORT_F = re.compile(r"\b(?:export|declare|typeset)\s+-[a-zA-Z]*f[a-zA-Z]*\s+"
+                                r"([A-Za-z_][A-Za-z0-9_]*)")
+_B_SHADOW_VARS = {
+    "BASH_ENV": re.compile(r"(?:^|[\s\"'=])BASH_ENV="),
+    "ENV": re.compile(r"(?:^|[\s\"'=])ENV="),
+    "PATH": re.compile(r"(?:^|[\s\"'=])PATH="),
+}
+_B_REDIRECT = re.compile(r">>?\s*[\"']?([^\s\"';|&<>]+)")
+_B_WRITE_CMDS = frozenset({"cp", "mv", "ln", "install", "touch", "chmod", "dd", "tar", "unzip"})
+_B_DOWNLOAD_CMDS = frozenset({"curl", "wget"})
+_B_READ_ONLY_TARGET = frozenset({"test", "[", "grep", "cat", "head", "tail", "wc", "readlink",
+                                 "sha256sum", "shasum", "cmp", "diff", "stat", "file", "ls"})
+# 运行时「可执行文件身份核验」步骤必须包含的标记（与候选树合同语义一致，但独立维护）
+_B_RESOLVER_MARKERS = (
+    "unset -f python3", "unset BASH_ENV", 'command -v -- "$name"', "/usr/*|/bin/*|/opt/*",
+    'test -x "$path"', 'PY_BIN="$(_resolve python3)"', 'GIT_BIN="$(_resolve git)"',
+    '"$PY_BIN" -c', '"$GIT_BIN" --version', 'echo "PY_BIN=$PY_BIN"',
+    'echo "GIT_BIN=$GIT_BIN"', '>> "$GITHUB_ENV"',
+)
+_B_POLICY_REPORT_MARKERS = ('test -s "$RUNNER_TEMP/workflow-policy.json"', "json.load", '"ok"')
+_B_BASELINE_CONTENT_MARKERS = ('test -s "$RUNNER_TEMP/verify_policy_baseline.py"', "hash-object",
+                               "rev-parse", "grep -q", "def main(", "--base-sha")
+_B_BASELINE_REPORT_MARKERS = ('test -s "$RUNNER_TEMP/trusted-baseline.json"', "json.load",
+                              '"ok"', "base_sha", "head_sha")
+
 REQUIRED_JOB_COMMANDS: dict[str, dict] = {
     "general-pr-verify": {
         "required_commands": [
-            {"path": _B_GENERAL_GUARD, "argv": {"flags": []}},
-            {"path": _B_GENERAL_CONFIGS, "argv": {"flags": []}},
-            {"path": _B_GENERAL_RULESETS, "argv": {"flags": []}},
-            {"path": _B_GENERAL_ICON_URLS, "argv": {"flags": []}},
-            {"path": _B_GENERAL_README, "argv": {"flags": [{"flag": "--check"}]}},
-            {"exact_tokens": ["python3", "-m", "unittest", "discover", "-s", "scripts/tests"]},
+            {"path": _B_GENERAL_GUARD, "interpreter": _B_VERIFIED_PY, "argv": {"flags": []}},
+            {"path": _B_GENERAL_CONFIGS, "interpreter": _B_VERIFIED_PY, "argv": {"flags": []}},
+            {"path": _B_GENERAL_RULESETS, "interpreter": _B_VERIFIED_PY, "argv": {"flags": []}},
+            {"path": _B_GENERAL_ICON_URLS, "interpreter": _B_VERIFIED_PY, "argv": {"flags": []}},
+            {"path": _B_GENERAL_README, "interpreter": _B_VERIFIED_PY, "argv": {"flags": [{"flag": "--check"}]}},
+            {"exact_tokens": [_B_VERIFIED_PY, "-m", "unittest", "discover", "-s", "scripts/tests"]},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [_B_VERIFIED_PY, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": _B_GENERAL_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": _B_GENERAL_GUARD},
@@ -374,19 +413,20 @@ REQUIRED_JOB_COMMANDS: dict[str, dict] = {
     },
     "workflow-policy-guard": {
         "required_commands": [
-            {"path": _B_POLICY_GUARD,
+            {"path": _B_POLICY_GUARD, "interpreter": _B_VERIFIED_PY,
              "argv": {"flags": [{"flag": "--json", "values": ("$RUNNER_TEMP/workflow-policy.json",)}]}},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [_B_VERIFIED_PY, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": _B_POLICY_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": _B_POLICY_GUARD},
         ],
+        "report_markers": _B_POLICY_REPORT_MARKERS,
     },
     "trusted-baseline-guard": {
         "required_commands": [
-            {"path": _B_BASELINE_PATH,
+            {"path": _B_BASELINE_PATH, "interpreter": _B_VERIFIED_PY,
              "argv": {"flags": [{"flag": "--base-sha", "values": (_B_BASELINE_BASE_REF,)},
                                 {"flag": "--head-sha", "values": (_B_BASELINE_HEAD_REF,)},
                                 {"flag": "--repo-root", "values": (".",)},
@@ -394,15 +434,16 @@ REQUIRED_JOB_COMMANDS: dict[str, dict] = {
              "provenance": "baseline_guard_copy"},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [_B_VERIFIED_PY, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": _B_BASELINE_PATH},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": _B_BASELINE_PATH},
-            {"tokens": ["git", "cat-file", "-e", "${PR_BASE_SHA}^{commit}"],
+            {"tokens": [_B_VERIFIED_GIT, "cat-file", "-e", "${PR_BASE_SHA}^{commit}"],
              "desc": "base 提交可用性检查", "before": _B_BASELINE_PATH},
-            {"tokens": ["git", "cat-file", "-e", "${PR_HEAD_SHA}^{commit}"],
+            {"tokens": [_B_VERIFIED_GIT, "cat-file", "-e", "${PR_HEAD_SHA}^{commit}"],
              "desc": "head 提交可用性检查", "before": _B_BASELINE_PATH},
         ],
+        "report_markers": _B_BASELINE_REPORT_MARKERS,
     },
 }
 EXECUTABLE_SCRIPT_COMMANDS = {"verify_general_pr.py", "verify_configs.py", "verify_rulesets.py",
@@ -507,7 +548,7 @@ def _invokes(entry: dict, want: str) -> bool:
     cw = entry["cw"]
     if _path_identity_ok(cw, want):
         return True
-    if _basename(cw) not in INTERPRETERS:
+    if _basename(cw) not in INTERPRETERS and cw != _B_VERIFIED_PY:
         return False
     return _path_identity_ok(_interpreter_target(entry.get("seg_tokens") or []), want)
 
@@ -576,16 +617,32 @@ def check_baseline_guard_provenance(doc: dict) -> list[str]:
     def is_allowed_copy(ann: dict) -> bool:
         toks = ann["tokens"]
         cw = toks[0] if toks else ""
-        return (cw == "git" and "show" in toks
+        return (cw in ("git", _B_VERIFIED_GIT) and "show" in toks
                 and (base_src in toks or head_src in toks)
                 and target in _redirect_targets(ann))
+
+    def is_allowed_verify(ann: dict) -> bool:
+        """第六轮：对取得的文件做**只读**核验的允许形态（单段、无重定向，写不进去）。"""
+        toks = ann["tokens"]
+        if not toks:
+            return False
+        cw = _command_word(toks) or ""
+        if cw in ("git", _B_VERIFIED_GIT):
+            if "hash-object" in toks and target in toks:
+                return True
+            if "rev-parse" in toks and (base_src in toks or head_src in toks):
+                return True
+        segs = _segments(ann["text"])
+        if len(segs) == 1 and _basename(cw) in _B_READ_ONLY_TARGET and target in ann["text"]:
+            return True
+        return False
 
     found_condition = base_ok = head_ok = False
     for _si, lines in per_step:
         for idx, ann in enumerate(lines):
             toks = ann["tokens"]
             if not (toks and toks[0] == "if" and base_src in toks
-                    and "git" in toks and "cat-file" in toks):
+                    and ("git" in toks or _B_VERIFIED_GIT in toks) and "cat-file" in toks):
                 continue
             found_condition = True
             then_lines, else_lines = _if_branches(lines, idx)
@@ -601,6 +658,8 @@ def check_baseline_guard_provenance(doc: dict) -> list[str]:
             toks = ann["tokens"]
             if is_allowed_copy(ann):
                 continue
+            if is_allowed_verify(ann):
+                continue
             segs = _segments(ann["text"])
             if len(segs) == 1 and _path_identity_ok(_interpreter_target(segs[0]) or "", target):
                 continue                                  # 执行行由必需命令合同校验
@@ -613,6 +672,14 @@ def check_baseline_guard_provenance(doc: dict) -> list[str]:
     if not head_ok:
         problems.append(f"缺少 else 分支的 `git show {head_src} > {target}`"
                         f"（bootstrap 一次性回退必须显式声明）")
+    # 第六轮：取得的文件与 JSON 报告必须被**真实核验**（非空 / 与来源 blob 一致 / 关键结构 / 报告字段）
+    step_text = " ".join(str(s.get("run") or "") for s in ((job.get("steps") or [])))
+    for label, markers in (("基线 guard 文件内容核验", _B_BASELINE_CONTENT_MARKERS),
+                           ("基线 JSON 报告核验", _B_BASELINE_REPORT_MARKERS)):
+        missing = [m for m in markers if m not in step_text]
+        if missing:
+            problems.append(f"缺少{label}（存在/非空/与来源 blob 一致/关键结构/报告字段）："
+                            f"缺失标记 {missing[:4]}")
     return problems
 
 
@@ -634,6 +701,12 @@ def check_command_contract(doc: dict) -> list[str]:
             for e in indexed:
                 if "path" in want:
                     if not _invokes(e, want["path"]):
+                        continue
+                    if want.get("interpreter") and e["cw"] != want["interpreter"]:
+                        why = (f"必须由核验过的可执行文件 {want['interpreter']} 调用"
+                               f"（实际 {e['cw']!r}）—— 裸命令名可被 shell 函数/PATH 伪装劫持")
+                        argv_problems.append(f"line {e['line']}: {why}")
+                        nonconforming.append(f"line {e['line']}: {why}")
                         continue
                     ok_argv, why = _argv_contract_ok(_argv_after_target(e, want["path"]) or [],
                                                      want.get("argv") or {})
@@ -685,6 +758,13 @@ def check_command_contract(doc: dict) -> list[str]:
                                                                       for e in targets):
                     problems.append(f"{PR_VERIFY}: job {job_id!r} —— {aux.get('desc', '')} 必须位于 "
                                     f"{aux['before']} 之前（步骤级顺序合同）")
+        # 第六轮：守卫必须真实产出可解析的 JSON 报告（不得只看 exit code）
+        steps = [s for s in ((job.get("steps") or [])) if isinstance(s, dict)]
+        step_text = " ".join(str(s.get("run") or "") for s in steps)
+        for marker in tuple(spec.get("report_markers") or ()):
+            if marker not in step_text:
+                problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少产物核验标记 {marker!r}"
+                                f"（守卫必须真实生成 JSON 报告并被核验，不得只以 exit code 判定成功）")
     return problems
 
 
@@ -732,6 +812,107 @@ DIRECT_MUTATION_PATTERNS = (
     (re.compile(r"/(?:repos/[^\s\"\']+/)?pulls/[^\s\"\']*/merge\b"), "REST merge 端点"),
     (re.compile(r"\b(?:curl|wget|http|httpie)\b[^\n]*\bgraphql\b"), "HTTP 客户端直接发 GraphQL"),
 )
+
+
+def _shadowing_problems(doc: dict, name: str) -> list[str]:
+    """第六轮（独立实现）：命令遮蔽 / 启动环境注入 / PATH 伪装 / 同名伪造可执行文件。
+
+    与候选树合同不共享任何代码：这里只对**逻辑命令行文本**做判定。
+    """
+    problems: list[str] = []
+    for jid, job in (doc.get("jobs") or {}).items():
+        for step in ((job or {}).get("steps") or []):
+            run = step.get("run") if isinstance(step, dict) else None
+            if not isinstance(run, str):
+                continue
+            for text in _logical_lines(run):
+                where = f"{name}: job {jid!r} step={step.get('name')!r}"
+                match = _B_SHADOW_FUNC.match(text) or _B_SHADOW_FUNC_KW.match(text)
+                if match and match.group(1) in _B_GUARDED:
+                    problems.append(f"{where} defines/overrides a shell function {match.group(1)!r} "
+                                    f"(command shadowing: guard invocation would resolve to the fake)")
+                    continue
+                match = _B_SHADOW_ALIAS.match(text)
+                if match and match.group(1) in _B_GUARDED:
+                    problems.append(f"{where} aliases protected command {match.group(1)!r}")
+                    continue
+                match = _B_SHADOW_EXPORT_F.search(text)
+                if match and match.group(1) in _B_GUARDED:
+                    problems.append(f"{where} exports a function {match.group(1)!r} "
+                                    f"(export -f propagates the fake to child shells)")
+                    continue
+                for var, pattern in _B_SHADOW_VARS.items():
+                    if pattern.search(text):
+                        problems.append(f"{where} assigns/rewrites {var} "
+                                        f"(startup file or search path controlled by candidate content)")
+                        break
+                hit = None
+                for match in _B_REDIRECT.finditer(text):
+                    if match.group(1).rsplit("/", 1)[-1] in _B_GUARDED:
+                        hit = match.group(1)
+                        break
+                toks = [t.strip("\"'") for t in text.split()]
+                cw = toks[0].rsplit("/", 1)[-1] if toks else ""
+                if hit is None and cw in _B_WRITE_CMDS:
+                    for tok in toks[1:]:
+                        if tok.startswith("-"):
+                            continue
+                        if tok.rsplit("/", 1)[-1] in _B_GUARDED:
+                            hit = tok
+                            break
+                if hit is None and cw in _B_DOWNLOAD_CMDS:
+                    for tok in toks[1:]:
+                        if tok.startswith("-"):
+                            continue
+                        if "/" in tok and tok.rsplit("/", 1)[-1] in _B_GUARDED:
+                            hit = tok
+                            break
+                if hit:
+                    problems.append(f"{where} writes/creates a file named like a protected command "
+                                    f"{hit!r} (PATH fake executable)")
+    return problems
+
+
+def _exec_identity_problems(doc: dict) -> list[str]:
+    """第六轮（独立实现）：必需 job 必须先用**核验过的可执行文件身份**，
+    并核验守卫真实产出的 JSON 报告。"""
+    problems: list[str] = []
+    jobs = doc.get("jobs") or {}
+    for job_id, spec in REQUIRED_JOB_COMMANDS.items():
+        job = jobs.get(job_id)
+        if not isinstance(job, dict):
+            continue
+        steps = [s for s in (job.get("steps") or []) if isinstance(s, dict)]
+        texts = [str(s.get("run") or "") for s in steps]
+        found = [i for i, t in enumerate(texts) if all(m in t for m in _B_RESOLVER_MARKERS)]
+        if not found:
+            problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少「可执行文件身份核验」步骤"
+                            f"（unset -f / unset BASH_ENV / 系统根目录绝对路径 / test -x / "
+                            f"真实运行核验 / $GITHUB_ENV 导出）")
+        else:
+            for i, text_ in enumerate(texts):
+                if i in found:
+                    continue
+                for var in ("PY_BIN", "GIT_BIN"):
+                    if re.search(rf"(?:^|[\s\"']){var}=", text_, re.MULTILINE):
+                        problems.append(f"{PR_VERIFY}: job {job_id!r} —— {var} 只允许由核验步骤"
+                                        f"（step {sorted(found)}）赋值，step {i} 也对其赋值")
+        indexed = executed_commands_indexed({"jobs": {job_id: job}})
+        for want in spec["required_commands"]:
+            if "path" not in want:
+                continue
+            hits = [e for e in indexed if _invokes(e, want["path"])]
+            if not hits:
+                continue
+            invocation_steps = {e["step"] for e in hits}
+            if found and min(found) >= min(invocation_steps):
+                problems.append(f"{PR_VERIFY}: job {job_id!r} —— 可执行文件身份核验步骤必须位于"
+                                f"守卫调用之前（resolver step {sorted(found)} ≥ 调用 step "
+                                f"{sorted(invocation_steps)}）")
+        for marker in tuple(spec.get("report_markers") or ()):
+            if not any(marker in t for t in texts):
+                problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少产物核验标记 {marker!r}")
+    return problems
 
 
 def workflow_files_at(revision: str, root: Path) -> list[str]:
@@ -936,6 +1117,8 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
             problems.append(f"{wf}: 无法解析候选 workflow YAML（fail-closed）：{exc}")
             continue
         problems.extend(direct_mutation_problems(wf_doc, wf))
+        # 第六轮：命令遮蔽 / 启动环境注入 / PATH 伪装 / 同名伪造可执行文件（独立实现）
+        problems.extend(_shadowing_problems(wf_doc, wf))
         if wf == CANDIDATE_SYNC:
             problems.extend(check_automerge_contract(wf_doc))
 
@@ -946,7 +1129,10 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
                 problems.append(f"{PR_VERIFY}: guard invocation {script} missing")
         # Fix B：候选 pr-verify.yml 的必要命令必须**真正执行**
         # （本 guard 自带独立严格解析，不 import 候选树代码，避免候选自证安全）
-        problems.extend(check_command_contract(yaml.safe_load(head_prv) or {}))
+        head_prv_doc = yaml.safe_load(head_prv) or {}
+        problems.extend(check_command_contract(head_prv_doc))
+        # 第六轮：可执行文件身份核验步骤与产物核验（独立实现）
+        problems.extend(_exec_identity_problems(head_prv_doc))
     return problems
 
 

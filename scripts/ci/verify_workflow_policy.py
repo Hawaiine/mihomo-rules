@@ -34,6 +34,13 @@
   P15 任何 workflow 都不得直接发送 auto-merge / 合并 mutation（gh api graphql、
       REST merge 端点、curl graphql、gh pr merge 及其包装形态）——必须通过
       scripts/ci/request_automerge.py 执行。
+  P16 命令遮蔽（shadowing）合同：任何 workflow 都不得定义受保护命令名的 shell 函数 /
+      alias / `export -f`、不得赋值 BASH_ENV/ENV/PATH、不得写入同名伪造可执行文件
+      ——否则 guard 调用会被解析到伪造实现，步骤 exit=0 却什么都没执行。
+  P17 必需 job 必须先用**核验过的可执行文件身份**（unset -f / unset BASH_ENV /
+      命令解析必须落在系统根目录 / test -x / 真实运行核验 / $GITHUB_ENV 导出）并
+      以 `"$PY_BIN"`、`"$GIT_BIN"` 调用守卫与辅助命令；守卫产出的 JSON 报告必须
+      真实生成并通过解析核验（不得只看 exit code）。
 
 用法：
   python3 scripts/ci/verify_workflow_policy.py [--root <仓库根>] [--json <输出路径>]
@@ -52,7 +59,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from workflow_command_contract import (  # noqa: E402
-    check_automerge_job, check_required_jobs, direct_mutation_problems,
+    check_automerge_job, check_required_jobs, direct_mutation_problems, shadowing_problems,
 )
 
 WORKFLOW_DIR = ".github/workflows"
@@ -100,7 +107,9 @@ DIRECT_MAIN_PATTERNS = (
     (re.compile(r"/pulls/[^\n]*/merge"), "REST merge 端点"),
 )
 CANDIDATE_PUSH_RE = re.compile(r"git\s+push[^\n]*refs/heads/\$(?:\{)?CANDIDATE_BRANCH(?:\})?")
-REPO_SCRIPT_RE = re.compile(r"(?:^|[\s;&|])(?:python3?|bash|sh|\./)\s*[\"']?(?:\./)?scripts/")
+REPO_SCRIPT_RE = re.compile(r"(?:^|[\s;&|\"'])"
+                            r"\"?(?:python3?|bash|sh|\./|\$PY_BIN|\$GIT_BIN)\"?"
+                            r"\s*[\"']?(?:\./)?scripts/")
 
 
 class PolicyError(Exception):
@@ -266,6 +275,9 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
 
     # P15：任何 workflow 都不得自己直接发送 auto-merge / 合并 mutation（必须走 helper）
     problems.extend(direct_mutation_problems(doc, name))
+
+    # P16：命令遮蔽（shadowing）—— 函数 / alias / export -f / BASH_ENV / PATH / 同名伪造可执行文件
+    problems.extend(shadowing_problems(doc, name))
 
     # P6：候选更新 workflow
     if is_candidate:
@@ -465,6 +477,12 @@ def run(root: Path) -> tuple[list[str], dict]:
             "automerge_command_contract": "P5：await_checks → verify_required_checks → "
                                           "request_automerge 必须真正执行且顺序/步骤/env 正确",
             "direct_mutation_guard": "P15：workflow 内禁止直接 auto-merge/合并 mutation",
+            "shadowing_guard": "P16：禁止定义受保护命令名的 shell 函数/alias/export -f、"
+                               "禁止赋值 BASH_ENV/ENV/PATH、禁止写入同名伪造可执行文件",
+            "exec_identity_guard": "P17：必需 job 必须用核验过的可执行文件身份（unset -f/"
+                                   "unset BASH_ENV/系统根目录绝对路径/test -x/真实运行核验/"
+                                   "$GITHUB_ENV 导出）并以 $PY_BIN、$GIT_BIN 调用守卫，"
+                                   "且核验守卫真实产出的 JSON 报告",
             "expected_check_source": {"app_slug": EXPECTED_CHECK_APP_SLUG, "app_id": EXPECTED_CHECK_APP_ID},
             "legacy_daily_sync_pin": PINNED_LEGACY_DAILY_SYNC_SHA256,
             "legacy_daily_sync_pinned_ok": legacy_pinned,

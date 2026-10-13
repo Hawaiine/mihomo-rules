@@ -586,22 +586,24 @@ class WorkflowSecurityGuardTest(unittest.TestCase):
         self.assertTrue(any("forbidden write command" in p for p in problems), problems)
 
     def test_missing_verification_step_fails(self):
-        text = self._workflow().replace("python3 scripts/verify_rulesets.py", "python3 scripts/verify_configs.py")
+        text = self._workflow().replace('"$PY_BIN" scripts/verify_rulesets.py',
+                                        '"$PY_BIN" scripts/verify_configs.py')
         problems = guard.workflow_problems(text)
         self.assertTrue(any("missing required verification step" in p for p in problems), problems)
 
     def test_icon_url_check_is_a_required_workflow_step(self):
         """生产图标 URL 可达性检查必须纳入必需步骤契约。"""
         self.assertIn("scripts/icon_urls.py", guard.WORKFLOW_REQUIRED_SCRIPTS)
-        self.assertIn("python3 scripts/icon_urls.py", self._workflow())
+        self.assertTrue(guard.required_step_present(self._workflow(), "scripts/icon_urls.py"))
         self.assertEqual(guard.workflow_problems(self._workflow()), [])
 
     def test_removing_only_the_icon_url_check_step_fails(self):
         """只删掉 icon_urls.py 这一个步骤，guard 必须报告缺少该必需检查。"""
         text = self._workflow()
-        self.assertIn("python3 scripts/icon_urls.py", text)
-        removed = text.replace("python3 scripts/icon_urls.py", "true  # 已移除必需步骤")
-        self.assertNotIn("python3 scripts/icon_urls.py", removed)
+        variant = next(v for v in guard.required_step_variants("scripts/icon_urls.py")
+                       if v in text)
+        removed = text.replace(variant, "true  # 已移除必需步骤")
+        self.assertFalse(guard.required_step_present(removed, "scripts/icon_urls.py"))
         problems = guard.workflow_problems(removed)
         self.assertIn(
             f"{guard.PR_WORKFLOW_PATH}: missing required verification step 'scripts/icon_urls.py'",
@@ -612,9 +614,12 @@ class WorkflowSecurityGuardTest(unittest.TestCase):
         """逐个删除每个必需步骤都必须失败——不能只对其中一个生效。"""
         for required in guard.WORKFLOW_REQUIRED_SCRIPTS:
             with self.subTest(required=required):
-                text = self._workflow().replace(required, "true  # 已移除必需步骤")
-                self.assertNotIn(required, text, f"替换后仍含 {required!r}")
-                problems = guard.workflow_problems(text)
+                text = self._workflow()
+                variant = next(v for v in guard.required_step_variants(required) if v in text)
+                removed = text.replace(variant, "true  # 已移除必需步骤")
+                self.assertFalse(guard.required_step_present(removed, required),
+                                 f"替换后仍算存在 {required!r}")
+                problems = guard.workflow_problems(removed)
                 self.assertIn(
                     f"{guard.PR_WORKFLOW_PATH}: missing required verification step {required!r}",
                     problems,

@@ -88,6 +88,22 @@ WORKFLOW_REQUIRED_SCRIPTS = (
     "scripts/readme_stats.py --check",
     "python3 -m unittest discover -s scripts/tests",
 )
+# 第六轮：守卫必须由**核验过的绝对路径解释器**调用（`"$PY_BIN"`），因此必需步骤文本
+# 允许「裸解释器」与「核验后解释器」两种写法；两种都算该步骤存在。
+VERIFIED_PY = '"$PY_BIN"'
+VERIFIED_PY_BARE = "$PY_BIN"
+
+
+def required_step_variants(required: str) -> tuple[str, ...]:
+    """该必需步骤在 workflow 文本里的可接受写法（用于存在性判定与测试定位）。"""
+    if required.startswith("python3 "):
+        tail = required[len("python3 "):]
+        return (required, f"{VERIFIED_PY} {tail}", f"{VERIFIED_PY_BARE} {tail}")
+    return (required,)
+
+
+def required_step_present(text: str, required: str) -> bool:
+    return any(variant in text for variant in required_step_variants(required))
 # Only the bare environment variable is forbidden; `_OASIC_REVISION` is the manifest-backed name.
 ENV_REVISION_FALLBACK = re.compile(r"(?<![A-Za-z0-9_])OASIC_REVISION(?![A-Za-z0-9_])")
 
@@ -770,7 +786,7 @@ def workflow_problems(text: str) -> list[str]:
         if command in text:
             problems.append(f"{PR_WORKFLOW_PATH}: forbidden write command {command!r}")
     for required in WORKFLOW_REQUIRED_SCRIPTS:
-        if required not in text:
+        if not required_step_present(text, required):
             problems.append(f"{PR_WORKFLOW_PATH}: missing required verification step {required!r}")
     # Oasisic 检出必须使用已批准 pin（与 daily-sync 同一权威来源，禁止浮动 ref）
     if f"ref: {PINNED_OASIC}" not in text:

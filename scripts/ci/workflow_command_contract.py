@@ -34,6 +34,49 @@ ICONS_REPO = "Hawaiine/Oasisic-Icons"
 
 # 解释器（真正执行文件的命令词）
 INTERPRETERS = {"python", "python3", "bash", "sh", "dash", "zsh", "node", "ruby", "perl"}
+
+# ---------------------------------------------------------------------------
+# 第六轮：命令遮蔽（shadowing）与真实可执行文件身份
+# ---------------------------------------------------------------------------
+# 文本合同只能看到「命令名 + 参数」，看不到**运行时的名字解析**：
+#   python3() { printf 'SHADOWED\n'; return 0; }
+#   git()     { return 0; }
+# 之类的同名 shell 函数（或别名、`export -f`、`$BASH_ENV`/`$ENV` 启动文件注入、
+# PATH 前缀里的同名伪造可执行文件）会让「看起来完全合规」的调用解析到伪造实现：
+# 步骤 exit=0、输出伪造，而真正的 guard 根本没运行。因此本轮做两层防护：
+#   A) 合同层 fail-closed：任何 workflow 文本里出现遮蔽构造一律拒绝（shadowing_problems）；
+#   B) 运行时层：守卫命令与其必要辅助命令必须通过**核验过的可执行文件**调用
+#      （解析 → 必须落在系统根目录 → 可执行 → 真实运行核验），绝不使用裸命令名
+#      （exec_identity：`"$PY_BIN"` / `"$GIT_BIN"`，由专用核验步骤导出）。
+GUARDED_COMMANDS = frozenset(INTERPRETERS | {
+    "git", "grep", "cat", "test", "[", "printf", "readlink",
+    "pip", "pip3", "cp", "mv", "ln", "install", "chmod", "curl", "wget",
+})
+PY_BIN_VAR = "$PY_BIN"
+GIT_BIN_VAR = "$GIT_BIN"
+VERIFIED_INTERPRETERS = frozenset({PY_BIN_VAR})
+VERIFIED_GIT = frozenset({GIT_BIN_VAR})
+# 只读检查命令（允许在「基线 guard 目标路径」上下文里出现的核对形态；写入语义一律不允许）
+_READ_ONLY_TARGET_COMMANDS = frozenset({
+    "test", "[", "grep", "cat", "head", "tail", "wc", "readlink",
+    "sha256sum", "shasum", "cmp", "diff", "stat", "file", "ls",
+})
+# 会「写入/创建文件」的命令（用于识别丢下同名伪造可执行文件的手法）
+_WRITE_COMMANDS = frozenset({"cp", "mv", "ln", "install", "touch", "chmod", "dd",
+                             "tar", "unzip"})
+_DOWNLOAD_COMMANDS = frozenset({"curl", "wget"})
+_REDIRECT_TARGET_RE = re.compile(r">>?\s*[\"']?([^\s\"';|&<>]+)")
+_SHADOW_FUNC_RE = re.compile(r"^\s*(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)")
+_SHADOW_FUNC_KW_RE = re.compile(r"^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)")
+_SHADOW_ALIAS_RE = re.compile(r"^\s*alias\s+([A-Za-z_][A-Za-z0-9_]*)\s*=")
+_SHADOW_EXPORT_F_RE = re.compile(r"\b(?:export|declare|typeset)\s+-[a-zA-Z]*f[a-zA-Z]*\s+"
+                                 r"([A-Za-z_][A-Za-z0-9_]*)")
+# 启动环境文件 / PATH 赋值（含 `export PATH=`、追加进 $GITHUB_ENV 的形态）
+_SHADOW_VAR_ASSIGN_RES = {
+    "BASH_ENV": re.compile(r"(?:^|[\s\"'=])BASH_ENV="),
+    "ENV": re.compile(r"(?:^|[\s\"'=])ENV="),
+    "PATH": re.compile(r"(?:^|[\s\"'=])PATH="),
+}
 # 包装命令（可跳过，不改变「实际执行者」判定）
 WRAPPERS = {"env", "sudo", "time", "command", "exec", "nohup"}
 # 空操作/不执行命令
@@ -64,45 +107,103 @@ BASELINE_HEAD_REF = "${PR_HEAD_SHA}"
 POLICY_JSON = "$RUNNER_TEMP/workflow-policy.json"
 BASELINE_JSON = "$RUNNER_TEMP/trusted-baseline.json"
 
+# ---------------------------------------------------------------------------
+# 运行时「可执行文件身份核验」步骤合同（第六轮）
+#
+# 该步骤必须（逐项都是**可核验的真实行为**，不是文本装饰）：
+#   1. `unset -f` 清除受保护命令名的 shell 函数（同 step 定义或经启动文件注入）；
+#   2. `unset BASH_ENV ENV` 清除启动环境文件注入面；
+#   3. `command -v --` 解析后，路径必须**位于系统根目录**（/usr、/bin、/opt）下的绝对路径
+#      —— 函数返回裸名、候选目录/PATH 伪装一律不满足，直接失败；
+#   4. `test -x` 确认可执行，`readlink -f` 规范化；
+#   5. 真实运行核验（`"$PY_BIN" -c …` / `"$GIT_BIN" --version`）；
+#   6. 通过 `$GITHUB_ENV` 导出 PY_BIN / GIT_BIN 供后续步骤使用（且不得在别处重复赋值）。
+# 之后所有 guard 与其必要辅助命令都必须用 `"$PY_BIN"` / `"$GIT_BIN"` 调用。
+RESOLVER_MARKERS = (
+    "unset -f python3",
+    "unset BASH_ENV",
+    'command -v -- "$name"',
+    "/usr/*|/bin/*|/opt/*",
+    'test -x "$path"',
+    'PY_BIN="$(_resolve python3)"',
+    'GIT_BIN="$(_resolve git)"',
+    '"$PY_BIN" -c',
+    '"$GIT_BIN" --version',
+    'echo "PY_BIN=$PY_BIN"',
+    'echo "GIT_BIN=$GIT_BIN"',
+    '>> "$GITHUB_ENV"',
+)
+RESOLVER_VARS = ("PY_BIN", "GIT_BIN")
+
+# 可信基线 guard 的**产物核验**合同（第六轮）：复制出来的 guard 文件与 JSON 报告
+# 都必须被真实核验，不能只靠「复制命令看起来对」。
+BASELINE_CONTENT_MARKERS = (
+    'test -s "$RUNNER_TEMP/verify_policy_baseline.py"',   # 必须存在且非空
+    "hash-object",                                        # 内容与来源 blob 逐字节一致
+    "rev-parse",
+    "grep -q",                                            # 关键结构/函数存在
+    "def main(",
+    "--base-sha",
+)
+BASELINE_REPORT_MARKERS = (
+    'test -s "$RUNNER_TEMP/trusted-baseline.json"',        # 报告必须真实生成且非空
+    "json.load",                                          # 必须可解析
+    '"ok"',                                                # 必需字段
+    "base_sha",
+    "head_sha",
+)
+# 策略 guard 的 JSON 报告也必须真实生成并可解析（不能只看 exit code）
+POLICY_REPORT_MARKERS = (
+    'test -s "$RUNNER_TEMP/workflow-policy.json"',
+    "json.load",
+    '"ok"',
+)
+
 CONTRACT: dict[str, dict[str, Any]] = {
     "general-pr-verify": {
         "required_commands": [
-            {"path": GENERAL_GUARD, "argv": {"flags": []}, "env": ["MIHOMO_ICON_REPO"],
-             "desc": "通用 PR 只读 guard"},
-            {"path": GENERAL_CONFIGS, "argv": {"flags": []}, "env": ["MIHOMO_ICON_REPO"],
-             "desc": "config 树校验"},
-            {"path": GENERAL_RULESETS, "argv": {"flags": []}, "desc": "ruleset 校验"},
-            {"path": GENERAL_ICON_URLS, "argv": {"flags": []}, "desc": "生产图标 URL 可达性"},
-            {"path": GENERAL_README, "argv": {"flags": [{"flag": "--check"}]},
+            {"path": GENERAL_GUARD, "interpreter": PY_BIN_VAR, "argv": {"flags": []},
+             "env": ["MIHOMO_ICON_REPO"], "desc": "通用 PR 只读 guard"},
+            {"path": GENERAL_CONFIGS, "interpreter": PY_BIN_VAR, "argv": {"flags": []},
+             "env": ["MIHOMO_ICON_REPO"], "desc": "config 树校验"},
+            {"path": GENERAL_RULESETS, "interpreter": PY_BIN_VAR, "argv": {"flags": []},
+             "desc": "ruleset 校验"},
+            {"path": GENERAL_ICON_URLS, "interpreter": PY_BIN_VAR, "argv": {"flags": []},
+             "desc": "生产图标 URL 可达性"},
+            {"path": GENERAL_README, "interpreter": PY_BIN_VAR, "argv": {"flags": [{"flag": "--check"}]},
              "desc": "README 统计口径"},
-            {"exact_tokens": ["python3", "-m", "unittest", "discover", "-s", "scripts/tests"],
+            {"exact_tokens": [PY_BIN_VAR, "-m", "unittest", "discover", "-s", "scripts/tests"],
              "env": ["MIHOMO_ICON_REPO"], "desc": "全量单元测试"},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [PY_BIN_VAR, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": GENERAL_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": GENERAL_GUARD},
         ],
         "checkouts": [{"repository": ICONS_REPO, "ref": PINNED_ICONS_SHA, "desc": "固定版本图标仓库"},
                       {"pr_head": True, "desc": "检出 PR head"}],
+        "exec_identity": {"resolver_markers": RESOLVER_MARKERS, "vars": RESOLVER_VARS},
     },
     "workflow-policy-guard": {
         "required_commands": [
-            {"path": POLICY_GUARD, "argv": {"flags": [{"flag": "--json", "values": (POLICY_JSON,)}]},
+            {"path": POLICY_GUARD, "interpreter": PY_BIN_VAR,
+             "argv": {"flags": [{"flag": "--json", "values": (POLICY_JSON,)}]},
              "desc": "workflow 策略 guard"},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [PY_BIN_VAR, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": POLICY_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": POLICY_GUARD},
         ],
         "checkouts": [{"pr_head": True, "desc": "检出 PR head"}],
+        "exec_identity": {"resolver_markers": RESOLVER_MARKERS, "vars": RESOLVER_VARS,
+                          "report_markers": POLICY_REPORT_MARKERS},
     },
     "trusted-baseline-guard": {
         "required_commands": [
-            {"path": BASELINE_GUARD_PATH,
+            {"path": BASELINE_GUARD_PATH, "interpreter": PY_BIN_VAR,
              "argv": {"flags": [{"flag": "--base-sha", "values": (BASELINE_BASE_REF,)},
                                 {"flag": "--head-sha", "values": (BASELINE_HEAD_REF,)},
                                 {"flag": "--repo-root", "values": (".",)},
@@ -111,18 +212,19 @@ CONTRACT: dict[str, dict[str, Any]] = {
              "desc": "可信基线 guard（候选树校验）"},
         ],
         "required_aux": [
-            {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
+            {"tokens": [PY_BIN_VAR, "-m", "pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
              "before": BASELINE_GUARD_PATH},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
              "before": BASELINE_GUARD_PATH},
-            {"tokens": ["git", "cat-file", "-e", "${PR_BASE_SHA}^{commit}"],
+            {"tokens": [GIT_BIN_VAR, "cat-file", "-e", "${PR_BASE_SHA}^{commit}"],
              "before": BASELINE_GUARD_PATH,
              "desc": "确认 base 提交可用（必须在基线 guard 之前）"},
-            {"tokens": ["git", "cat-file", "-e", "${PR_HEAD_SHA}^{commit}"],
+            {"tokens": [GIT_BIN_VAR, "cat-file", "-e", "${PR_HEAD_SHA}^{commit}"],
              "before": BASELINE_GUARD_PATH,
              "desc": "确认 head 提交可用（必须在基线 guard 之前）"},
         ],
         "checkouts": [{"pr_head": True, "desc": "检出 PR head"}],
+        "exec_identity": {"resolver_markers": RESOLVER_MARKERS, "vars": RESOLVER_VARS},
     },
 }
 
@@ -427,7 +529,7 @@ def invokes_path(cmd: CommandLine, want: str) -> bool:
         return False
     if path_identity_ok(cw, want):
         return True
-    if _basename(cw) not in INTERPRETERS:
+    if _basename(cw) not in INTERPRETERS and cw not in VERIFIED_INTERPRETERS:
         return False
     return path_identity_ok(interpreter_target(seg), want)
 
@@ -478,6 +580,132 @@ def matches_tokens(cmd: CommandLine, tokens: list[str], want_cw: str | None = No
     return False
 
 
+def _creates_guarded_executable(cmd: CommandLine) -> str | None:
+    """该行是否在创建/覆盖一个与受保护命令**同名**的文件（PATH 伪装的可执行文件）。
+
+    * 重定向目标：`> foo/python3`、`>> "…/git"`；
+    * coreutils 写命令的目标参数：`cp evil python3`、`install -m755 x …/git`、`chmod +x …/python3`；
+    * 下载命令写到带路径的目标：`curl -o /tmp/python3 …`。
+    管道下游（`curl … | python3 -c …`）只是调用，不是写文件，因此不做段切分判定。
+    """
+    for match in _REDIRECT_TARGET_RE.finditer(cmd.text):
+        if _basename(match.group(1)) in GUARDED_COMMANDS:
+            return match.group(1)
+    toks = cmd.tokens
+    if not toks:
+        return None
+    cw = _basename(toks[0])
+    if cw in _WRITE_COMMANDS:
+        for tok in toks[1:]:
+            if tok.startswith("-"):
+                continue
+            if _basename(tok) in GUARDED_COMMANDS:
+                return tok
+    elif cw in _DOWNLOAD_COMMANDS:
+        for tok in toks[1:]:
+            if tok.startswith("-"):
+                continue
+            if "/" in tok and _basename(tok) in GUARDED_COMMANDS:
+                return tok
+    return None
+
+
+def shadowing_problems(doc: dict, name: str = "") -> list[str]:
+    """命令遮蔽（shadowing）合同：任何 workflow 都不得制造「guard 调用被解析到伪造实现」的条件。
+
+    文本合同看不到运行时的名字解析，因此这里对**遮蔽构造本身** fail-closed：
+
+      * 定义/覆盖受保护命令名的 shell 函数（`python3() { … }`、`function git { … }`）；
+      * `alias python3=…` / `export -f python3` / `declare -fx git`；
+      * 赋值 `BASH_ENV` / `ENV`（非交互 shell 启动文件注入——`unset` 不受影响）；
+      * 改写 `PATH`（前缀里放同名伪造可执行文件）；
+      * 把同名伪造可执行文件写进任何路径（`> …/python3`、`cp … git`、`chmod +x …/git`）。
+
+    任何一个命中即失败；合法 workflow（真实调用 `python3 scripts/…`）不受影响。
+    """
+    problems: list[str] = []
+    for jid, job in (doc.get("jobs") or {}).items():
+        for step in _steps_of(job):
+            run = step.get("run")
+            if not isinstance(run, str):
+                continue
+            where = f"{name}: job '{jid}' step={step.get('name')!r}"
+            for cmd in split_command_lines(run):
+                text = cmd.text
+                match = _SHADOW_FUNC_RE.match(text) or _SHADOW_FUNC_KW_RE.match(text)
+                if match and match.group(1) in GUARDED_COMMANDS:
+                    problems.append(
+                        f"{where} 定义了受保护命令 {match.group(1)!r} 的 shell 函数 "
+                        f"（命令遮蔽：guard 调用会被解析到伪造实现，步骤可能 exit=0 却未执行真正的守卫）："
+                        f"{text.strip()[:120]!r}")
+                    continue
+                match = _SHADOW_ALIAS_RE.match(text)
+                if match and match.group(1) in GUARDED_COMMANDS:
+                    problems.append(f"{where} 用 alias 覆盖了受保护命令 {match.group(1)!r}："
+                                    f"{text.strip()[:120]!r}")
+                    continue
+                match = _SHADOW_EXPORT_F_RE.search(text)
+                if match and match.group(1) in GUARDED_COMMANDS:
+                    problems.append(f"{where} 导出/声明了受保护命令 {match.group(1)!r} 的函数"
+                                    f"（export -f 会让子 shell 也用伪造实现）：{text.strip()[:120]!r}")
+                    continue
+                for var, pattern in _SHADOW_VAR_ASSIGN_RES.items():
+                    if pattern.search(text):
+                        problems.append(f"{where} 赋值/改写了 {var}（非交互 shell 的启动环境文件或命令"
+                                        f"搜索路径被候选内容控制，可劫持 guard 调用）：{text.strip()[:120]!r}")
+                        break
+                created = _creates_guarded_executable(cmd)
+                if created:
+                    problems.append(f"{where} 写入/创建了与受保护命令同名的文件 {created!r}"
+                                    f"（PATH 同名伪造可执行文件）：{text.strip()[:120]!r}")
+    return problems
+
+
+def _resolver_step_indices(steps: list[dict], markers: tuple[str, ...]) -> list[int]:
+    """包含全部核验标记的步骤下标（要求标记出现在**同一个步骤**里）。"""
+    return [si for si, step in enumerate(steps)
+            if isinstance(step.get("run"), str) and all(m in step["run"] for m in markers)]
+
+
+def exec_identity_problems(steps: list[dict], job_id: str, spec: dict[str, Any]) -> list[str]:
+    """可执行文件身份核验步骤合同（第六轮）＋ 变量赋值唯一性 ＋ 产物核验标记。
+
+    * 必须存在一个包含全部核验标记的步骤；
+    * 该步骤必须位于所有必需命令**之前**（由调用方按 step_index 校验顺序）；
+    * PY_BIN / GIT_BIN 只允许在该步骤内赋值（防止后续步骤用 $GITHUB_ENV 覆盖成伪造路径）；
+    * 必须核验守卫真实产出的 JSON 报告（存在/非空/可解析/含 ok 字段），不能只看 exit code。
+    """
+    problems: list[str] = []
+    markers = tuple(spec.get("resolver_markers") or ())
+    vars_ = tuple(spec.get("vars") or ())
+    if not markers:
+        return problems
+    found = _resolver_step_indices(steps, markers)
+    if not found:
+        missing = [m for m in markers
+                   if not any(isinstance(s.get("run"), str) and m in s["run"] for s in steps)]
+        problems.append(f"{job_id}: 缺少「可执行文件身份核验」步骤（必须在任何守卫调用之前，"
+                        f"unset -f 清除函数遮蔽 / unset BASH_ENV / 解析后必须是系统根目录下的"
+                        f"绝对路径 / test -x / 真实运行核验 / 通过 $GITHUB_ENV 导出）"
+                        f"；缺失标记：{missing[:4]}")
+    else:
+        allowed = set(found)
+        for si, step in enumerate(steps):
+            run = step.get("run")
+            if not isinstance(run, str) or si in allowed:
+                continue
+            for var in vars_:
+                if re.search(rf"(?:^|[\s\"']){var}=", run, re.MULTILINE):
+                    problems.append(f"{job_id}: {var} 只允许由身份核验步骤（step {sorted(allowed)}）赋值，"
+                                    f"但 step {si}（{step.get('name')!r}）也对其赋值 —— "
+                                    f"允许后续步骤改写解析结果会被用来指向伪造可执行文件")
+    for marker in tuple(spec.get("report_markers") or ()):
+        if not any(isinstance(s.get("run"), str) and marker in s["run"] for s in steps):
+            problems.append(f"{job_id}: 缺少产物核验标记 {marker!r} —— 守卫必须真实生成 JSON 报告"
+                            f"并被核验（不得只以 exit code 判定成功）")
+    return problems
+
+
 def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
     """校验单个必需 job 的命令合同。返回 (problems, details)。"""
     spec = CONTRACT[job_id]
@@ -497,6 +725,15 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
     details: dict[str, Any] = {"steps": len(steps), "logical_command_lines": len(lines),
                                "required_commands": [], "required_aux": []}
 
+    # 第六轮：可执行文件身份核验步骤合同（必须在任何守卫调用之前）
+    identity = spec.get("exec_identity") or {}
+    identity_problems = exec_identity_problems(steps, job_id, identity)
+    problems.extend(identity_problems)
+    resolver_steps = _resolver_step_indices(steps, tuple(identity.get("resolver_markers") or ()))
+    if resolver_steps:
+        details["exec_identity"] = {"resolver_steps": resolver_steps, "ok": not identity_problems}
+    executed_steps: list[int] = []
+
     # 必需命令：必须被**真正执行**，且路径/参数与合同逐字一致
     for req in spec["required_commands"]:
         desc = req.get("desc", "")
@@ -506,6 +743,15 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
         for cmd in lines:
             if "path" in req:
                 if not invokes_path(cmd, req["path"]):
+                    continue
+                # 第六轮：必须用核验过的可执行文件调用，禁止裸命令名（遮蔽面）
+                want_interp = req.get("interpreter")
+                if want_interp and command_word(cmd.segments[0]) != want_interp:
+                    why = (f"必须由核验过的可执行文件 {want_interp} 调用"
+                           f"（实际 {command_word(cmd.segments[0])!r}）—— 裸命令名可被 shell 函数/"
+                           f"PATH 伪装劫持")
+                    argv_problems.append(f"line {cmd.line_no}: {why}")
+                    nonconforming.append((cmd, why))
                     continue
                 ok, why = argv_contract_ok(argv_after_target(cmd, req["path"]) or [],
                                            req.get("argv") or {})
@@ -563,7 +809,16 @@ def check_job_commands(job: dict, job_id: str) -> tuple[list[str], dict]:
             entry.setdefault("env_required", []).append({"key": key, "ok": ok_env})
             if not ok_env:
                 problems.append(f"{job_id}: {desc} 所在步骤必须声明 env {key}")
+        executed_steps.extend(getattr(c, "step_index", 0) for c in executed)
         details["required_commands"].append(entry)
+
+    # 第六轮：身份核验步骤必须位于**所有**守卫调用之前（否则守卫可能先被劫持执行）
+    if resolver_steps and executed_steps:
+        first_invocation = min(executed_steps)
+        if min(resolver_steps) >= first_invocation:
+            problems.append(f"{job_id}: 「可执行文件身份核验」步骤必须位于守卫调用之前"
+                            f"（实际 resolver step {sorted(resolver_steps)} ≥ 调用 step "
+                            f"{first_invocation}）")
 
     # 辅助命令：必须真实执行（可为流水线/条件的一部分，但命令词不能是空操作）
     aux_lines: dict[str, int] = {}
@@ -663,16 +918,43 @@ def check_baseline_guard_provenance(job: dict) -> list[str]:
         per_step.append((si, lines))
 
     def is_allowed_copy(cmd: CommandLine) -> bool:
-        """`git show <base|head>:<src> > <target>` 形态（来源必须是声明的那两个 ref）。"""
-        return (command_word(cmd.tokens) == "git" and "show" in cmd.tokens
+        """`git show <base|head>:<src> > <target>` 形态（来源必须是声明的那两个 ref）。
+
+        第六轮：必须用核验过的 `$GIT_BIN`（或裸 `git`）—— 伪造 `git` 函数会让这一步「成功」
+        却写出空文件，因此运行时改用核验过的绝对路径，合同层两种写法都识别。
+        """
+        return (command_word(cmd.tokens) in ("git", GIT_BIN_VAR) and "show" in cmd.tokens
                 and (base_src in cmd.tokens or head_src in cmd.tokens)
                 and target in _redirect_targets(cmd))
+
+    def is_allowed_verify(cmd: CommandLine) -> bool:
+        """第六轮：对**取得的文件**做真实核验的允许形态（只读、单段，禁止写入语义）。
+
+          * `test -s <target>`              —— 必须存在且非空；
+          * `"$GIT_BIN" hash-object <target>` —— 内容必须与来源 blob 逐字节一致；
+          * `"$GIT_BIN" rev-parse <ref>:<src>` —— 取得来源 blob id 作为比对基准；
+          * `test "$(…hash-object <target>…)" = "$WANT"` / `grep -q <标记> <target>` 等只读检查。
+        """
+        toks = cmd.tokens
+        if not toks:
+            return False
+        cw = command_word(toks)
+        if cw in ("git", GIT_BIN_VAR):
+            if "hash-object" in toks and target in toks:
+                return True
+            if "rev-parse" in toks and (base_src in toks or head_src in toks):
+                return True
+        # 只读检查：必须是单一简单命令（无重定向/管道，写不进去），命令词属于只读集合
+        if cmd.clean and _basename(cw or "") in _READ_ONLY_TARGET_COMMANDS and target in cmd.text:
+            return True
+        return False
 
     found_condition = base_ok = head_ok = False
     for _si, lines in per_step:
         for idx, cmd in enumerate(lines):
             if not (command_word(cmd.tokens) == "if" and base_src in cmd.tokens
-                    and "git" in cmd.tokens and "cat-file" in cmd.tokens):
+                    and ("git" in cmd.tokens or GIT_BIN_VAR in cmd.tokens)
+                    and "cat-file" in cmd.tokens):
                 continue
             found_condition = True
             then_lines, else_lines = _if_branches(lines, idx)
@@ -685,7 +967,7 @@ def check_baseline_guard_provenance(job: dict) -> list[str]:
         for cmd in lines:
             if target not in cmd.text:
                 continue
-            if is_allowed_copy(cmd) or invokes_path(cmd, target):
+            if is_allowed_copy(cmd) or is_allowed_verify(cmd) or invokes_path(cmd, target):
                 continue
             problems.append(f"基线 guard 目标路径出现在未允许的上下文/写入方式："
                             f"step{si} {cmd.text.strip()[:140]!r}")
@@ -698,6 +980,15 @@ def check_baseline_guard_provenance(job: dict) -> list[str]:
     if not head_ok:
         problems.append(f"缺少 else 分支的 `git show {head_src} > {target}`"
                         f"（bootstrap 一次性回退必须显式声明）")
+    # 第六轮：复制出来的文件与 JSON 报告都必须被**真实核验**，不得只验证命令文本
+    step_texts = [str(s.get("run") or "") for s in _steps_of(job)]
+    for label, markers in (("基线 guard 文件内容核验（存在/非空/与来源 blob 一致/关键结构）",
+                            BASELINE_CONTENT_MARKERS),
+                           ("基线 JSON 报告核验（真实生成/可解析/含预期字段）",
+                            BASELINE_REPORT_MARKERS)):
+        missing = [m for m in markers if not any(m in t for t in step_texts)]
+        if missing:
+            problems.append(f"缺少{label}：缺失标记 {missing[:4]}")
     return problems
 
 
@@ -712,7 +1003,9 @@ def needle_in_run(step: dict, req: dict) -> bool:
     if "path" in req:
         return _basename(str(req["path"])) in run
     if "exact_tokens" in req:
-        return " ".join(req["exact_tokens"]) in run
+        # 允许引号包裹的核验后解释器写法（`"$PY_BIN"`）——按去引号后的文本比对
+        norm = run.replace('"', "").replace("'", "")
+        return " ".join(str(t).strip("\"'") for t in req["exact_tokens"]) in norm
     return all(t in run for t in req.get("tokens") or [])
 
 
