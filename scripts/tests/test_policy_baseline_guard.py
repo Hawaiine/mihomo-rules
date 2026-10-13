@@ -81,7 +81,7 @@ jobs:
           ref: ${{ steps.pr.outputs.head }}
           persist-credentials: false
       - run: python3 -m pip install pyyaml
-      - run: python3 scripts/ci/verify_workflow_policy.py
+      - run: python3 scripts/ci/verify_workflow_policy.py --json "$RUNNER_TEMP/workflow-policy.json"
   trusted-baseline-guard:
     name: trusted-baseline-guard
     runs-on: ubuntu-latest
@@ -97,7 +97,13 @@ jobs:
         run: |
           set -euo pipefail
           git cat-file -e "${PR_BASE_SHA}^{commit}"
-          python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"
+          git cat-file -e "${PR_HEAD_SHA}^{commit}"
+          if git cat-file -e "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" 2>/dev/null; then
+            git show "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+          else
+            git show "${PR_HEAD_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+          fi
+          python3 "$RUNNER_TEMP/verify_policy_baseline.py" --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}" --repo-root . --json "$RUNNER_TEMP/trusted-baseline.json"
 """
 
 # 夹具使用**真实的** daily-sync.yml 内容（若可用），使 base-guard 端到端判定只针对被测改动。
@@ -149,23 +155,31 @@ jobs:
       - name: wait
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s
+        run: python3 scripts/ci/await_checks.py --repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" --expected-head-sha "${{ needs.publish.outputs.head_sha }}" --base-branch "$BASE_BRANCH" --timeout 900 --interval 15 --max-interval 60 --json "$RUNNER_TEMP/await-checks.json"
       - name: verify
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s
+        run: python3 scripts/ci/verify_required_checks.py --repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" --head-sha "${{ needs.publish.outputs.head_sha }}" --json "$RUNNER_TEMP/required-checks.json"
       - name: automerge
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s
+        run: python3 scripts/ci/request_automerge.py --repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" --head-sha "${{ needs.publish.outputs.head_sha }}" --json "$RUNNER_TEMP/automerge.json"
 """
 CAND_PATH = ".github/workflows/candidate-pr-sync.yml"
+_AWAIT_ARGS = ('--repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" '
+               '--expected-head-sha "${{ needs.publish.outputs.head_sha }}" --base-branch "$BASE_BRANCH" '
+               '--timeout 900 --interval 15 --max-interval 60 --json "$RUNNER_TEMP/await-checks.json"')
+_VERIFY_ARGS = ('--repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" '
+                '--head-sha "${{ needs.publish.outputs.head_sha }}" '
+                '--json "$RUNNER_TEMP/required-checks.json"')
+_AM_ARGS = ('--repo "${GITHUB_REPOSITORY}" --pr "${{ needs.publish.outputs.pr_number }}" '
+            '--head-sha "${{ needs.publish.outputs.head_sha }}" --json "$RUNNER_TEMP/automerge.json"')
 AWAIT_STEP = ("      - name: wait\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
-              "        run: python3 scripts/ci/await_checks.py --repo o/r --pr 1 --expected-head-sha s\n")
+              "        run: python3 scripts/ci/await_checks.py " + _AWAIT_ARGS + "\n")
 VERIFY_STEP = ("      - name: verify\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
-               "        run: python3 scripts/ci/verify_required_checks.py --repo o/r --pr 1 --head-sha s\n")
+               "        run: python3 scripts/ci/verify_required_checks.py " + _VERIFY_ARGS + "\n")
 AUTOMERGE_STEP = ("      - name: automerge\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
-                  "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s\n")
+                  "        run: python3 scripts/ci/request_automerge.py " + _AM_ARGS + "\n")
 
 
 def block(prefix: str, body_lines: list[str]) -> str:
@@ -247,21 +261,11 @@ class WeakeningTest(Fixture):
         self.assertProblem("must not disappear", {".github/required-checks.json": None})
 
     def test_job_removed(self):
+        start = PR_VERIFY.index("  trusted-baseline-guard:")
+        end = PR_VERIFY.index("      - name: baseline")
+        end = PR_VERIFY.index("\n", PR_VERIFY.index(BASELINE_CMD_BODY, end)) + 1
         self.assertProblem("job 'trusted-baseline-guard' removed",
-                           {".github/workflows/pr-verify.yml": PR_VERIFY.replace(
-                               "  trusted-baseline-guard:\n    name: trusted-baseline-guard\n"
-                               "    runs-on: ubuntu-latest\n    steps:\n"
-                               "      - name: sha\n"
-                               "        run: printf '%s' \"a\" | grep -Eq '^[0-9a-f]{40}$'\n"
-                               "      - uses: actions/checkout@v7\n        with:\n"
-                               "          ref: ${{ steps.pr.outputs.head }}\n"
-                               "          persist-credentials: false\n"
-                               "      - run: python3 -m pip install pyyaml\n"
-                               "      - name: baseline\n        run: |\n"
-                               "          set -euo pipefail\n"
-                               "          git cat-file -e \"${PR_BASE_SHA}^{commit}\"\n"
-                               "          python3 scripts/ci/verify_policy_baseline.py "
-                               "--base-sha \"${PR_BASE_SHA}\" --head-sha \"${PR_HEAD_SHA}\"\n", "")})
+                           {".github/workflows/pr-verify.yml": PR_VERIFY[:start] + PR_VERIFY[end:]})
 
     def test_job_name_changed(self):
         self.assertProblem("name changed",
@@ -350,11 +354,15 @@ if __name__ == "__main__":
 
 
 # --------------------------------------------------------------------------- Fix B
+POLICY_CMD_BODY = ('python3 scripts/ci/verify_workflow_policy.py '
+                 '--json "$RUNNER_TEMP/workflow-policy.json"')
+BASELINE_CMD_BODY = ('python3 "$RUNNER_TEMP/verify_policy_baseline.py" '
+                     '--base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}" --repo-root . '
+                     '--json "$RUNNER_TEMP/trusted-baseline.json"')
 JOB_COMMANDS = [
     ("general-pr-verify", "        run: ", "python3 scripts/ci/verify_general_pr.py"),
-    ("workflow-policy-guard", "      - run: ", "python3 scripts/ci/verify_workflow_policy.py"),
-    ("trusted-baseline-guard", "          ",
-     'python3 scripts/ci/verify_policy_baseline.py --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}"'),
+    ("workflow-policy-guard", "      - run: ", POLICY_CMD_BODY),
+    ("trusted-baseline-guard", "          ", BASELINE_CMD_BODY),
 ]
 CONFIGS_CMD = "run: python3 scripts/verify_configs.py"
 UNITTEST_CMD = "run: python3 -m unittest discover -s scripts/tests"
@@ -534,7 +542,7 @@ class AutoMergeContractInBaselineTest(Fixture):
                 self.assertTrue(any("没有被实际执行" in p or "缺少必需命令" in p for p in problems), problems)
 
     def test_helper_in_if_false_rejected(self):
-        body = "python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s"
+        body = "python3 scripts/ci/request_automerge.py " + _AM_ARGS
         repl = ("      - name: automerge\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
                 "        run: |\n          if false; then\n            " + body + "\n          fi\n")
         problems = self.candidate_problems(CANDIDATE.replace(AUTOMERGE_STEP, repl))
@@ -542,33 +550,33 @@ class AutoMergeContractInBaselineTest(Fixture):
 
     def test_direct_gh_api_graphql_rejected(self):
         text = CANDIDATE.replace(
-            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: python3 scripts/ci/request_automerge.py " + _AM_ARGS,
             "        run: |\n          gh api graphql -f query='mutation{enablePullRequestAutoMerge}'\n"
-            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+            "          python3 scripts/ci/request_automerge.py " + _AM_ARGS)
         problems = self.candidate_problems(text)
         self.assertTrue(any("直接 auto-merge mutation 标记" in p for p in problems), problems)
 
     def test_direct_rest_merge_rejected(self):
         text = CANDIDATE.replace(
-            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: python3 scripts/ci/request_automerge.py " + _AM_ARGS,
             "        run: |\n          curl -X PUT https://api.github.com/repos/o/r/pulls/1/merge\n"
-            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+            "          python3 scripts/ci/request_automerge.py " + _AM_ARGS)
         problems = self.candidate_problems(text)
         self.assertTrue(any("REST merge 端点" in p for p in problems), problems)
 
     def test_gh_pr_merge_rejected(self):
         text = CANDIDATE.replace(
-            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: python3 scripts/ci/request_automerge.py " + _AM_ARGS,
             "        run: |\n          gh pr merge 1 --squash\n"
-            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+            "          python3 scripts/ci/request_automerge.py " + _AM_ARGS)
         problems = self.candidate_problems(text)
         self.assertTrue(any("gh pr merge" in p for p in problems), problems)
 
     def test_curl_graphql_rejected(self):
         text = CANDIDATE.replace(
-            "        run: python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s",
+            "        run: python3 scripts/ci/request_automerge.py " + _AM_ARGS,
             "        run: |\n          curl -sS https://api.github.com/graphql -d @payload.json\n"
-            "          python3 scripts/ci/request_automerge.py --repo o/r --pr 1 --head-sha s")
+            "          python3 scripts/ci/request_automerge.py " + _AM_ARGS)
         problems = self.candidate_problems(text)
         self.assertTrue(any("HTTP 客户端直接发 GraphQL" in p for p in problems), problems)
 
@@ -578,3 +586,149 @@ class AutoMergeContractInBaselineTest(Fixture):
 
     def test_real_candidate_passes(self):
         self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])
+
+
+# --------------------------------------------------------------------------- 第五轮 Fix A/B
+MASQUERADE = "attacker-controlled"
+
+
+class PathIdentityInBaselineTest(Fixture):
+    """Fix A：baseline guard 的**独立实现**必须同样拒绝路径伪装。"""
+
+    REQUIRED = [
+        ("general-pr-verify", "scripts/ci/verify_general_pr.py"),
+        ("general-pr-verify", "scripts/verify_configs.py"),
+        ("general-pr-verify", "scripts/verify_rulesets.py"),
+        ("general-pr-verify", "scripts/icon_urls.py"),
+        ("general-pr-verify", "scripts/readme_stats.py"),
+        ("workflow-policy-guard", "scripts/ci/verify_workflow_policy.py"),
+        ("trusted-baseline-guard", "$RUNNER_TEMP/verify_policy_baseline.py"),
+    ]
+
+    def expect_rejected(self, text: str, label: str):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": text})
+        self.assertTrue(any("路径身份不符" in p or "没有被真正执行" in p for p in problems),
+                        f"{label}: {problems}")
+        return problems
+
+    def test_masquerade_path_rejected(self):
+        for job, path in self.REQUIRED:
+            with self.subTest(job=job, path=path):
+                name = path.rsplit("/", 1)[-1]
+                self.expect_rejected(swap(PR_VERIFY, path, MASQUERADE + "/" + name), f"{job}/{path}")
+
+    def test_absolute_path_rejected(self):
+        for job, path in self.REQUIRED:
+            with self.subTest(job=job, path=path):
+                self.expect_rejected(swap(PR_VERIFY, path, "/tmp/" + path.rsplit("/", 1)[-1]),
+                                     f"{job}/{path}")
+
+    def test_dot_slash_prefix_still_accepted(self):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": swap(
+            PR_VERIFY, "python3 scripts/ci/verify_general_pr.py",
+            "python3 ./scripts/ci/verify_general_pr.py")})
+        self.assertEqual(problems, [])
+
+    def test_masquerade_helper_rejected(self):
+        for label, path in (("await_checks.py", "scripts/ci/await_checks.py"),
+                            ("verify_required_checks.py", "scripts/ci/verify_required_checks.py"),
+                            ("request_automerge.py", "scripts/ci/request_automerge.py")):
+            with self.subTest(helper=label):
+                problems = self.problems_after({CAND_PATH: CANDIDATE.replace(
+                    "python3 " + path, "python3 " + MASQUERADE + "/" + label)})
+                self.assertTrue(any("路径身份不符" in p or "没有被实际执行" in p for p in problems),
+                                f"{label}: {problems}")
+
+
+class ArgvContractInBaselineTest(Fixture):
+    """Fix B：baseline guard 的独立参数结构合同（短路/未知/重复/缺值一律拒绝）。"""
+
+    def expect_rejected(self, text: str, needle: str = "参数合同"):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": text})
+        self.assertTrue(any(needle in p for p in problems), problems)
+        return problems
+
+    def test_policy_guard_help_rejected(self):
+        for extra in (" --help", " -h", " --version"):
+            with self.subTest(extra=extra):
+                self.expect_rejected(swap(PR_VERIFY, POLICY_CMD_BODY, POLICY_CMD_BODY + extra))
+
+    def test_policy_guard_unknown_duplicate_missing_value_rejected(self):
+        for label, repl in {"未知": POLICY_CMD_BODY + " --skip",
+                            "重复": POLICY_CMD_BODY + ' --json "$RUNNER_TEMP/workflow-policy.json"',
+                            "缺值": "python3 scripts/ci/verify_workflow_policy.py --json",
+                            "错值": 'python3 scripts/ci/verify_workflow_policy.py --json "/tmp/x.json"'}.items():
+            with self.subTest(case=label):
+                self.expect_rejected(swap(PR_VERIFY, POLICY_CMD_BODY, repl))
+
+    def test_baseline_guard_help_and_missing_flag_rejected(self):
+        for extra in (" --help", " -h", " --force"):
+            with self.subTest(extra=extra):
+                self.expect_rejected(swap(PR_VERIFY, BASELINE_CMD_BODY, BASELINE_CMD_BODY + extra))
+        for drop in (' --repo-root .', ' --base-sha "${PR_BASE_SHA}"'):
+            with self.subTest(drop=drop):
+                self.expect_rejected(swap(PR_VERIFY, BASELINE_CMD_BODY,
+                                          BASELINE_CMD_BODY.replace(drop, "")))
+
+    def test_general_and_readme_and_unittest_extra_rejected(self):
+        cases = [("general --help", "python3 scripts/ci/verify_general_pr.py",
+                  "python3 scripts/ci/verify_general_pr.py --help"),
+                 ("readme 重复", "python3 scripts/readme_stats.py --check",
+                  "python3 scripts/readme_stats.py --check --check"),
+                 ("unittest 附加", "python3 -m unittest discover -s scripts/tests",
+                  "python3 -m unittest discover -s scripts/tests -v")]
+        for label, old, repl in cases:
+            with self.subTest(case=label):
+                self.expect_rejected(swap(PR_VERIFY, old, repl))
+
+    def test_automerge_helper_help_rejected(self):
+        for label, step, path in (("await", AWAIT_STEP, "scripts/ci/await_checks.py"),
+                                  ("verify", VERIFY_STEP, "scripts/ci/verify_required_checks.py"),
+                                  ("automerge", AUTOMERGE_STEP, "scripts/ci/request_automerge.py")):
+            with self.subTest(helper=label):
+                body = step.split("        run: ", 1)[1].strip()
+                repl = ("      - name: x\n        env:\n          GITHUB_TOKEN: "
+                        "${{ secrets.GITHUB_TOKEN }}\n        run: |\n          " + body + " --help\n")
+                problems = self.problems_after({CAND_PATH: CANDIDATE.replace(step, repl)})
+                self.assertTrue(any("参数合同" in p for p in problems), f"{label}: {problems}")
+
+    def test_real_layout_passes(self):
+        self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])
+
+
+class BaselineGuardProvenanceInBaselineTest(Fixture):
+    """Fix A1：baseline guard 的独立来源合同。"""
+
+    COND = 'if git cat-file -e "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" 2>/dev/null; then'
+    BASE_COPY = ('            git show "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" '
+                 '> "$RUNNER_TEMP/verify_policy_baseline.py"')
+    HEAD_COPY = ('            git show "${PR_HEAD_SHA}:scripts/ci/verify_policy_baseline.py" '
+                 '> "$RUNNER_TEMP/verify_policy_baseline.py"')
+
+    def expect_rejected(self, text: str, needle: str):
+        problems = self.problems_after({".github/workflows/pr-verify.yml": text})
+        self.assertTrue(any(needle in p for p in problems), problems)
+        return problems
+
+    def test_real_layout_passes(self):
+        self.assertEqual(self.problems_after({"README.md": "base\nmore\n"}), [])
+
+    def test_missing_condition_rejected(self):
+        self.expect_rejected(swap(PR_VERIFY, "          " + self.COND + "\n", ""),
+                             "git cat-file -e ${PR_BASE_SHA}")
+
+    def test_missing_base_or_head_copy_rejected(self):
+        self.expect_rejected(swap(PR_VERIFY, self.BASE_COPY + "\n", ""), "then 分支")
+        self.expect_rejected(swap(PR_VERIFY, self.HEAD_COPY + "\n", ""), "else 分支")
+
+    def test_attacker_sourced_copy_rejected(self):
+        self.expect_rejected(swap(
+            PR_VERIFY, self.BASE_COPY,
+            '            git show "attacker-controlled:scripts/ci/verify_policy_baseline.py" '
+            '> "$RUNNER_TEMP/verify_policy_baseline.py"'), "then 分支")
+
+    def test_cp_into_target_rejected(self):
+        self.expect_rejected(swap(
+            PR_VERIFY, self.COND + "\n",
+            self.COND + "\n          cp attacker-controlled/verify_policy_baseline.py "
+            '"$RUNNER_TEMP/verify_policy_baseline.py"\n'), "未允许的上下文")

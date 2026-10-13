@@ -342,43 +342,66 @@ def executed_commands(doc: dict) -> list[tuple[str, list[str]]]:
 
 # 必需命令合同（与 scripts/ci/workflow_command_contract.py 的集合保持一致；此处是
 # **独立实现**，不 import 候选树代码，以保证用 base 可信逻辑判定候选树）。
+# 精确命令合同（第五轮，**独立实现**）：精确路径身份 + 精确参数结构。
+# 与 scripts/ci/workflow_command_contract.py 语义一致，但这里不 import 任何候选树代码。
+_B_GENERAL_GUARD = "scripts/ci/verify_general_pr.py"
+_B_GENERAL_CONFIGS = "scripts/verify_configs.py"
+_B_GENERAL_RULESETS = "scripts/verify_rulesets.py"
+_B_GENERAL_ICON_URLS = "scripts/icon_urls.py"
+_B_GENERAL_README = "scripts/readme_stats.py"
+_B_POLICY_GUARD = "scripts/ci/verify_workflow_policy.py"
+_B_BASELINE_PATH = "$RUNNER_TEMP/verify_policy_baseline.py"
+_B_BASELINE_SRC = "scripts/ci/verify_policy_baseline.py"
+_B_BASELINE_BASE_REF = "${PR_BASE_SHA}"
+_B_BASELINE_HEAD_REF = "${PR_HEAD_SHA}"
+
 REQUIRED_JOB_COMMANDS: dict[str, dict] = {
     "general-pr-verify": {
         "required_commands": [
-            {"script": "verify_general_pr.py"},
-            {"script": "verify_configs.py"},
-            {"script": "verify_rulesets.py"},
-            {"script": "icon_urls.py"},
-            {"script": "readme_stats.py", "args": ["--check"]},
-            {"tokens": ["-m", "unittest", "discover", "-s", "scripts/tests"]},
+            {"path": _B_GENERAL_GUARD, "argv": {"flags": []}},
+            {"path": _B_GENERAL_CONFIGS, "argv": {"flags": []}},
+            {"path": _B_GENERAL_RULESETS, "argv": {"flags": []}},
+            {"path": _B_GENERAL_ICON_URLS, "argv": {"flags": []}},
+            {"path": _B_GENERAL_README, "argv": {"flags": [{"flag": "--check"}]}},
+            {"exact_tokens": ["python3", "-m", "unittest", "discover", "-s", "scripts/tests"]},
         ],
         "required_aux": [
             {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
-             "before": "verify_general_pr.py"},
+             "before": _B_GENERAL_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
-             "before": "verify_general_pr.py"},
+             "before": _B_GENERAL_GUARD},
         ],
     },
     "workflow-policy-guard": {
-        "required_commands": [{"script": "verify_workflow_policy.py"}],
+        "required_commands": [
+            {"path": _B_POLICY_GUARD,
+             "argv": {"flags": [{"flag": "--json", "values": ("$RUNNER_TEMP/workflow-policy.json",)}]}},
+        ],
         "required_aux": [
             {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
-             "before": "verify_workflow_policy.py"},
+             "before": _B_POLICY_GUARD},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
-             "before": "verify_workflow_policy.py"},
+             "before": _B_POLICY_GUARD},
         ],
     },
     "trusted-baseline-guard": {
         "required_commands": [
-            {"script": "verify_policy_baseline.py", "args": ["--base-sha", "--head-sha"]},
+            {"path": _B_BASELINE_PATH,
+             "argv": {"flags": [{"flag": "--base-sha", "values": (_B_BASELINE_BASE_REF,)},
+                                {"flag": "--head-sha", "values": (_B_BASELINE_HEAD_REF,)},
+                                {"flag": "--repo-root", "values": (".",)},
+                                {"flag": "--json", "values": ("$RUNNER_TEMP/trusted-baseline.json",)}]},
+             "provenance": "baseline_guard_copy"},
         ],
         "required_aux": [
             {"tokens": ["pip", "install", "pyyaml"], "desc": "安装依赖 pyyaml",
-             "before": "verify_policy_baseline.py"},
+             "before": _B_BASELINE_PATH},
             {"tokens": ["grep", "-Eq", "^[0-9a-f]{40}$"], "desc": "解析并校验 PR base/head SHA 格式",
-             "before": "verify_policy_baseline.py"},
-            {"tokens": ["git", "cat-file", "-e"], "desc": "base/head 提交可用性检查",
-             "before": "verify_policy_baseline.py"},
+             "before": _B_BASELINE_PATH},
+            {"tokens": ["git", "cat-file", "-e", "${PR_BASE_SHA}^{commit}"],
+             "desc": "base 提交可用性检查", "before": _B_BASELINE_PATH},
+            {"tokens": ["git", "cat-file", "-e", "${PR_HEAD_SHA}^{commit}"],
+             "desc": "head 提交可用性检查", "before": _B_BASELINE_PATH},
         ],
     },
 }
@@ -415,21 +438,182 @@ def executed_commands_indexed(doc: dict) -> list[dict]:
     return out
 
 
-def _invokes(entry: dict, script: str) -> bool:
-    """Fix A1/A2（独立实现）：必须**顶层**单一简单命令，且脚本是解释器的第一个位置参数。
+def _normalize_path(token: str) -> str:
+    """仅去掉 `./` 前缀；不做 basename 归一、不做 `..` 折叠（差异一律 fail-closed）。"""
+    return token[2:] if token.startswith("./") else token
 
-    `python3 -m py_compile x.py`、`python3 -c "..." x.py`、函数体/条件分支里的调用、
-    echo/注释/引号文本中的脚本名，一律不算「正在执行」。
+
+def _path_identity_ok(target: str | None, want: str) -> bool:
+    """**精确路径身份**（Fix A，第五轮）：逐字一致才算同一个脚本。"""
+    if not target or " " in target or "\t" in target:
+        return False
+    return _normalize_path(target) == _normalize_path(want)
+
+
+_B_ARGV_SHORT_CIRCUIT = ("--help", "-h", "--usage", "--version", "-V")
+
+
+def _argv_contract_ok(argv: list[str], spec: dict) -> tuple[bool, str]:
+    """**解析后的参数结构**合同（Fix B，第五轮）：逐位走位匹配，拒绝一切多余/未知/重复/
+    缺值参数与短路选项（`--help` 等）。"""
+    flags = list(spec.get("flags") or [])
+    i = fi = 0
+    while i < len(argv):
+        tok = argv[i]
+        if not tok.startswith("-") or tok == "-":
+            return False, f"出现未声明的位置参数 {tok!r}"
+        if tok in _B_ARGV_SHORT_CIRCUIT:
+            return False, f"出现可提前成功退出的短路选项 {tok!r}"
+        if fi >= len(flags):
+            return False, f"出现未声明的参数 {tok!r}"
+        name = flags[fi]["flag"]
+        if tok != name:
+            return False, f"参数名称/顺序不符：期望 {name!r}，实际 {tok!r}"
+        fi += 1
+        i += 1
+        values = flags[fi - 1].get("values")
+        if values is None:
+            continue
+        if i >= len(argv):
+            return False, f"{name} 缺少参数值"
+        if argv[i] not in tuple(values):
+            return False, f"{name} 的取值不在允许集合内：{argv[i]!r}（允许 {list(values)}）"
+        i += 1
+    if fi != len(flags):
+        return False, "缺少必需参数：" + " ".join(f["flag"] for f in flags[fi:])
+    return True, ""
+
+
+def _argv_after_target(entry: dict, want: str) -> list[str] | None:
+    """该命令中目标脚本**之后**的参数（解释器或直接执行两种形态）。"""
+    seg = list(entry.get("seg_tokens") or [])
+    idx = _command_word_index(seg)
+    if idx is None:
+        return None
+    if _path_identity_ok(seg[idx], want):
+        return seg[idx + 1:]
+    for j in range(idx + 1, len(seg)):
+        if _path_identity_ok(seg[j], want):
+            return seg[j + 1:]
+    return None
+
+
+def _invokes(entry: dict, want: str) -> bool:
+    """Fix A1/A2 + 第五轮 A：必须**顶层**单一简单命令，脚本是解释器的第一个位置参数，
+    且路径与合同**逐字一致**（禁止 basename 伪装/同名换目录）。
     """
     if not entry["clean"] or not entry.get("top_level"):
         return False
     cw = entry["cw"]
-    if _basename(cw) == script:
-        return " " not in cw and "\t" not in cw
+    if _path_identity_ok(cw, want):
+        return True
     if _basename(cw) not in INTERPRETERS:
         return False
-    target = _interpreter_target(entry.get("seg_tokens") or [])
-    return target is not None and _basename(target) == script and " " not in target and "\t" not in target
+    return _path_identity_ok(_interpreter_target(entry.get("seg_tokens") or []), want)
+
+
+def _family_key(tokens: list[str]) -> tuple:
+    """命令「家族」标识（命令词 + `-m` 模块名 或 第一个位置参数 basename）。"""
+    if not tokens:
+        return ()
+    cw = _basename(tokens[0])
+    if "-m" in tokens[:3]:
+        i = tokens.index("-m")
+        return (cw, "-m", tokens[i + 1] if i + 1 < len(tokens) else "")
+    for tok in tokens[1:]:
+        if not tok.startswith("-"):
+            return (cw, _basename(tok))
+    return (cw,)
+
+
+def _if_branches(lines: list[dict], start: int) -> tuple[list[dict], list[dict]]:
+    """从 `if` 块头开始，按深度返回 (then 分支, else 分支) 的行。"""
+    base_depth = lines[start]["depth"]
+    then_lines: list[dict] = []
+    else_lines: list[dict] = []
+    in_else = False
+    for ann in lines[start + 1:]:
+        cw = ann["tokens"][0] if ann["tokens"] else ""
+        if cw == "fi" and ann["depth"] <= base_depth:
+            break
+        if cw == "else" and ann["depth"] == base_depth + 1:
+            in_else = True
+            continue
+        if ann["depth"] >= base_depth + 1:
+            (else_lines if in_else else then_lines).append(ann)
+    return then_lines, else_lines
+
+
+def _redirect_targets(ann: dict) -> list[str]:
+    """该行重定向（`>`/`>>`）目标。"""
+    segs = _segments(ann["text"])
+    if len(segs) < 2:
+        return []
+    return [seg[-1] for seg in segs[1:] if seg]
+
+
+def check_baseline_guard_provenance(doc: dict) -> list[str]:
+    """Fix A1（独立实现）：可信基线 guard 的**来源与复制步骤**合同。
+
+    允许且仅允许：`if git cat-file -e ${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py` 条件；
+    then 分支从 `${PR_BASE_SHA}` 取用（可信来源）；else 分支的 `${PR_HEAD_SHA}` 回退是
+    **bootstrap 一次性限制**（必须显式声明）；执行行必须精确路径 + 精确参数。
+    任何其它写入/复制/下载到该路径的形态一律 fail-closed。
+    """
+    target = _B_BASELINE_PATH
+    base_src = f"{_B_BASELINE_BASE_REF}:{_B_BASELINE_SRC}"
+    head_src = f"{_B_BASELINE_HEAD_REF}:{_B_BASELINE_SRC}"
+    problems: list[str] = []
+    job = (doc.get("jobs") or {}).get("trusted-baseline-guard")
+    if not isinstance(job, dict):
+        return [f"{PR_VERIFY}: required job 'trusted-baseline-guard' missing"]
+
+    per_step: list[tuple[int, list[dict]]] = []
+    for si, step in enumerate((job.get("steps") or [])):
+        run = step.get("run") if isinstance(step, dict) else None
+        per_step.append((si, _annotate(_logical_lines(run)) if isinstance(run, str) else []))
+
+    def is_allowed_copy(ann: dict) -> bool:
+        toks = ann["tokens"]
+        cw = toks[0] if toks else ""
+        return (cw == "git" and "show" in toks
+                and (base_src in toks or head_src in toks)
+                and target in _redirect_targets(ann))
+
+    found_condition = base_ok = head_ok = False
+    for _si, lines in per_step:
+        for idx, ann in enumerate(lines):
+            toks = ann["tokens"]
+            if not (toks and toks[0] == "if" and base_src in toks
+                    and "git" in toks and "cat-file" in toks):
+                continue
+            found_condition = True
+            then_lines, else_lines = _if_branches(lines, idx)
+            if any(is_allowed_copy(a) and base_src in a["tokens"] for a in then_lines):
+                base_ok = True
+            if any(is_allowed_copy(a) and head_src in a["tokens"] for a in else_lines):
+                head_ok = True
+
+    for si, lines in per_step:
+        for ann in lines:
+            if target not in ann["text"]:
+                continue
+            toks = ann["tokens"]
+            if is_allowed_copy(ann):
+                continue
+            segs = _segments(ann["text"])
+            if len(segs) == 1 and _path_identity_ok(_interpreter_target(segs[0]) or "", target):
+                continue                                  # 执行行由必需命令合同校验
+            problems.append(f"基线 guard 目标路径出现在未允许的上下文/写入方式："
+                            f"step{si} {ann['text'].strip()[:140]!r}")
+    if not found_condition:
+        problems.append(f"缺少 `git cat-file -e {base_src}` 条件（无法证明复制来源是 PR base 提交）")
+    if not base_ok:
+        problems.append(f"缺少 then 分支的 `git show {base_src} > {target}`（可信来源必须是 PR base 提交）")
+    if not head_ok:
+        problems.append(f"缺少 else 分支的 `git show {head_src} > {target}`"
+                        f"（bootstrap 一次性回退必须显式声明）")
+    return problems
 
 
 def check_command_contract(doc: dict) -> list[str]:
@@ -444,21 +628,48 @@ def check_command_contract(doc: dict) -> list[str]:
         indexed = executed_commands_indexed({"jobs": {job_id: job}})
         text = " ".join(str(s.get("run") or "") for s in ((job.get("steps") or [])))
         for want in spec["required_commands"]:
-            if "script" in want:
-                hits = [e for e in indexed if e["clean"] and _invokes(e, want["script"])]
-            else:
-                hits = [e for e in indexed if e["clean"]
-                        and all(t in ([e["cw"]] + e["args"]) for t in want["tokens"])]
-            need = want.get("args", [])
-            ok = any(all(any(a in t for t in e["args"]) for a in need) for e in hits)
-            if not ok:
-                label = want.get("script") or " ".join(want["tokens"])
-                if label in text:
-                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {label} 只出现脚本名"
-                                    f"但**没有被真正执行**（echo/注释/引号文本/here-doc/条件分支/"
-                                    f"|| true 等空跑或执行语义绕过）")
+            hits: list[dict] = []
+            argv_problems: list[str] = []
+            nonconforming: list[str] = []
+            for e in indexed:
+                if "path" in want:
+                    if not _invokes(e, want["path"]):
+                        continue
+                    ok_argv, why = _argv_contract_ok(_argv_after_target(e, want["path"]) or [],
+                                                     want.get("argv") or {})
+                    if ok_argv:
+                        hits.append(e)
+                    else:
+                        argv_problems.append(f"line {e['line']}: {why}")
+                        nonconforming.append(f"line {e['line']}: {why}")
+                elif "exact_tokens" in want:
+                    toks = [e["cw"]] + e["args"]
+                    if e["clean"] and e.get("top_level") and toks == list(want["exact_tokens"]):
+                        hits.append(e)
+                    elif e.get("top_level") and _family_key(toks) == _family_key(want["exact_tokens"]):
+                        why = f"token 向量与合同不一致（实际 {' '.join(toks)}）"
+                        argv_problems.append(f"line {e['line']}: {why}")
+                        nonconforming.append(f"line {e['line']}: {why}")
+            label = want.get("path") or " ".join(want.get("exact_tokens") or [])
+            toks = list(want.get("exact_tokens") or [])
+            name = (_basename(str(want["path"])) if want.get("path")
+                    else (toks[toks.index("-m") + 1] if "-m" in toks else _basename(toks[-1])))
+            if nonconforming:
+                problems.append(f"{PR_VERIFY}: job {job_id!r} —— {name} 存在**不合参数合同**的额外调用"
+                                f"（短路/未知/重复/缺值参数一律拒绝）：" + "；".join(nonconforming[:3]))
+            if not hits:
+                if argv_problems:
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {name} **参数合同不符**："
+                                    + "；".join(argv_problems[:3]))
+                elif name in text:
+                    problems.append(f"{PR_VERIFY}: job {job_id!r} —— {name} 只出现脚本名"
+                                    f"但**没有被真正执行或路径身份不符**（echo/注释/引号文本/here-doc/"
+                                    f"条件分支/|| true 等空跑、执行语义绕过、同名换目录的伪装路径）")
                 else:
                     problems.append(f"{PR_VERIFY}: job {job_id!r} —— 缺少必需命令 {label}")
+            elif want.get("provenance") == "baseline_guard_copy":
+                problems.extend(f"{PR_VERIFY}: job {job_id!r} —— {p}"
+                                for p in check_baseline_guard_provenance(doc))
         for aux in spec["required_aux"]:
             hits = [e for e in indexed if all(t in ([e["cw"]] + e["args"]) for t in aux["tokens"])]
             if not hits:
@@ -484,12 +695,31 @@ def _basename(token: str) -> str:
 # ---------------------------------------------------- Fix B（独立实现）：auto-merge 合同
 AUTOMERGE_JOB_ID = "request-auto-merge"
 AUTOMERGE_ENV = "GITHUB_TOKEN"
+_B_REPO = "${GITHUB_REPOSITORY}"
+_B_PR = "${{ needs.publish.outputs.pr_number }}"
+_B_HEAD = "${{ needs.publish.outputs.head_sha }}"
 AUTOMERGE_REQUIRED_STEPS: list[dict] = [
-    {"script": "await_checks.py", "args": ["--repo", "--pr", "--expected-head-sha"],
+    {"path": "scripts/ci/await_checks.py",
+     "argv": {"flags": [{"flag": "--repo", "values": (_B_REPO,)},
+                        {"flag": "--pr", "values": (_B_PR,)},
+                        {"flag": "--expected-head-sha", "values": (_B_HEAD,)},
+                        {"flag": "--base-branch", "values": ("$BASE_BRANCH",)},
+                        {"flag": "--timeout", "values": ("900",)},
+                        {"flag": "--interval", "values": ("15",)},
+                        {"flag": "--max-interval", "values": ("60",)},
+                        {"flag": "--json", "values": ("$RUNNER_TEMP/await-checks.json",)}]},
      "desc": "有界等待必需检查完成（只读轮询）"},
-    {"script": "verify_required_checks.py", "args": ["--repo", "--pr", "--head-sha"],
+    {"path": "scripts/ci/verify_required_checks.py",
+     "argv": {"flags": [{"flag": "--repo", "values": (_B_REPO,)},
+                        {"flag": "--pr", "values": (_B_PR,)},
+                        {"flag": "--head-sha", "values": (_B_HEAD,)},
+                        {"flag": "--json", "values": ("$RUNNER_TEMP/required-checks.json",)}]},
      "desc": "严格必需检查验证（来源/身份/状态复核）"},
-    {"script": "request_automerge.py", "args": ["--repo", "--pr", "--head-sha"],
+    {"path": "scripts/ci/request_automerge.py",
+     "argv": {"flags": [{"flag": "--repo", "values": (_B_REPO,)},
+                        {"flag": "--pr", "values": (_B_PR,)},
+                        {"flag": "--head-sha", "values": (_B_HEAD,)},
+                        {"flag": "--json", "values": ("$RUNNER_TEMP/automerge.json",)}]},
      "desc": "请求 auto-merge（唯一允许的 mutation 路径）"},
 ]
 # 只认「写」形态：GraphQL mutation 名 / REST merge 端点 / gh pr merge / 直接 graphql 请求
@@ -539,14 +769,33 @@ def check_automerge_contract(doc: dict) -> list[str]:
     indexed = executed_commands_indexed({"jobs": {AUTOMERGE_JOB_ID: job}})
     found: list[int] = []
     for want in AUTOMERGE_REQUIRED_STEPS:
-        label = want["script"]
-        hits = [e for e in indexed if _invokes(e, label)
-                and all(any(a in t for t in e["seg_tokens"]) for a in want["args"])]
+        label = want["path"]
+        name = _basename(label)
+        hits: list[dict] = []
+        argv_problems: list[str] = []
+        nonconforming: list[str] = []
+        for e in indexed:
+            if not _invokes(e, label):
+                continue
+            ok_argv, why = _argv_contract_ok(_argv_after_target(e, label) or [], want.get("argv") or {})
+            if ok_argv:
+                hits.append(e)
+            else:
+                argv_problems.append(f"line {e['line']}: {why}")
+                nonconforming.append(f"line {e['line']}: {why}")
+        if nonconforming:
+            problems.append(f"{CANDIDATE_SYNC}: {want['desc']} —— {name} 存在**不合参数合同**的额外调用"
+                            f"（短路/未知/重复/缺值参数一律拒绝）：" + "；".join(nonconforming[:3]))
         if not hits:
-            present = any(label in str(s.get("run") or "") for s in steps)
-            problems.append(f"{CANDIDATE_SYNC}: {want['desc']} —— {label} "
-                            + ("出现但**没有被实际执行**（echo/注释/引号文本/非顶层上下文/缺参数）"
-                               if present else f"缺少必需命令（{' '.join(want['args'])}）"))
+            present = any(name in str(s.get("run") or "") for s in steps)
+            if argv_problems:
+                problems.append(f"{CANDIDATE_SYNC}: {want['desc']} —— {name} **参数合同不符**："
+                                + "；".join(argv_problems[:3]))
+            else:
+                problems.append(f"{CANDIDATE_SYNC}: {want['desc']} —— {name} "
+                                + ("出现但**没有被实际执行或路径身份不符**（echo/注释/引号文本/"
+                                   "非顶层上下文/同名换目录的伪装路径）"
+                                   if present else f"缺少必需命令（{label}）"))
             continue
         hit = hits[0]
         if AUTOMERGE_ENV not in (steps[hit["step"]].get("env") or {}):
