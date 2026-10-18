@@ -61,7 +61,14 @@
 
 ## 4. 快照持久化与保留
 
-* 内容：`{schema_version, generation, state, digest}`。
+* 内容：`{schema_version, generation, state, meta, digest}`（`meta` 记录本次写入上下文：
+  `acquired` / `completed` / `pre-acquire`，属审计信息）。
+* 同代幂等判定（fail-closed）：`SnapshotExists` 只表示该代对象已存在，**不表示内容相同**。
+  回读快照后按规范化方案重算 `digest`（覆盖 `schema_version`/`generation`/`state` 的语义字段，
+  排除 `snapshot_digest`、`updated_at` 与 `meta`），并与本次计算值比对：
+  * 完整一致 ⇒ 幂等成功（同代重跑，含"先建快照、CAS 失败后重试"的残留场景）；
+  * 读取失败 / JSON 损坏 / digest 与自身内容不符 / state 不同 ⇒ `SNAPSHOT_CONFLICT`，
+    状态不推进，需人工恢复；绝不静默复用另一份 payload 的快照。
 * 位置：同分支 `state/snapshots/gen-<N>.json`（blob）+ 轻量 tag `state/gate/gen-<N>`（指向快照提交）。
 * 独立性：不写 worktree、不写 `$RUNNER_TEMP`、不写 cache；runner 被销毁后仍可读。
 * 保留：tag 与分支引用存在即对象不被 GC；建议保留最近 30 代 + 所有 `final-review` 代，
@@ -81,7 +88,8 @@ gate_lock.py --repo OWNER/REPO status          # 只读
 
 退出码：`0` 成功、`1` 参数/状态非法、`3` 锁被占用、`4` CAS 冲突、`5` 需要人工（paused）。
 
-规则：`paused` **只能**通过 `resume` 或显式 `--resume-paused` 离开；`acquire` 在 paused 时直接拒绝；
+规则：`paused` / `recovery-required` **只能**通过 `resume` 子命令离开（`complete` 没有任何
+绕过参数，永远拒绝这两个 phase）；`acquire` 在 paused 时直接拒绝；
 `complete` 必须先匹配 `lock_owner`；每次成功写入都落一份快照（acquire 时为旧状态落 pre-acquire 快照）。
 
 ## 5. 恢复 CLI
