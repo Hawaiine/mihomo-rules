@@ -34,6 +34,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gate_status import choose_mode, evaluate_statuses, load_status_contexts  # noqa: E402
 from check_provenance import (  # noqa: E402
     ApiError, DEFAULT_MANIFEST, ManifestError, STATE_MISSING, STATE_NOT_SUCCESS, STATE_SUCCESS,
     STATE_UNVERIFIED, collect_check_runs, collect_jobs, collect_workflow_runs, http_get_json,
@@ -72,12 +73,14 @@ class Poller:
     def __init__(self, *, repo: str, pr: int, expected_head: str, base_branch: str, required: list[dict],
                  token: str, api_base: str = "https://api.github.com", timeout: float = 900.0,
                  interval: float = 15.0, max_interval: float = 60.0, max_api_retries: int = 3,
-                 fetcher=http_get_json, sleeper=time.sleep, clock=time.monotonic, log=print):
+                 fetcher=http_get_json, sleeper=time.sleep, clock=time.monotonic, log=print,
+                 contexts: list[str] | None = None):
         self.repo, self.pr, self.expected_head = repo, int(pr), expected_head
         self.base_branch, self.required, self.token = base_branch, required, token
         self.api_base, self.timeout = api_base.rstrip("/"), timeout
         self.interval, self.max_interval, self.max_api_retries = interval, max_interval, max_api_retries
         self.fetcher, self.sleeper, self.clock, self.log = fetcher, sleeper, clock, log
+        self.contexts = list(contexts or [])
         self.http_requests = 0
 
     # --- 只读原语 ---
@@ -161,6 +164,16 @@ class Poller:
     def preflight(self) -> tuple[bool, list[str], dict]:
         return self._pr_and_base_state("前置校验")
 
+    def _read_statuses(self) -> list[dict]:
+        """commit status 列表（GET 返回数组；失败即 fail-closed）。"""
+        self.http_requests += 1
+        status, body = self.fetcher(
+            f"{self.api_base}/repos/{self.repo}/commits/{self.expected_head}/statuses?per_page=100",
+            self.token)
+        if status != 200 or not isinstance(body, list):
+            raise ApiError(status, "commit statuses 读取失败")
+        return body
+
     def recheck_pr(self) -> tuple[bool, list[str]]:
         ok, problems, _ = self._pr_and_base_state("检查完成后复核")
         return ok, problems
@@ -183,8 +196,16 @@ class Poller:
                 check_runs, workflow_runs, jobs_by_id = self.read_provenance()
                 report["polls"] += 1
                 pr_head = (report.get("pr_head_sha") or self.expected_head)
-                status, per_check, problems = evaluate(check_runs, workflow_runs, jobs_by_id,
-                                                       self.required, self.expected_head, pr_head)
+                mode = choose_mode(check_runs, self.contexts)
+                report["gate_mode"] = mode
+                if mode == "status":
+                    statuses = self._read_statuses()
+                    status, per_check, problems = evaluate_statuses(
+                        statuses, self.contexts, self.expected_head)
+                    report["status_contexts"] = per_check
+                else:
+                    status, per_check, problems = evaluate(check_runs, workflow_runs, jobs_by_id,
+                                                           self.required, self.expected_head, pr_head)
                 report["checks"] = per_check
                 report["problems"] = problems
                 report["provenance_state"] = overall_state(per_check)
@@ -243,12 +264,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     try:
         required = load_manifest(a.required_checks)
+        contexts = load_status_contexts(a.required_checks)
     except ManifestError as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 1
     poller = Poller(repo=a.repo, pr=a.pr, expected_head=a.expected_head_sha, base_branch=a.base_branch,
                     required=required, token=token, api_base=a.api_base, timeout=a.timeout,
-                    interval=a.interval, max_interval=a.max_interval)
+                    interval=a.interval, max_interval=a.max_interval, contexts=contexts)
     report = poller.run()
     text = json.dumps(report, ensure_ascii=False, indent=2)
     print(text)

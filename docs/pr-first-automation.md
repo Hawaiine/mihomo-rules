@@ -47,6 +47,18 @@ GitHub 的两条硬事实：
 "Allow GitHub Actions to create and approve pull requests"*，否则 `publish` 建 PR 返回 403。
 此时流程 fail-closed 并报 BLOCKED，**绝不回退到 App/PAT**。
 
+## 2.1 门禁数据源：两种模式，同等强度
+
+| 模式 | 触发条件 | 数据源 | 适用 |
+|---|---|---|---|
+| check-run | head SHA 上存在 `checks[]` 声明的 check-run | `GET /commits/{sha}/check-runs`（app 15368） | 人工 PR（`pull_request` 触发 pr-verify） |
+| commit status | 该 SHA 上**没有任何** check-run | `GET /commits/{sha}/statuses`，要求 `creator.login == github-actions[bot]` 且 state=success | 候选 PR（GITHUB_TOKEN 创建，无 pull_request 事件、无法产生 check-run） |
+
+`await_checks.py` / `verify_required_checks.py` 按上述规则自动选择模式（`gate_mode` 字段），
+两者都要求：精确 head SHA、全部必需项 success、PR 仍 open、base 未漂移。
+模式选择**只允许** check-run → status 的单向回退，且仅在「一个 check-run 都没有」时生效；
+出现同名但来源不符的 check-run 仍按原严格口径失败。
+
 ## 3. 严格口径（fail-closed）
 
 * **状态**：只有 `success` 视为满足；`pending` / `failure` / `error` 一律禁止合并。

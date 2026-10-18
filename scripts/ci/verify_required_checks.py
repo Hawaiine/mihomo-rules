@@ -30,6 +30,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gate_status import choose_mode, evaluate_statuses, load_status_contexts  # noqa: E402
 from check_provenance import (  # noqa: E402
     ApiError, DEFAULT_MANIFEST, ManifestError, STRICT_CONCLUSION, collect_check_runs, collect_jobs,
     collect_workflow_runs, http_get_json, index_jobs, load_manifest, needed_run_ids, overall_state,
@@ -39,7 +40,8 @@ from check_provenance import (  # noqa: E402
 
 def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jobs_by_id: dict,
              required: list[dict], expected_head: str, base_branch: str = "main",
-             main_sha: str | None = None) -> tuple[bool, list[str], dict]:
+             main_sha: str | None = None, statuses: list[dict] | None = None,
+             contexts: list[str] | None = None) -> tuple[bool, list[str], dict]:
     """纯函数判定（便于负向测试）。返回 (ok, problems, report)。"""
     problems: list[str] = []
     report: dict = {"expected_head_sha": expected_head, "checks": {}, "stale_runs": []}
@@ -62,6 +64,19 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
     report["pr_head_sha"] = head_sha
     if head_sha != expected_head:
         problems.append(f"PR head SHA {head_sha} != 预期 {expected_head}（head 漂移）")
+
+    mode = choose_mode(check_runs, contexts or [])
+    report["gate_mode"] = mode
+    if mode == "status":
+        cstate, per_ctx, ctx_problems = evaluate_statuses(statuses or [], contexts or [], expected_head)
+        report["status_contexts"] = per_ctx
+        report["gate_state"] = cstate
+        problems.extend(ctx_problems)
+        if cstate != "success":
+            problems.append(f"候选 PR 的必需状态未全部 success（当前 {cstate}）")
+        if pr_obj.get("state") != "open" or (pr_obj.get("head") or {}).get("sha") != expected_head:
+            problems.append("PR 状态/head 在门禁判定时不匹配")
+        return not problems, problems, report
 
     per_check, prov_problems = select_checks(
         check_runs=check_runs, manifest=required, workflow_runs=workflow_runs,
@@ -111,6 +126,8 @@ def verify(*, repo: str, pr: int, expected_head: str, required_manifest: str = D
         if not main_sha:
             msg = f"GET refs/heads/{base_branch}: 响应缺少 sha"
             return False, {"error": msg}, [f"{msg}（fail-closed）"]
+    contexts = load_status_contexts(required_manifest)
+    statuses: list[dict] = []
     try:
         check_runs = collect_check_runs(getter=getter, token=token, api_base=api_base, repo=repo,
                                         head_sha=expected_head)
@@ -124,8 +141,16 @@ def verify(*, repo: str, pr: int, expected_head: str, required_manifest: str = D
         log(f"❌ provenance 采集失败：{exc}")
         return False, {"error": str(exc)}, [f"provenance 采集失败：{exc}（fail-closed）"]
 
+    if not check_runs and contexts:
+        status, body = getter(f"{api_base}/repos/{repo}/commits/{expected_head}/statuses?per_page=100", token)
+        if status != 200 or not isinstance(body, list):
+            msg = f"GET commit statuses: HTTP {status}"
+            log(f"❌ {msg}")
+            return False, {"error": msg}, [f"{msg}（fail-closed）"]
+        statuses = body
     ok, eval_problems, report = evaluate(pr_obj, check_runs, workflow_runs, jobs_by_id, required,
-                                        expected_head, base_branch, main_sha)
+                                        expected_head, base_branch, main_sha,
+                                        statuses=statuses, contexts=contexts)
     report.update({"repo": repo, "pr": int(pr), "required": [c["name"] for c in required],
                    "required_manifest": required_manifest, "writes_performed": []})
     for p in eval_problems:

@@ -59,6 +59,36 @@ jobs:
             echo "⏸️ CANDIDATE_SYNC_ENABLED 未启用：候选更新保持关闭（安全默认）"
           fi
 
+  lock:
+    name: lock
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true' && vars.GATE_STATE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write        # 状态 ref（D-15 控制平面）
+    outputs:
+      generation: ${{ steps.acquire.outputs.generation }}
+    steps:
+      - name: 📥 检出默认分支（受信脚本）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: 🔒 获取逻辑锁（CAS；占用/暂停即失败关闭）
+        id: acquire
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
+            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            acquire --base-sha "${GITHUB_SHA}" --target-ref "refs/heads/${CANDIDATE_BRANCH}" \
+            --trigger "${GITHUB_EVENT_NAME}" | tee "$RUNNER_TEMP/lock.json"
+          python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("generation=%s" % d["generation"])' \
+            "$RUNNER_TEMP/lock.json" >> "$GITHUB_OUTPUT"
+
   generate:
     name: generate
     needs: gate
@@ -160,8 +190,9 @@ jobs:
 
   publish:
     name: publish
-    needs: [gate, generate]
+    needs: [gate, lock, generate]
     if: needs.gate.outputs.enabled == 'true' && needs.generate.outputs.changed == 'true'
+        && (needs.lock.result == 'success' || needs.lock.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -473,9 +504,62 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  finalize:
+    name: finalize
+    needs: [gate, lock, generate, publish, verify]
+    if: always() && vars.GATE_STATE_ENABLED == 'true' && needs.lock.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 检出默认分支（受信脚本）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: 🧾 写终态（成功）/ 失败关闭（失败）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: |
+          set -euo pipefail
+          RC=0
+          if [ "$VERIFY_RESULT" = "success" ] && [ "$PUBLISH_RESULT" = "success" ]; then
+            python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
+              --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              complete --result success --pr "${{ needs.publish.outputs.pr_number }}" || RC=$?
+          else
+            python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
+              --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              pause --reason "publish/verify 失败：publish=$PUBLISH_RESULT verify=$VERIFY_RESULT" || RC=$?
+          fi
+          exit "$RC"
+
+      - name: 📊 终态回读（审计证据）
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" status \
+            | tee "$RUNNER_TEMP/gate-state.json" || true
+
+      - name: ⬆️ 上传状态证据
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: gate-state
+          path: |
+            ${{ runner.temp }}/lock.json
+            ${{ runner.temp }}/gate-state.json
+          retention-days: 14
+          if-no-files-found: ignore
+
   request-auto-merge:
     name: request-auto-merge
-    needs: [gate, generate, publish, verify]
+    needs: [gate, lock, generate, publish, verify, finalize]
     if: needs.gate.outputs.enabled == 'true' && needs.publish.outputs.publish_skipped != 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30

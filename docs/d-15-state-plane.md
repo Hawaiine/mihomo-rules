@@ -11,6 +11,18 @@
 | 后端 | 同上 | `GitHubRefStore`（唯一生产后端）、`LocalFileStore`（**仅测试**） |
 | 恢复 CLI | `scripts/ci/recover_gate_state.py` | 只从已验证快照生成新 generation |
 
+## 1.1 工作流接线（真实调用，不是孤立工具）
+
+`candidate-pr-sync.yml`（由唯一入口 `daily-sync.yml` 委派）新增两个 job，由
+`vars.GATE_STATE_ENABLED` 控制（**默认未设置 = 关闭**）：
+
+| job | 时机 | 调用 | 失败行为 |
+|---|---|---|---|
+| `lock` | gate 之后、generate 之前 | `gate_lock.py acquire` | 锁被占用退出 3、paused 退出 5、CAS 冲突退出 4 → 整个 run 失败关闭，不生成候选 |
+| `finalize` | `always()`，且 acquire 成功 | `complete --result success/failure` 或 `pause` | 终态写入失败 → run 失败；失败场景写 `paused`，**不会被后续成功路径清除** |
+
+任何需要持久状态才能安全继续的步骤（获取锁、终态）在状态后端不可用时 **fail-closed**。
+
 ## 2. 状态 schema（v1）
 
 ```json
@@ -56,6 +68,21 @@
   删除需独立 CLI 与审计（本 PR 未实现删除器，避免误删）。
 * 前置条件：需要 `contents: write` 的 GITHUB_TOKEN，且 `state/*` 分支不在受保护列表内。
   **平台侧未配置，属阻塞项**。
+
+## 4.1 锁/状态机 CLI（`scripts/ci/gate_lock.py`）
+
+```
+gate_lock.py --repo OWNER/REPO --run-id RUN acquire --base-sha SHA [--target-ref REF]
+gate_lock.py --repo OWNER/REPO --run-id RUN complete --result success|failure [--pr N]
+gate_lock.py --repo OWNER/REPO --run-id RUN pause --reason TEXT [--evidence URL]
+gate_lock.py --repo OWNER/REPO --run-id RUN resume --reason TEXT
+gate_lock.py --repo OWNER/REPO status          # 只读
+```
+
+退出码：`0` 成功、`1` 参数/状态非法、`3` 锁被占用、`4` CAS 冲突、`5` 需要人工（paused）。
+
+规则：`paused` **只能**通过 `resume` 或显式 `--resume-paused` 离开；`acquire` 在 paused 时直接拒绝；
+`complete` 必须先匹配 `lock_owner`；每次成功写入都落一份快照（acquire 时为旧状态落 pre-acquire 快照）。
 
 ## 5. 恢复 CLI
 
