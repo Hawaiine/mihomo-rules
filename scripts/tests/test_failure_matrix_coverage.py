@@ -53,6 +53,34 @@ MATRIX: dict[str, tuple[str, str]] = {
     "生产开关关闭仍尝试合并": ("test_approval_and_decide",
                               "DecideTest.test_existing_data_eligible_but_production_off"),
     "文档与 workflow 行为一致": ("test_workflow_policy_guard", "DailySyncEntryTest.test_real_entry_passes"),
+    # ── P1.2 运行时接线（本轮新增）─────────────────────────────────────────────
+    "候选 workflow 运行时引用 APP_TOKEN": (
+        "test_runtime_policy_wiring",
+        "AuthSourceTest.test_candidate_workflow_has_no_app_token_reference"),
+    "App/PAT 过时叙述残留": (
+        "test_runtime_policy_wiring",
+        "AuthSourceTest.test_pr_verify_has_no_app_narration"),
+    "守卫对 run 块中的 APP_TOKEN 无判别力": (
+        "test_runtime_policy_wiring",
+        "AuthSourceTest.test_policy_guard_rejects_app_token_in_run_block"),
+    "docs/ 被误当普通数据放行": (
+        "test_runtime_policy_wiring",
+        "ScopePolicyTest.test_docs_prefix_is_governance_not_data"),
+    "同 generation 快照内容不同被当幂等": (
+        "test_runtime_policy_wiring",
+        "SnapshotReconcileTest.test_snapshot_same_generation_different_state_is_refused"),
+    "complete 用旧 flag 绕过 pause": (
+        "test_runtime_policy_wiring",
+        "CompleteNoBypassTest.test_resume_paused_flag_is_gone"),
+    "status creator 不可验证": (
+        "test_runtime_policy_wiring",
+        "StatusPublisherIdentityTest.test_missing_creator_rejected"),
+    "平台未就绪仍判可合并": (
+        "test_runtime_policy_wiring",
+        "PolicyWiringTest.test_platform_not_ready_blocks_and_forbids_production"),
+    "治理变更绕过分类器": (
+        "test_runtime_policy_wiring",
+        "PolicyWiringTest.test_governance_change_blocked"),
 }
 
 

@@ -112,11 +112,13 @@ class GateLockCliTest(unittest.TestCase):
         import time as _t
         from unittest import mock
         self.acquire("1-1")
-        # 把租约改成已过期
+        # 把租约改成已过期（模拟"时间流逝"：状态字段被改，随后清掉该代旧快照，
+        # 使 store 保持自洽——严格快照对账下，状态变了而快照未变会被判冲突）。
         store = gs.LocalFileStore(self.dir)
         st, sha = store.read()
         doc = st.to_doc(); doc["lease_until"] = _t.time() - 10
         doc["snapshot_digest"] = gs.canonical_digest(doc)
+        (self.dir / "snapshots" / "gen-1.json").unlink()
         store.cas_write(gs.GateState.from_doc(doc), expected_old_sha=sha)
         self.assertEqual(self.acquire("2-2"), gl.EXIT_NEEDS_HUMAN)
         self.assertEqual(self.state().generation, 1, "未授权接管不得写入")

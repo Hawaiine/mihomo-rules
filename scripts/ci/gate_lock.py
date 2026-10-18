@@ -39,18 +39,63 @@ def _fingerprint(state: gs.GateState) -> dict:
             "phase": state.phase, "check_status": state.check_status}
 
 
-def _snapshot(store, state: gs.GateState, extra: dict) -> str:
-    """写快照；只有"同代已存在"可接受，其余失败一律向上抛（fail-closed）。"""
-    body = {"schema_version": gs.SCHEMA_VERSION, "generation": state.generation,
-            "state": state.to_doc(), "meta": extra}
+def _snapshot_digest(generation: int, state_doc: dict) -> str:
+    """规范化摘要：覆盖 schema/generation + 状态的**语义字段**。
+
+    排除项及理由：
+    * ``snapshot_digest`` —— 自指字段，写入状态时才会补上；
+    * ``updated_at`` —— 写入时刻，不代表状态语义（同代重跑会变）；
+    * 审计 ``meta`` —— 记录本次写入上下文（acquired/completed/pre-acquire），不属于状态。
+
+    因此"同一 generation 的同一状态"跨进程可复算，而任何语义字段变化（phase /
+    check_status / conclusion / lock_owner / sha）都会改变摘要，从而暴露冲突。
+    """
     import hashlib
-    payload = json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
-    body["digest"] = "sha256:" + hashlib.sha256(payload).hexdigest()
+    semantic = {k: v for k, v in (state_doc or {}).items()
+                if k not in ("snapshot_digest", "updated_at")}
+    canonical = json.dumps({"schema_version": gs.SCHEMA_VERSION, "generation": generation,
+                            "state": semantic}, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":")).encode()
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+
+def _snapshot(store, state: gs.GateState, extra: dict) -> str:
+    """写快照；``SnapshotExists`` 只表示**同代对象已存在**，必须回读核对状态。
+
+    * 回读后 digest 与 state 规范化内容完全一致 ⇒ 幂等成功（同代重跑）。
+    * 读取失败 / JSON 损坏 / digest 不符 / state 不同 ⇒ ``SNAPSHOT_CONFLICT``
+      fail-closed，绝不静默复用可能属于另一份 payload 的快照。
+    """
+    import hashlib
+    state_doc = state.to_doc()
+    body = {"schema_version": gs.SCHEMA_VERSION, "generation": state.generation,
+            "state": state_doc, "meta": extra,
+            "digest": _snapshot_digest(state.generation, state_doc)}
     data = json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
     try:
         return store.snapshot_put(state, data)
-    except gs.SnapshotExists as exc:          # 同代重跑：内容已存在，可接受
-        return f"existing:{exc}"
+    except gs.SnapshotExists:
+        try:
+            existing = store.snapshot_get(state.generation)
+        except gs.StateError as exc:
+            raise gs.StateError(
+                f"SNAPSHOT_UNVERIFIABLE: gen-{state.generation} 已存在但无法回读（{exc}）") from exc
+        try:
+            doc = json.loads(existing.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise gs.StateError(
+                f"SNAPSHOT_UNVERIFIABLE: gen-{state.generation} 内容不可解析（{exc}）") from exc
+        recorded = doc.get("digest") if isinstance(doc, dict) else None
+        state_now = doc.get("state") if isinstance(doc, dict) else None
+        if not isinstance(recorded, str) or recorded != _snapshot_digest(state.generation, state_now or {}):
+            raise gs.StateError(
+                f"SNAPSHOT_CONFLICT: gen-{state.generation} 已有快照的 digest 与自身内容不符"
+                f"（recorded={recorded!r}）")
+        if recorded != body["digest"]:
+            raise gs.StateError(
+                f"SNAPSHOT_CONFLICT: gen-{state.generation} 已存在但状态不同"
+                f"（existing={recorded} wanted={body['digest']}）")
+        return f"existing-same:{hashlib.sha256(data).hexdigest()}"
 
 
 def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str) -> int:
@@ -174,9 +219,9 @@ def cmd_complete(args) -> int:
     if current is None:
         print("❌ 无当前状态", file=sys.stderr)
         return EXIT_INVALID
-    if current.phase in gs.BLOCKING_PHASES and not args.resume_paused:
-        print(f"❌ 状态为 {current.phase}：普通完成路径不得清除（需 --resume-paused 或 resume 子命令）",
-              file=sys.stderr)
+    if current.phase in gs.BLOCKING_PHASES:
+        print(f"❌ 状态为 {current.phase}：complete 永远不能清除 PAUSED/RECOVERY_REQUIRED，"
+              f"只能用 resume 子命令正式恢复", file=sys.stderr)
         return EXIT_NEEDS_HUMAN
     if current.lock_owner != f"gate-{args.run_id}":
         print(f"❌ 非锁持有者（当前 {current.lock_owner!r}）", file=sys.stderr)
@@ -250,7 +295,6 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--result", choices=("success", "failure"), required=True)
     c.add_argument("--candidate-sha", default="")
     c.add_argument("--pr", default="")
-    c.add_argument("--resume-paused", action="store_true")
 
     pa = sub.add_parser("pause")
     pa.add_argument("--reason", required=True)

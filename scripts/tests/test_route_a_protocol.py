@@ -160,7 +160,8 @@ class PublishStatusTests(ServerCase):
             "GET /repos/o/r/git/ref/heads/main": (200, {"object": {"sha": "m" * 40}}),
             "POST /repos/o/r/statuses/" + "h" * 40: (201, {"state": "success"}),
             "GET /repos/o/r/commits/" + "h" * 40 + "/statuses": (200, [
-                {"context": "route-a/verify", "state": "success", "target_url": ""}]),
+                {"context": "route-a/verify", "state": "success", "target_url": "",
+                 "creator": {"login": "github-actions[bot]", "type": "Bot"}}]),
         })
         client = self.client()
         ps.preflight(client, 7, "h" * 40, "main")
