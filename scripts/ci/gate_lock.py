@@ -40,6 +40,7 @@ def _fingerprint(state: gs.GateState) -> dict:
 
 
 def _snapshot(store, state: gs.GateState, extra: dict) -> str:
+    """写快照；只有"同代已存在"可接受，其余失败一律向上抛（fail-closed）。"""
     body = {"schema_version": gs.SCHEMA_VERSION, "generation": state.generation,
             "state": state.to_doc(), "meta": extra}
     import hashlib
@@ -48,7 +49,7 @@ def _snapshot(store, state: gs.GateState, extra: dict) -> str:
     data = json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
     try:
         return store.snapshot_put(state, data)
-    except gs.StateError as exc:              # 快照已存在（同代重跑）→ 不算失败
+    except gs.SnapshotExists as exc:          # 同代重跑：内容已存在，可接受
         return f"existing:{exc}"
 
 
@@ -80,6 +81,16 @@ def cmd_require_enabled(args) -> int:
     return EXIT_OK
 
 
+def _commit(store, state: gs.GateState, old_sha: str | None, meta: dict, *, run_id: str) -> int:
+    """先落快照、再 CAS 写状态：快照失败则不改变任何状态。"""
+    try:
+        _snapshot(store, state, meta)
+    except gs.StateError as exc:
+        print(f"❌ 快照写入失败，状态未变更（fail-closed）：{exc}", file=sys.stderr)
+        return EXIT_INVALID
+    return _write(store, state, old_sha, run_id=run_id)
+
+
 def cmd_status(args) -> int:
     state, sha = _store(args).read()
     print(json.dumps({"state": state.to_doc() if state else None, "ref_sha": sha}, ensure_ascii=False, indent=1))
@@ -94,24 +105,38 @@ def cmd_acquire(args) -> int:
         if current.phase == "paused":
             print("❌ 状态处于 paused：必须先 resume（不允许普通运行清除暂停）", file=sys.stderr)
             return EXIT_NEEDS_HUMAN
-        if current.lock_owner and current.lease_until > now and current.lock_owner != args.run_id:
+        expired = bool(current.lock_owner) and current.lease_until <= now \
+            and current.lock_owner != f"gate-{args.run_id}"
+        if current.lock_owner and current.lease_until > now and current.lock_owner != f"gate-{args.run_id}":
             print(f"❌ 锁被 {current.lock_owner} 持有（lease 至 {current.lease_until:.0f}），拒绝并发运行",
                   file=sys.stderr)
             return EXIT_BUSY
-        # 为**旧状态**落快照，供日后恢复
-        _snapshot(store, current, {"kind": "pre-acquire"})
+        if expired and not args.takeover:
+            print(f"❌ 租约已过期但未授权接管（原持有者 {current.lock_owner}）："
+                  f"需人工确认后用 --takeover", file=sys.stderr)
+            return EXIT_NEEDS_HUMAN
+        # 为**旧状态**落快照，供日后恢复（失败即中止）
+        try:
+            _snapshot(store, current, {"kind": "pre-acquire", "by": args.run_id})
+        except gs.StateError as exc:
+            print(f"❌ 旧状态快照失败，拒绝继续（fail-closed）：{exc}", file=sys.stderr)
+            return EXIT_INVALID
+        takeover = expired
+    else:
+        takeover = False
 
     generation = 1 if current is None else current.generation + 1
     state = gs.GateState(
-        run_id=args.run_id, generation=generation, epoch=0 if current is None else current.epoch,
+        run_id=args.run_id, generation=generation,
+        epoch=(0 if current is None else current.epoch + (1 if takeover else 0)),
         base_sha=args.base_sha, candidate_sha=args.candidate_sha or args.base_sha,
         target_ref=args.target_ref, phase="candidate", check_status="pending", conclusion="none",
         lock_owner=f"gate-{args.run_id}", lock_token=os.urandom(16).hex(),
         lease_until=now + args.lease_seconds, updated_at=now)
-    rc = _write(store, state, sha, run_id=args.run_id)
-    if rc == EXIT_OK:
-        _snapshot(store, state, {"kind": "acquired", "trigger": args.trigger})
-    return rc
+    return _commit(store, state, sha, {"kind": "acquired", "trigger": args.trigger,
+                                       "takeover": takeover,
+                                       "previous_owner": (current.lock_owner if current else "")},
+                   run_id=args.run_id)
 
 
 def cmd_complete(args) -> int:
@@ -135,10 +160,8 @@ def cmd_complete(args) -> int:
         check_status="completed" if success else "failure",
         conclusion="success" if success else "failure",
         lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time())
-    rc = _write(store, state, sha, run_id=args.run_id)
-    if rc == EXIT_OK:
-        _snapshot(store, state, {"kind": "completed", "result": args.result, "pr": args.pr})
-    return rc
+    return _commit(store, state, sha,
+                   {"kind": "completed", "result": args.result, "pr": args.pr}, run_id=args.run_id)
 
 
 def cmd_pause(args) -> int:
@@ -152,11 +175,9 @@ def cmd_pause(args) -> int:
         base_sha=current.base_sha, candidate_sha=current.candidate_sha, target_ref=current.target_ref,
         phase="paused", check_status="failure", conclusion="failure",
         lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time())
-    rc = _write(store, state, sha, run_id=args.run_id)
-    if rc == EXIT_OK:
-        _snapshot(store, state, {"kind": "paused", "reason": args.reason,
-                                 "evidence": args.evidence})
-    return rc
+    return _commit(store, state, sha,
+                   {"kind": "paused", "reason": args.reason, "evidence": args.evidence},
+                   run_id=args.run_id)
 
 
 def cmd_resume(args) -> int:
@@ -171,10 +192,8 @@ def cmd_resume(args) -> int:
         phase="candidate", check_status="pending", conclusion="none",
         lock_owner=f"gate-{args.run_id}", lock_token=os.urandom(16).hex(),
         lease_until=time.time() + args.lease_seconds, updated_at=time.time())
-    rc = _write(store, state, sha, run_id=args.run_id)
-    if rc == EXIT_OK:
-        _snapshot(store, state, {"kind": "resumed", "reason": args.reason})
-    return rc
+    return _commit(store, state, sha, {"kind": "resumed", "reason": args.reason},
+                   run_id=args.run_id)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -193,6 +212,8 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--candidate-sha", default="")
     a.add_argument("--target-ref", default="refs/heads/candidate/rules-update")
     a.add_argument("--trigger", default="schedule")
+    a.add_argument("--takeover", action="store_true",
+                   help="显式接管**已过期**的租约（新 generation 且 epoch+1，记录原持有者）")
 
     c = sub.add_parser("complete")
     c.add_argument("--result", choices=("success", "failure"), required=True)

@@ -11,7 +11,8 @@
 [定时 22:00 UTC / 手动] daily-sync.yml   ← 唯一入口（自身零写入，只做 workflow_call）
   └─ candidate-pr-sync.yml
        gate      : vars.CANDIDATE_SYNC_ENABLED == 'true'（默认关闭）
-       generate  : 只读 —— 拉上游、生成规则、跑全部 guard 与单测，产出 candidate.patch
+       lock      : **硬前置** —— require-enabled（GATE_STATE_ENABLED 非 true 即失败）→ acquire（CAS）
+       generate  : 只读 —— 依赖 lock 成功；拉上游、生成规则、跑全部 guard 与单测，产出 candidate.patch
        publish   : GITHUB_TOKEN（contents: write / pull-requests: write / statuses: write）
                    → 推送候选分支 candidate/rules-update（硬断言 ≠ main）
                    → 创建/更新 PR（幂等；无真实 diff 不产生空提交）
@@ -64,6 +65,9 @@ GitHub 的两条硬事实：
 * **状态**：只有 `success` 视为满足；`pending` / `failure` / `error` 一律禁止合并。
 * **head SHA 绑定**：发布前校验 PR 仍 open、base 分支与 base SHA 未变、**PR head == 目标 SHA**；
   发布后回读该 SHA 上确有本 context 且 state 一致。旧 SHA 的结论绝不套用到新提交。
+* **身份严格性**：候选 PR 必须由 `type=Bot` 的 `github-actions[bot]` 创建才走 status 模式；
+  人工 PR 必须是 `type=User`；commit status 的 `creator.type` 必须是 `Bot`。
+  只比对 login 的一律拒绝（防同名冒充）。
 * **防自我削弱**：`verify_candidate.py` 用受信脚本检查候选 diff，**禁止**修改
   `.github/**`、`scripts/**`、`tests/**`、`required-checks.json`；超出 `ruleset/`、`configs/`、
   `docs/`、`README.md`、`CHANGELOG.md` 的改动同样失败（机器人 PR 只能改规则数据）。

@@ -57,14 +57,25 @@ def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: 
             per[ctx] = {"state": STATE_MISSING}
             continue
         state = item.get("state")
-        if item.get("sha") and item["sha"] != expected_head:
-            per[ctx] = {"state": STATE_FAILED, "reason": "status 绑定到其它 SHA"}
-            problems.append(f"{ctx}: 状态绑定到 {item['sha'][:12]}，不是预期 head {expected_head[:12]}")
+        # 严格 SHA 校验：字段缺失同样拒绝（禁止"缺失即跳过"的绕过）
+        sha = item.get("sha")
+        if not isinstance(sha, str) or len(sha) != 40:
+            per[ctx] = {"state": STATE_FAILED, "reason": "status 缺少 sha 或格式非法"}
+            problems.append(f"{ctx}: status 缺少合法 sha，拒绝采信")
             continue
-        creator = ((item.get("creator") or {}).get("login") or "")
+        if sha != expected_head:
+            per[ctx] = {"state": STATE_FAILED, "reason": "status 绑定到其它 SHA"}
+            problems.append(f"{ctx}: 状态绑定到 {sha[:12]}，不是预期 head {expected_head[:12]}")
+            continue
+        creator_obj = item.get("creator") or {}
+        creator = creator_obj.get("login") or ""
         if creator != TRUSTED_STATUS_CREATOR:
             per[ctx] = {"state": STATE_FAILED, "reason": f"来源不可验证：creator={creator!r}"}
             problems.append(f"{ctx}: 状态来源 {creator!r} 不在可信名单（{TRUSTED_STATUS_CREATOR}）")
+            continue
+        if creator_obj.get("type") != "Bot":
+            per[ctx] = {"state": STATE_FAILED, "reason": f"来源类型不可信：type={creator_obj.get('type')!r}"}
+            problems.append(f"{ctx}: 状态来源类型 {creator_obj.get('type')!r} 不是 Bot（拒绝仅凭 login 采信）")
             continue
         if state == "success":
             per[ctx] = {"state": STATE_SUCCESS, "target_url": item.get("target_url", "")}
@@ -104,6 +115,11 @@ def expected_mode(pr_obj: dict) -> str:
     login = user.get("login")
     if not isinstance(login, str) or not login:
         raise GateModeError("PR 作者不可确定：无法固定预期门禁模式")
+    utype = user.get("type")
     if login == BOT_LOGIN:
+        if utype != "Bot":
+            raise GateModeError(f"作者 {login!r} 的 type={utype!r}，非 Bot（拒绝仅凭 login 判定）")
         return STATUS_MODE
+    if utype != "User":
+        raise GateModeError(f"作者 {login!r} 的 type={utype!r}，既非 Bot 也非 User，无法确定模式")
     return CHECK_RUN_MODE

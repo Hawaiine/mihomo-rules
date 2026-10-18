@@ -49,6 +49,10 @@ class StateError(RuntimeError):
     """状态不可读 / 语义非法 / 后端不可用：一律 fail-closed。"""
 
 
+class SnapshotExists(StateError):
+    """该 generation 的快照已存在（重复写同一代）；与真实失败区分。"""
+
+
 class CasConflict(StateError):
     """CAS 失败：ref 已被其他写者推进，或期望的旧 SHA 不匹配。"""
 
@@ -200,7 +204,7 @@ class LocalFileStore:
     def snapshot_put(self, state: GateState, payload: bytes) -> str:
         target = self.snapshots / f"gen-{state.generation}.json"
         if target.exists():
-            raise StateError(f"快照已存在，拒绝覆盖: {target.name}")
+            raise SnapshotExists(f"快照已存在，拒绝覆盖: {target.name}")
         tmp = target.with_suffix(".tmp")
         tmp.write_bytes(payload)
         os.replace(tmp, target)
@@ -351,6 +355,8 @@ class GitHubRefStore:
         tag = f"{SNAPSHOT_TAG_PREFIX}{state.generation}"
         status, _ = self._request("POST", f"/repos/{self.repo}/git/refs",
                                   {"ref": f"refs/tags/{tag}", "sha": commit["sha"]})
+        if status == 422:
+            raise SnapshotExists(f"快照 tag 已存在: {tag}")
         if status not in (200, 201):
             raise StateError(f"快照 tag 创建失败: HTTP {status}")
         return hashlib.sha256(payload).hexdigest()

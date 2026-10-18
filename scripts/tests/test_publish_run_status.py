@@ -65,7 +65,8 @@ class Case(unittest.TestCase):
         self.client = prs.Client("o/r", "tok", api=self.api)
 
     def run_doc(self, **over):
-        doc = {"repository": {"full_name": "o/r"}, "event": "pull_request",
+        doc = {"repository": {"full_name": "o/r"}, "head_repository": {"full_name": "o/r"},
+               "path": ".github/workflows/pr-verify.yml", "pull_requests": [], "event": "pull_request",
                "name": "General PR verification", "head_sha": HEAD,
                "status": "completed", "conclusion": "success"}
         doc.update(over)
@@ -109,6 +110,21 @@ class Case(unittest.TestCase):
 
     def test_wrong_event_refused(self):
         self.base_routes(run={"event": "push"})
+        with self.assertRaises(prs.Refused):
+            self.publish()
+
+    def test_workflow_path_spoof_refused(self):
+        self.base_routes(run={"path": ".github/workflows/evil.yml"})
+        with self.assertRaises(prs.Refused):
+            self.publish()
+
+    def test_fork_head_repository_refused(self):
+        self.base_routes(run={"head_repository": {"full_name": "evil/mihomo-rules"}})
+        with self.assertRaises(prs.Refused):
+            self.publish()
+
+    def test_run_linked_to_other_pr_refused(self):
+        self.base_routes(run={"pull_requests": [{"number": 7}]})
         with self.assertRaises(prs.Refused):
             self.publish()
 

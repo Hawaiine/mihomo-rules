@@ -97,8 +97,8 @@ jobs:
 
   generate:
     name: generate
-    needs: gate
-    if: needs.gate.outputs.enabled == 'true'
+    needs: [gate, lock]
+    if: needs.gate.outputs.enabled == 'true' && needs.lock.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:

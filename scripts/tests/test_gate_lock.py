@@ -108,6 +108,32 @@ class GateLockCliTest(unittest.TestCase):
             gl.main(["--local-dir", str(self.dir), "require-enabled"])
         self.assertEqual((self.dir / "state.json").read_bytes(), before)
 
+    def test_expired_lease_requires_explicit_takeover(self):
+        import time as _t
+        from unittest import mock
+        self.acquire("1-1")
+        # 把租约改成已过期
+        store = gs.LocalFileStore(self.dir)
+        st, sha = store.read()
+        doc = st.to_doc(); doc["lease_until"] = _t.time() - 10
+        doc["snapshot_digest"] = gs.canonical_digest(doc)
+        store.cas_write(gs.GateState.from_doc(doc), expected_old_sha=sha)
+        self.assertEqual(self.acquire("2-2"), gl.EXIT_NEEDS_HUMAN)
+        self.assertEqual(self.state().generation, 1, "未授权接管不得写入")
+        rc = self.run_cli("--run-id", "2-2", "acquire", "--base-sha", "a" * 40, "--takeover")
+        self.assertEqual(rc, 0)
+        st2 = self.state()
+        self.assertEqual(st2.lock_owner, "gate-2-2")
+        self.assertEqual(st2.epoch, 1, "接管必须推进 epoch")
+
+    def test_snapshot_failure_blocks_state_change(self):
+        from unittest import mock
+        store = gs.LocalFileStore(self.dir)
+        with mock.patch.object(gs.LocalFileStore, "snapshot_put",
+                               side_effect=gs.StateError("disk full")):
+            self.assertEqual(self.acquire("1-1"), gl.EXIT_INVALID)
+        self.assertIsNone(gs.LocalFileStore(self.dir).read()[0], "快照失败时不得写状态")
+
     def test_status_is_read_only(self):
         self.acquire()
         before = (self.dir / "state.json").read_bytes()

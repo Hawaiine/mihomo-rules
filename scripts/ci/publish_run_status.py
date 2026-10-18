@@ -26,6 +26,7 @@ from pathlib import Path
 
 CONTEXT = "route-a/verify"
 EXPECTED_RUN_NAME = "General PR verification"
+EXPECTED_RUN_PATH = ".github/workflows/pr-verify.yml"
 TRUSTED_BOT = "github-actions[bot]"
 
 
@@ -67,12 +68,23 @@ class Client:
             raise Refused(f"状态发布请求失败: {exc}") from exc
 
 
-def verify_run(client: Client, run_id: str, head_sha: str, required: set[str]) -> dict:
+def verify_run(client: Client, run_id: str, head_sha: str, required: set[str],
+               pr: int | None = None) -> dict:
     status, run = client.call(f"/repos/{client.repo}/actions/runs/{run_id}")
     if status != 200 or not isinstance(run, dict):
         raise Refused(f"读取 workflow run 失败: HTTP {status}")
     if (run.get("repository") or {}).get("full_name") != client.repo:
         raise Refused("run 不属于本仓库")
+    if (run.get("head_repository") or {}).get("full_name") != client.repo:
+        raise Refused("run 的 head_repository 不属于本仓库（可能来自 fork）")
+    if run.get("path") != EXPECTED_RUN_PATH:
+        raise Refused(f"run path 为 {run.get('path')!r}，非 {EXPECTED_RUN_PATH!r}"
+                      f"（同名 workflow 不能冒充）")
+    prs = run.get("pull_requests")
+    if isinstance(prs, list) and prs:
+        numbers = {p.get("number") for p in prs if isinstance(p, dict)}
+        if pr is not None and pr not in numbers:
+            raise Refused(f"run 关联的 PR {sorted(numbers)} 不包含目标 PR #{pr}")
     if run.get("event") != "pull_request":
         raise Refused(f"run 事件为 {run.get('event')!r}，非 pull_request（拒绝采信）")
     if run.get("name") != EXPECTED_RUN_NAME:
@@ -159,7 +171,7 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
     client = Client(repo, token, api)
     if not pr:
         pr = resolve_pr(client, head_sha)
-    run_info = verify_run(client, run_id, head_sha, required)
+    run_info = verify_run(client, run_id, head_sha, required, pr=pr)
     pr_info = verify_pr(client, pr, head_sha)
     posted = publish(client, head_sha, run_id, "受信校验通过（run 级核验）", target_url)
     verified = verify_published(client, head_sha, attempts=attempts)

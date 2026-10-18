@@ -28,7 +28,7 @@ def pr(state="open", head=HEAD, base="main", base_sha=MAIN, auto_merge=None, mer
        merge_commit_sha=None):
     return {"state": state, "head": {"sha": head}, "base": {"ref": base, "sha": base_sha},
             "number": 29, "node_id": "PR_kwNode", "merged": merged, "auto_merge": auto_merge,
-            "merge_commit_sha": merge_commit_sha, "user": {"login": "Hawaiine"}}
+            "merge_commit_sha": merge_commit_sha, "user": {"login": "Hawaiine", "type": "User"}}
 
 
 class Transport:
