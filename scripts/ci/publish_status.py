@@ -23,6 +23,24 @@ import urllib.request
 
 CONTEXT = "route-a/verify"
 LEGAL_STATES = {"success", "failure", "pending", "error"}
+# 发布者身份：Route A 只用内置 GITHUB_TOKEN，状态 creator 必须是 GitHub Actions 应用；
+# 只核对 context 名字不足以防冒充（同一个 context 名任何具 statuses:write 的主体都能发）。
+TRUSTED_STATUS_CREATOR = "github-actions[bot]"
+TRUSTED_CREATOR_TYPE = "Bot"
+
+
+def creator_problem(status_obj: dict) -> str:
+    """返回不可信原因；空字符串表示可信。字段缺失同样拒绝（不假设字段存在）。"""
+    creator = status_obj.get("creator")
+    if not isinstance(creator, dict):
+        return "status 缺少 creator 对象（来源不可验证）"
+    login = creator.get("login")
+    utype = creator.get("type")
+    if login != TRUSTED_STATUS_CREATOR:
+        return f"status creator.login={login!r} 不在可信名单（{TRUSTED_STATUS_CREATOR}）"
+    if utype != TRUSTED_CREATOR_TYPE:
+        return f"status creator.type={utype!r} 非 {TRUSTED_CREATOR_TYPE}（拒绝仅凭 login 采信）"
+    return ""
 
 
 class PublishRefused(RuntimeError):
@@ -91,16 +109,26 @@ def publish(client: Client, head_sha: str, state: str, description: str,
 def verify_published(client: Client, head_sha: str, expected: str, *, attempts: int = 5,
                      delay: float = 1.0) -> dict:
     last = None
+    reason = ""
     for i in range(attempts):
         status, payload = client.call("GET", f"/repos/{client.repo}/commits/{head_sha}/statuses?per_page=100")
         if status == 200 and isinstance(payload, list):
             ours = [s for s in payload if s.get("context") == CONTEXT]
-            if ours and ours[0].get("state") == expected:
-                return {"verified": True, "state": ours[0]["state"], "context": CONTEXT,
-                        "target_url": ours[0].get("target_url", "")}
-            last = ours[0].get("state") if ours else None
+            if ours:
+                last = ours[0]
+                # 发布者身份必须是可信 Bot（creator.login + creator.type 双向校验）
+                reason = creator_problem(last)
+                if not reason and last.get("state") == expected \
+                        and last.get("sha") in (None, head_sha):
+                    creator = last.get("creator") or {}
+                    return {"verified": True, "state": last["state"], "context": CONTEXT,
+                            "creator": creator.get("login"), "creator_type": creator.get("type"),
+                            "target_url": last.get("target_url", "")}
+                if not reason:
+                    reason = f"回读 state={last.get('state')!r}（期望 {expected!r}）"
         time.sleep(delay * (i + 1))
-    raise PublishRefused(f"发布后回读未看到 {CONTEXT}={expected}（当前={last}）")
+    raise PublishRefused(f"发布后回读未看到可信 {CONTEXT}={expected}"
+                         f"（当前={last.get('state') if isinstance(last, dict) else last!r}；{reason}）")
 
 
 def main(argv: list[str] | None = None) -> int:

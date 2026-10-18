@@ -291,7 +291,7 @@ jobs:
 
           # 已有 PR 的状态（只读；含 closed，避免自动复活被人工关闭的 PR）
           PR_STATE="none"; PR_HEAD="-"
-          EXISTING="$(curl -sS -H "Authorization: Bearer ${APP_TOKEN}" -H "Accept: application/vnd.github+json" \
+          EXISTING="$(curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" \
             -w $'\n%{http_code}' "${API}/pulls?state=all&head=${GITHUB_REPOSITORY_OWNER}:${CANDIDATE_BRANCH}&base=${BASE_BRANCH}")"
           EXIST_CODE="$(printf '%s' "$EXISTING" | tail -n1)"
           test "$EXIST_CODE" = "200" || { echo "❌ 查询已有 PR 失败：HTTP $EXIST_CODE"; exit 1; }
@@ -325,7 +325,7 @@ jobs:
           esac
           echo "expected_head_sha=${EXPECTED}" >> "$GITHUB_OUTPUT"
 
-      - name: 🔁 创建或更新 PR（幂等；App 身份创建 ⇒ 正常触发 pull_request 验证）
+      - name: 🔁 创建或更新 PR（幂等；GITHUB_TOKEN 身份；候选 PR 由本流程内受信验证）
         id: pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -347,11 +347,11 @@ jobs:
           api() {
             local method="$1" path="$2" data="${3:-}" expect="${4:-200}" out code body
             if [ -n "$data" ]; then
-              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${APP_TOKEN}" \
+              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${GITHUB_TOKEN}" \
                 -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
                 -H "Content-Type: application/json" -d "$data" -w $'\n%{http_code}' "${API}${path}")"
             else
-              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${APP_TOKEN}" \
+              out="$(curl -sS -X "$method" -H "Authorization: Bearer ${GITHUB_TOKEN}" \
                 -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
                 -w $'\n%{http_code}' "${API}${path}")"
             fi
@@ -376,7 +376,7 @@ jobs:
             PAYLOAD="$(python3 -c 'import json,os;print(json.dumps({"title":os.environ["PR_TITLE"],"head":os.environ["HEAD_BR"],"base":os.environ["BASE_BR"],"body":open(os.environ["BODY_FILE"],encoding="utf-8").read()}))')"
             RESP="$(api POST "/pulls" "$PAYLOAD" 201)"
             NUMBER="$(printf '%s' "$RESP" | python3 -c 'import json,sys;d=json.load(sys.stdin);assert d.get("number"), "POST 响应缺少 number";print(d["number"])')"
-            echo "✅ 已创建 PR #${NUMBER}（App 身份，将正常触发 pull_request 验证）"
+            echo "✅ 已创建 PR #${NUMBER}（GITHUB_TOKEN 身份；候选 PR 不触发 pull_request，由本流程 verify job 受信验证）"
           fi
           echo "pr_number=${NUMBER}" >> "$GITHUB_OUTPUT"
 
@@ -391,7 +391,7 @@ jobs:
           EXPECTED="${{ steps.push.outputs.expected_head_sha }}"
           get() {
             local out code body
-            out="$(curl -sS -H "Authorization: Bearer ${APP_TOKEN}" -H "Accept: application/vnd.github+json" \
+            out="$(curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" -w $'\n%{http_code}' "$1")"
             code="$(printf '%s' "$out" | tail -n1)"
             body="$(printf '%s' "$out" | sed '$d')"
@@ -438,7 +438,7 @@ jobs:
 
   verify:
     name: verify
-    needs: [gate, generate, publish]
+    needs: [gate, lock, generate, publish]
     if: needs.gate.outputs.enabled == 'true' && needs.publish.outputs.pr_number != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -462,21 +462,33 @@ jobs:
       - name: 📦 安装依赖
         run: python3 -m pip install pyyaml
 
-      - name: 🛡️ 受信验证候选树（范围/防自我削弱/规则集/配置）
+      - name: 🛡️ 受信验证候选树（完整性/范围/防自我削弱/规则集/配置）+ 分类与审批判定
         id: verify
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if python3 scripts/ci/verify_candidate.py --repo "${GITHUB_REPOSITORY}" \
+          VC_RC=0; POLICY_RC=0
+          python3 scripts/ci/verify_candidate.py --repo "${GITHUB_REPOSITORY}" \
+              --pr "${{ needs.publish.outputs.pr_number }}" \
               --base-sha "${{ needs.generate.outputs.base_sha }}" \
               --head-sha "${{ needs.publish.outputs.head_sha }}" \
-              --json "$RUNNER_TEMP/candidate-verify.json"; then
+              --json "$RUNNER_TEMP/candidate-verify.json" || VC_RC=$?
+          python3 scripts/ci/evaluate_candidate_policy.py \
+              --repo "${GITHUB_REPOSITORY}" \
+              --pr "${{ needs.publish.outputs.pr_number }}" \
+              --base-sha "${{ needs.generate.outputs.base_sha }}" \
+              --head-sha "${{ needs.publish.outputs.head_sha }}" \
+              --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              --generation "${{ needs.lock.outputs.generation }}" \
+              --mode verify --json "$RUNNER_TEMP/policy.json" || POLICY_RC=$?
+          CLASS="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("change_class","MIXED_OR_UNKNOWN"))' "$RUNNER_TEMP/policy.json" 2>/dev/null || echo MIXED_OR_UNKNOWN)"
+          if [ "$VC_RC" = 0 ] && [ "$POLICY_RC" = 0 ]; then
             echo "state=success" >> "$GITHUB_OUTPUT"
-            echo "description=受信校验通过（范围/规则集/配置）" >> "$GITHUB_OUTPUT"
+            echo "description=受信校验通过（$CLASS）" >> "$GITHUB_OUTPUT"
           else
             echo "state=failure" >> "$GITHUB_OUTPUT"
-            echo "description=受信校验失败（详见 artifact）" >> "$GITHUB_OUTPUT"
+            echo "description=受信校验失败（verify=$VC_RC policy=$POLICY_RC class=$CLASS）" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 🚦 在精确 head SHA 上发布 route-a/verify
@@ -491,6 +503,13 @@ jobs:
             --description "${{ steps.verify.outputs.description }}" \
             --target-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --json "$RUNNER_TEMP/status.json"
+
+      - name: 🔴 校验失败必须让 job 非零退出（失败状态已发布，不得以成功 job 收尾）
+        if: steps.verify.outputs.state != 'success'
+        run: |
+          set -euo pipefail
+          echo "❌ 候选验证失败：route-a/verify 已发布 failure；job 以非零退出，finalize 进入安全暂停路径"
+          exit 1
 
       - name: 📊 摘要与证据
         if: always()
@@ -525,15 +544,36 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: 🧾 写终态（成功）/ 失败关闭（失败）
+      - name: 🧾 写终态（no-op / 成功）/ 失败关闭（失败）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERIFY_RESULT: ${{ needs.verify.result }}
           PUBLISH_RESULT: ${{ needs.publish.result }}
+          GENERATE_RESULT: ${{ needs.generate.result }}
+          GENERATE_CHANGED: ${{ needs.generate.outputs.changed }}
+          LOCK_RESULT: ${{ needs.lock.result }}
         run: |
           set -euo pipefail
           RC=0
-          if [ "$VERIFY_RESULT" = "success" ] && [ "$PUBLISH_RESULT" = "success" ]; then
+          # 未取得锁（gate 关闭 / lock 失败）：job 级 if 已挡住绝大多数情形，这里再兜底。
+          if [ "$LOCK_RESULT" != "success" ]; then
+            echo "⏸️ 未取得锁（lock=$LOCK_RESULT）：本 run 不写任何状态"
+            exit 0
+          fi
+          if [ "$GENERATE_CHANGED" != "true" ]; then
+            # no-change 是正常 no-op：publish/verify 会被 skip，**不得**因此暂停。
+            if [ "$GENERATE_RESULT" = "success" ]; then
+              echo "✅ 无候选变更（no-op）：释放锁并写成功终态（不要求 publish/verify）"
+              python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
+                --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+                complete --result success || RC=$?
+            else
+              echo "❌ generate=$GENERATE_RESULT：进入安全暂停"
+              python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
+                --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+                pause --reason "generate 未成功：$GENERATE_RESULT" || RC=$?
+            fi
+          elif [ "$VERIFY_RESULT" = "success" ] && [ "$PUBLISH_RESULT" = "success" ]; then
             python3 scripts/ci/gate_lock.py --repo "${GITHUB_REPOSITORY}" \
               --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
               complete --result success --pr "${{ needs.publish.outputs.pr_number }}" || RC=$?
@@ -583,6 +623,20 @@ jobs:
           ref: main
           fetch-depth: 1
           persist-credentials: false
+
+      - name: 🧭 可信策略判定（分类/审批/决策矩阵；BLOCKED 即禁止合并）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/evaluate_candidate_policy.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ needs.publish.outputs.pr_number }}" \
+            --base-sha "${{ needs.generate.outputs.base_sha }}" \
+            --head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --mode merge --production-mode 1 \
+            --json "$RUNNER_TEMP/policy-merge.json"
 
       - name: ⏳ 有界等待必需检查完成（只读轮询；不做任何写请求）
         env:

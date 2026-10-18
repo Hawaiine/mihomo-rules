@@ -32,7 +32,9 @@ GitHub 按 Ruleset 合并（必需状态 + 禁止 force push / 删除分支，by
 GitHub 的两条硬事实：
 
 1. 用 `GITHUB_TOKEN` 创建/更新的 PR **不会触发** `pull_request` workflow（防递归）。
-2. `GITHUB_TOKEN` **不能创建 check-run**（check-run 必须由 App 身份创建）。
+2. 因此这条 PR 上不会出现 `pr-verify.yml` 的三个 check-run —— 不是"能力不足"，
+   而是**事件没有被触发**。Route A 的选择是不引入 App/PAT 去换事件，
+   只把可信验证放进候选运行本身。
 
 因此 Route A 的候选 PR 拿不到 `pr-verify` 的三个 check-run。可行且不需 App 的路径是
 **commit status**：`POST /statuses/{head_sha}` 只需 `statuses: write`，而 Ruleset 的

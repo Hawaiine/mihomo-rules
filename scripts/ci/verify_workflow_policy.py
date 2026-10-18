@@ -277,6 +277,20 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
     # P15：任何 workflow 都不得自己直接发送 auto-merge / 合并 mutation（必须走 helper）
     problems.extend(direct_mutation_problems(doc, name))
 
+    # P17：运行时认证只能是内置 GITHUB_TOKEN。
+    # 注释里提到 App/PAT 不构成风险；但 **run 脚本里引用** APP_TOKEN 等变量意味着
+    # 该路径真的会拿一个未定义的 token 去认证（Route A 下必然失败，属真实缺陷）。
+    for run in _run_scripts(doc):
+        for line in run.splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            for banned in ("APP_TOKEN", "PR_FIRST_APP_TOKEN", "PR_FIRST_APP_ID"):
+                if re.search(rf"(?<![A-Za-z0-9_]){banned}(?![A-Za-z0-9_])", line):
+                    problems.append(
+                        f"{name}: run 脚本引用 {banned}（Route A 只允许内置 GITHUB_TOKEN）："
+                        f"{stripped[:120]!r}")
+
     # P16：命令遮蔽（shadowing）—— 函数 / alias / export -f / BASH_ENV / PATH / 同名伪造可执行文件
     problems.extend(shadowing_problems(doc, name))
 

@@ -9,8 +9,10 @@ name: General PR verification
 #     checks 中，也不满足 ruleset 必需检查（见 github/docs 的
 #     troubleshooting-required-status-checks）。因此本 workflow 不声明 workflow_dispatch，
 #     必需检查一律由 pull_request 事件产生。
-#   * 候选 PR 由专用最小权限 GitHub App installation token 创建/更新，其产生的事件会正常
-#     触发 pull_request 验证（GITHUB_TOKEN 创建的 PR 不会）。
+#   * Route A（固定约束，无 GitHub App、无 PAT）：候选 PR 由内置 GITHUB_TOKEN 创建，
+#     因此**不会**触发本 workflow 的 pull_request；候选 PR 的门禁由
+#     candidate-pr-sync.yml 的 verify job 在同一受信运行内完成，并发布
+#     `route-a/verify` commit status。
 #
 # 安全姿态（由 scripts/ci/verify_general_pr.py 的 workflow-security-guard 与
 # scripts/ci/verify_workflow_policy.py 共同强制）：

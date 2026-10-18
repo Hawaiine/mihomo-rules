@@ -40,7 +40,8 @@
     "必需检查必须由 pull_request 事件产生：workflow_dispatch 触发的检查不出现在 PR checks 中，不满足 Ruleset 必需检查。",
     "scripts/ci/verify_workflow_policy.py 会校验本文件与 pr-verify.yml 的 job 集合、job 名、来源绑定完全一致。",
     "Route A：候选 PR 的必需门槛是 status context `route-a/verify`（由 verify job 在精确 head SHA 上 POST /statuses 发布）。Ruleset 必须同时引用该 context，否则候选 PR 永远无法满足门禁。",
-    "`checks[]` 仍适用于人工 PR（pull_request 触发）；候选 PR 不会产生这些 check-run，因此不得把它们当作候选 PR 的门槛。"
+    "`checks[]` 只适用于人工 PR（pull_request 触发）；候选 PR 不会产生这些 check-run，其门槛只有 `status_contexts[]` 中的 `route-a/verify`。任何 workflow 都不得要求候选 PR 通过 `checks[]`（否则 R8：bot PR 永久卡死）。",
+    "候选 PR 的运行时判定：verify job 先跑 verify_candidate.py（完整分页 diff + 单一路径政策 + 树自洽），再跑 evaluate_candidate_policy.py --mode verify（分类 + 新增 Ruleset 的当前 head 人工审批）；两者都通过才发布 success。合并前由 --mode merge 再做一次分类/审批/必需检查/锁/平台只读的完整决策，BLOCKED 即不发送合并 mutation。"
   ],
   "status_contexts": [
     {
