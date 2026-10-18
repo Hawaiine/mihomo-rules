@@ -208,6 +208,33 @@ jobs:
       - run: git apply "$RUNNER_TEMP/candidate.patch"
       - run: python3 "$RUNNER_TEMP/trusted/candidate_sha.py" decide
       - run: git push origin "HEAD:refs/heads/${CANDIDATE_BRANCH}"
+  lock:
+    name: lock
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: python3 scripts/ci/gate_lock.py require-enabled
+      - run: python3 scripts/ci/gate_lock.py acquire --base-sha x
+  generate:
+    name: generate
+    needs: [gate, lock]
+    if: needs.gate.outputs.enabled == 'true' && needs.lock.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo generate
+  finalize:
+    name: finalize
+    needs: [gate, lock, publish]
+    if: always() && needs.lock.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: python3 scripts/ci/gate_lock.py complete --result success || true
+      - run: python3 scripts/ci/gate_lock.py pause --reason failed || true
   request-auto-merge:
     name: request-auto-merge
     needs: [gate, publish]
@@ -327,6 +354,28 @@ class GateStructureTest(Fixture):
                                       "    runs-on: ubuntu-latest\n    permissions:\n      contents: write")
         problems = self.problems(candidate=candidate)
         self.assertTrue(any("publish" in p for p in problems), problems)
+
+
+class LockOrderTest(Fixture):
+    """锁序回归守卫：generate 必须在 lock 之后，finalize 必须能处理失败/取消。"""
+
+    def test_generate_without_lock_is_rejected(self):
+        candidate = CANDIDATE.replace("    needs: [gate, lock]\n    if: needs.gate.outputs.enabled == 'true' && needs.lock.result == 'success'",
+                                      "    needs: [gate]\n    if: needs.gate.outputs.enabled == 'true'")
+        problems = self.problems(candidate=candidate)
+        self.assertTrue(any("generate 必须依赖 lock" in p for p in problems), problems)
+
+    def test_finalize_without_always_is_rejected(self):
+        candidate = CANDIDATE.replace("    if: always() && needs.lock.result == 'success'",
+                                      "    if: needs.lock.result == 'success'")
+        problems = self.problems(candidate=candidate)
+        self.assertTrue(any("finalize 必须使用 always()" in p for p in problems), problems)
+
+    def test_finalize_without_pause_is_rejected(self):
+        candidate = CANDIDATE.replace(
+            "      - run: python3 scripts/ci/gate_lock.py pause --reason failed || true\n", "")
+        problems = self.problems(candidate=candidate)
+        self.assertTrue(any("必须在非成功路径写 pause" in p for p in problems), problems)
 
 
 class RequiredChecksTest(Fixture):

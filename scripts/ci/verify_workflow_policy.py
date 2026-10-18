@@ -289,6 +289,26 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
                                                   for j, job in jobs.items()]:
             if _perm_map(perm).get("actions") == "write":
                 problems.append(f"{name}: {scope} 不得声明 actions: write")
+        generate = jobs.get("generate") or {}
+        gen_needs = generate.get("needs") or []
+        gen_needs = [gen_needs] if isinstance(gen_needs, str) else list(gen_needs)
+        if "lock" not in gen_needs:
+            problems.append(f"{name}: generate 必须依赖 lock（锁前不得生成）")
+        if "lock.result" not in _job_if(generate):
+            problems.append(f"{name}: generate 的 if 必须要求 lock.result == 'success'"
+                            f"（实际 {_job_if(generate)!r}）")
+
+        finalize = jobs.get("finalize") or {}
+        fin_needs = finalize.get("needs") or []
+        fin_needs = [fin_needs] if isinstance(fin_needs, str) else list(fin_needs)
+        if "lock" not in fin_needs:
+            problems.append(f"{name}: finalize 必须依赖 lock（否则会盲清状态）")
+        if "always()" not in _job_if(finalize):
+            problems.append(f"{name}: finalize 必须使用 always() 以保证失败/取消时处理状态")
+        fin_runs = "\n".join(str(st.get("run") or "") for st in _steps(finalize))
+        if "complete --result success" in fin_runs and "pause" not in fin_runs:
+            problems.append(f"{name}: finalize 必须在非成功路径写 pause（不得只写成功终态）")
+
         publish = jobs.get("publish") or {}
         if GATE_OUTPUT not in _job_if(publish):
             problems.append(f"{name}: publish 必须门控于 {GATE_OUTPUT}"

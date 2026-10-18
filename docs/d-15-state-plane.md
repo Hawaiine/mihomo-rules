@@ -142,3 +142,33 @@ CAS 冲突 / 写入后回读不一致。成功时 `generation = 旧 + 1`、`epoc
 D-15 的本地实现通过**不等于**阶段十三通过：P0-09 gate 接线、P0-12 Ruleset、P0-15 status-source
 仍是独立门槛；本 PR 未打开任何 runtime 写入开关（`CANDIDATE_SYNC_ENABLED` /
 `CANDIDATE_AUTOMERGE_ENABLED` 均未设置）。
+
+## 10. 状态机转换表（实现映射）
+
+现有 schema 用 `phase` + `check_status` 表达，语义名称映射如下：
+
+| 语义状态 | 实现取值 | 前置条件 | 允许去向 | 拒绝原因 |
+|---|---|---|---|---|
+| IDLE | 无状态文件 / `generation` 缺失 | 未初始化 | → LOCKED | — |
+| LOCKED | `phase=candidate, check_status=pending`，`lock_owner` 非空 | CAS 成功、未 paused、无有效他人租约 | → VERIFYING / PAUSED / FAILED | `LOCK_BUSY` / `LEASE_EXPIRED_NO_TAKEOVER` |
+| VERIFYING | `phase=validation|pr|trusted-gate|gate, check_status=in_progress` | 持锁且 owner 匹配 | → FINALIZING / PAUSED | `LOCK_NOT_HELD` |
+| FINALIZING | 同上（收尾阶段） | 验证全部 success | → COMPLETED | `CHECKS_NOT_OK` |
+| PAUSED | `phase=paused, check_status=failure` | 显式 `pause` | → LOCKED（仅 `resume`） | `PAUSED_REQUIRES_RESUME` |
+| RECOVERY_REQUIRED | 待实现：`phase=paused` + 快照/租约证据冲突 | 状态或证据不可信 | → PAUSED 处理后 `resume` | `RECOVERY_EVIDENCE_MISSING` |
+| COMPLETED | `phase=final-review, check_status=completed` | 全部 success | 终态 | — |
+| FAILED | `phase=failed, check_status=failure` | 验证/发布失败 | 终态 | — |
+
+关键约束：`complete` 不能清除 `PAUSED`；过期租约必须 `--takeover` 才接管（`epoch+1`）；
+`RECOVERY_REQUIRED` 尚未落为独立字段，**这是已知缺口**（M3 设计项）。
+
+## 11. 快照错误分类（必须区分）
+
+| 错误 | 判定 | 行为 |
+|---|---|---|
+| `SnapshotExists`（同代、内容已存在） | 明确幂等 | 允许继续（不改状态） |
+| 存储不可用 / 超时 / 权限 | 基础设施失败 | 中止，状态不变 |
+| 内容或摘要不符 | 数据损坏 | 中止并进入恢复流程 |
+| 未知异常 | 无法证明 | 中止（fail-closed） |
+
+实现：`gate_state.SnapshotExists` 是唯一"可接受"的异常；`gate_lock._commit` 先写快照、
+成功后才 CAS 写状态，因此"状态已写但快照失败"在本实现中不可能出现。
