@@ -190,7 +190,7 @@ class ManifestTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "required-checks.json"
             p.write_text(json.dumps({"required": ["a"]}), encoding="utf-8")
-            problems, _names, _ = pol.check_required_checks_file(p)
+            problems, _names, _checks, _info = pol.check_required_checks_file(p)
             self.assertTrue(any("来源绑定" in x for x in problems), problems)
 
     def test_legacy_manifest_rejected_by_loader(self):

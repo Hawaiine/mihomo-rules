@@ -90,7 +90,8 @@ PR_VERIFY_WRITE_ALLOW: dict[str, str] = {"contents": "read"}
 # + pull-requests: write（enablePullRequestAutoMerge）。绝不包含 actions: write / write-all。
 AUTOMERGE_WRITE_ALLOW: dict[str, str] = {"contents": "read", "pull-requests": "write",
                                          "checks": "read", "actions": "read"}
-PUBLISH_WRITE_ALLOW: dict[str, str] = {"contents": "read"}
+PUBLISH_WRITE_ALLOW: dict[str, str] = {"contents": "write", "pull-requests": "write",
+                                       "statuses": "write"}
 
 # 用于**定位** auto-merge job 的标记（判定本身由 workflow_command_contract 的严格合同完成，
 # 这里不再用子串作为「已调用」的证据）。
@@ -289,10 +290,18 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
             if _perm_map(perm).get("actions") == "write":
                 problems.append(f"{name}: {scope} 不得声明 actions: write")
         publish = jobs.get("publish") or {}
+        if GATE_OUTPUT not in _job_if(publish):
+            problems.append(f"{name}: publish 必须门控于 {GATE_OUTPUT}"
+                            f"（实际 if={_job_if(publish)!r}）")
         pperms = _perm_map(_permissions(doc, publish))
         if pperms != PUBLISH_WRITE_ALLOW:
-            problems.append(f"{name}: publish 权限必须恰为 {PUBLISH_WRITE_ALLOW}（写操作交给 App token；"
-                            f"实际 {pperms!r}）")
+            problems.append(f"{name}: publish 权限必须恰为 {PUBLISH_WRITE_ALLOW}"
+                            f"（Route A：GITHUB_TOKEN 写候选分支/PR/状态；实际 {pperms!r}）")
+        # Route A：禁止 App / PAT 认证路径
+        wtext = str(doc)
+        for banned in ("create-github-app-token", "PR_FIRST_APP_ID", "PR_FIRST_APP_PRIVATE_KEY"):
+            if banned in wtext:
+                problems.append(f"{name}: Route A 禁止 GitHub App 认证路径（出现 {banned}）")
         # publish 不得检出 PR head
         for step in _steps(publish):
             if _is_pr_head_checkout(step):
@@ -405,7 +414,21 @@ def check_required_checks_file(path: Path) -> tuple[list[str], list[str], list[d
             problems.append(f"{REQUIRED_CHECKS_PATH}: 需要非空 checks[] 列表（每项含 name/source）")
     if len(set(names)) != len(names):
         problems.append(f"{REQUIRED_CHECKS_PATH}: 检查名重复")
-    return problems, names, checks
+    contexts = data.get("status_contexts") or []
+    ctx_names: list[str] = []
+    if contexts:
+        if data.get("version", 0) < 3:
+            problems.append(f"{REQUIRED_CHECKS_PATH}: 声明 status_contexts 时 version 必须 >= 3")
+        for item in contexts:
+            if not isinstance(item, dict) or not item.get("context"):
+                problems.append(f"{REQUIRED_CHECKS_PATH}: status_contexts 项非法：{item!r}")
+                continue
+            ctx_names.append(str(item["context"]))
+            if item.get("publisher") != "builtin-github-token":
+                problems.append(f"{REQUIRED_CHECKS_PATH}: {item['context']} 的 publisher 必须是 builtin-github-token"
+                                f"（Route A 禁止 App/PAT）")
+    info = {"status_contexts": ctx_names}
+    return problems, names, checks, info
 
 
 def check_check_name_uniqueness(docs: dict[str, dict], required: list[str]) -> list[str]:
@@ -430,24 +453,47 @@ def check_check_name_uniqueness(docs: dict[str, dict], required: list[str]) -> l
     return problems
 
 
-def check_legacy_daily_sync(root: Path) -> list[str]:
-    """P3b：旧直推 workflow 必须逐字节不变（pin sha256）。"""
+def check_daily_sync_entry(root: Path) -> list[str]:
+    """P3b（Route A）：daily-sync.yml 是唯一入口，且自身不得包含任何写操作。
+
+    历史直推路径（push / commit / refs API）一旦重新出现即失败；同时要求它通过
+    workflow_call 复用候选流程，避免出现第二条实现。
+    """
+    problems: list[str] = []
     path = root / LEGACY_DIRECT_WRITE
     if not path.exists():
-        return []  # 删除它也是「不重新启用」，且会出现在 diff 中
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if digest != PINNED_LEGACY_DAILY_SYNC_SHA256:
-        return [f"{LEGACY_DIRECT_WRITE}: 内容与固定 pin 不一致（sha256 {digest} != "
-                f"{PINNED_LEGACY_DAILY_SYNC_SHA256}）——旧直推 main workflow 禁止被修改/重新武装"]
-    return []
+        return [f"{LEGACY_DIRECT_WRITE}: 缺少唯一入口文件"]
+    text = path.read_text(encoding="utf-8")
+    body = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
+    for pattern, label in (
+        (r"git\s+push", "git push"),
+        (r"git\s+commit", "git commit"),
+        (r"/git/refs", "refs API 写入"),
+        (r"/statuses/", "status API 写入"),
+        (r"/pulls", "PR API 写入"),
+    ):
+        if re.search(pattern, body):
+            problems.append(f"{LEGACY_DIRECT_WRITE}: 唯一入口不得包含写操作（匹配 {label}）")
+    if "uses: ./.github/workflows/candidate-pr-sync.yml" not in body:
+        problems.append(f"{LEGACY_DIRECT_WRITE}: 必须通过 workflow_call 复用 candidate-pr-sync.yml")
+    if "schedule" not in body:
+        problems.append(f"{LEGACY_DIRECT_WRITE}: 必须保留唯一定时触发")
+    # 全局：只有 daily-sync 允许 schedule
+    wf_dir = root / WORKFLOW_DIR
+    for other in sorted(list(wf_dir.glob("*.yml")) + list(wf_dir.glob("*.yaml"))):
+        if other.name == path.name:
+            continue
+        raw = other.read_text(encoding="utf-8")
+        if re.search(r"^\s*schedule:", raw, re.MULTILINE):
+            problems.append(f"{WORKFLOW_DIR}/{other.name}: 只允许 {LEGACY_DIRECT_WRITE} 持有 schedule"
+                            f"（否则形成双定时入口）")
+    return problems
 
 
 def run(root: Path) -> tuple[list[str], dict]:
-    problems, required, checks = check_required_checks_file(root / REQUIRED_CHECKS_PATH)
-    problems.extend(check_legacy_daily_sync(root))
-    legacy_path = root / LEGACY_DIRECT_WRITE
-    legacy_pinned = (legacy_path.exists()
-                     and hashlib.sha256(legacy_path.read_bytes()).hexdigest() == PINNED_LEGACY_DAILY_SYNC_SHA256)
+    problems, required, checks, rc_info = check_required_checks_file(root / REQUIRED_CHECKS_PATH)
+    problems.extend(check_daily_sync_entry(root))
+    legacy_pinned = False
     wf_dir = root / WORKFLOW_DIR
     files = sorted(wf_dir.glob("*.yml")) + sorted(wf_dir.glob("*.yaml"))
     if not files:
@@ -483,8 +529,9 @@ def run(root: Path) -> tuple[list[str], dict]:
                                    "unset BASH_ENV/系统根目录绝对路径/test -x/真实运行核验/"
                                    "$GITHUB_ENV 导出）并以 $PY_BIN、$GIT_BIN 调用守卫，"
                                    "且核验守卫真实产出的 JSON 报告",
+            "status_contexts": rc_info.get("status_contexts", []),
             "expected_check_source": {"app_slug": EXPECTED_CHECK_APP_SLUG, "app_id": EXPECTED_CHECK_APP_ID},
-            "legacy_daily_sync_pin": PINNED_LEGACY_DAILY_SYNC_SHA256,
+            "daily_sync_single_entry": True,
             "legacy_daily_sync_pinned_ok": legacy_pinned,
             "legacy_content_rules_waived": (["P8", "P11"] if legacy_pinned else []),
             "legacy_waiver_reason": ("daily-sync.yml 由 sha256 pin（P3b）保证逐字节不变、平台侧已禁用，"

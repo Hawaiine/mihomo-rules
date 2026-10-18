@@ -1,25 +1,34 @@
 {
   "schema": "mihomo-rules-required-checks",
-  "version": 2,
+  "version": 3,
   "workflow": ".github/workflows/pr-verify.yml",
   "checks": [
     {
       "name": "general-pr-verify",
       "job_id": "general-pr-verify",
       "workflow": ".github/workflows/pr-verify.yml",
-      "source": { "app_slug": "github-actions", "app_id": 15368 }
+      "source": {
+        "app_slug": "github-actions",
+        "app_id": 15368
+      }
     },
     {
       "name": "workflow-policy-guard",
       "job_id": "workflow-policy-guard",
       "workflow": ".github/workflows/pr-verify.yml",
-      "source": { "app_slug": "github-actions", "app_id": 15368 }
+      "source": {
+        "app_slug": "github-actions",
+        "app_id": 15368
+      }
     },
     {
       "name": "trusted-baseline-guard",
       "job_id": "trusted-baseline-guard",
       "workflow": ".github/workflows/pr-verify.yml",
-      "source": { "app_slug": "github-actions", "app_id": 15368 }
+      "source": {
+        "app_slug": "github-actions",
+        "app_id": 15368
+      }
     }
   ],
   "expected_source_note": "app_id 15368 / slug github-actions 由 GET /apps/github-actions 独立核实（2026-10-13：id=15368, slug=github-actions, owner=github），并与本仓库真实 CI check run 的 app 字段一致。创建 Ruleset 时每个 required check 必须绑定该 integration/source，不得接受任意来源。",
@@ -29,6 +38,15 @@
     "任何新增必需检查都必须先在此登记，再由 Ruleset 引用；删除检查属于破坏契约。",
     "只有 success 视为满足；skipped / neutral 一律不满足（严格口径，见 scripts/ci/verify_required_checks.py）。",
     "必需检查必须由 pull_request 事件产生：workflow_dispatch 触发的检查不出现在 PR checks 中，不满足 Ruleset 必需检查。",
-    "scripts/ci/verify_workflow_policy.py 会校验本文件与 pr-verify.yml 的 job 集合、job 名、来源绑定完全一致。"
+    "scripts/ci/verify_workflow_policy.py 会校验本文件与 pr-verify.yml 的 job 集合、job 名、来源绑定完全一致。",
+    "Route A：候选 PR 的必需门槛是 status context `route-a/verify`（由 verify job 在精确 head SHA 上 POST /statuses 发布）。Ruleset 必须同时引用该 context，否则候选 PR 永远无法满足门禁。",
+    "`checks[]` 仍适用于人工 PR（pull_request 触发）；候选 PR 不会产生这些 check-run，因此不得把它们当作候选 PR 的门槛。"
+  ],
+  "status_contexts": [
+    {
+      "context": "route-a/verify",
+      "publisher": "builtin-github-token",
+      "required_for": "candidate-pr-sync.yml（GITHUB_TOKEN 创建的 PR 不产生 check-run，只能靠 commit status）"
+    }
   ]
 }

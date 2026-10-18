@@ -456,6 +456,20 @@ def oasisic_checkout_steps(workflow_text: str) -> list | None:
     return steps
 
 
+def _is_delegating(workflow_text: str) -> bool:
+    """workflow 是否只做 workflow_call 委派（没有任何 step）。"""
+    try:
+        doc = yaml.safe_load(workflow_text)
+    except Exception:  # noqa: BLE001
+        return False
+    jobs = (doc or {}).get("jobs") or {}
+    if not isinstance(jobs, dict) or not jobs:
+        return False
+    has_steps = any((job or {}).get("steps") for job in jobs.values() if isinstance(job, dict))
+    has_uses = any(isinstance(job, dict) and job.get("uses") for job in jobs.values())
+    return has_uses and not has_steps
+
+
 def checkout_problems(workflow_text: str, path: str, manifest: dict) -> list[str]:
     """每个 Oasisic checkout 的 repository 与 ref 都必须与批准身份 / manifest 一致。
 
@@ -466,6 +480,10 @@ def checkout_problems(workflow_text: str, path: str, manifest: dict) -> list[str
     if steps is None:
         return [f"{path}: cannot parse workflow YAML to verify the Oasisic checkout"]
     if not steps:
+        # 纯委派 workflow（job 只有 uses:，没有任何 steps）不执行 checkout，
+        # 其身份契约由被调用的 workflow 承担；其余无 checkout 的 workflow 仍失败。
+        if _is_delegating(workflow_text):
+            return []
         return [f"{path}: no Oasisic-Icons checkout step found"]
     manifest_repository = manifest.get("repository")
     revision = manifest.get("revision")

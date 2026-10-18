@@ -1,25 +1,31 @@
-name: 候选分支更新（PR-first）
+name: 候选分支更新（PR-first · Route A）
 
-# 运行时设计（详见 docs/pr-first-automation.md）：
-#   * 只创建/更新候选分支与 PR，绝不推送默认分支；push 前有硬断言。
-#   * 定时与手动触发都由仓库变量 CANDIDATE_SYNC_ENABLED 门控；未设置或非 "true" 时整体跳过。
-#   * generate job 只读；publish job 用**专用最小权限 GitHub App installation token** 完成
-#     分支推送与 PR 创建/更新，因此其产生的事件会正常触发 pull_request 验证
-#     （GITHUB_TOKEN 创建的 PR 不会触发）。本 job 不执行候选内容。
-#   * 自动合并由独立的 CANDIDATE_AUTOMERGE_ENABLED 变量二次门控，且必须先在有界等待中
-#     确认三个必需检查在 PR 真实 head SHA 上真实 success（严格口径，不接受 skipped/neutral）。
-#   * ChatGPT 不在日常运行路径中。
+# Route A（用户已确认）：认证只用内置 GITHUB_TOKEN，不使用 GitHub App / PAT。
+#   * daily-sync.yml 是**唯一**定时入口（schedule + workflow_dispatch），通过 workflow_call
+#     调用本文件；本文件自身不再带 schedule，避免同日双入口。
+#   * generate job 只读；publish job 用 GITHUB_TOKEN（contents: write + pull-requests: write）
+#     推送候选分支并创建/更新 PR，绝不推送默认分支；push 前有硬断言。
+#   * 因为 GITHUB_TOKEN 创建的 PR 不触发 pull_request workflow，本流程在同一次运行内用
+#     verify job（trusted 脚本来自 main，候选树只作数据）执行校验，并以
+#     POST /statuses/{head_sha} 发布 `route-a/verify` context。Ruleset 应引用该 context
+#     （check-run 无法由 GITHUB_TOKEN 创建）。
+#   * 平台前提：仓库必须允许 Actions 创建 PR（Settings → Actions → General →
+#     "Allow GitHub Actions to create and approve pull requests"）。未开启时 PR 创建返回
+#     403，本流程 fail-closed 并报告 BLOCKED，**绝不**回退到 App/PAT。
+#   * 自动合并仍由 CANDIDATE_AUTOMERGE_ENABLED 二次门控；只在 Ruleset 已引用
+#     route-a/verify 后才可能成立，否则保持关闭。
 #
 # 关于基线 ref：generate/publish 都基于当前默认分支——这是**生成器**而非门禁，
 # 其输出只能进入候选分支，无法直接影响默认分支。门禁（pr-verify.yml）则一律只检出被检 SHA。
-#
-# App 凭据（本轮不创建、不配置；缺失时本流程保持关闭且不失败、不写入）：
-#   secrets.PR_FIRST_APP_ID / secrets.PR_FIRST_APP_PRIVATE_KEY
-#   最小权限：contents: write（推候选分支）、pull-requests: write（建/更新 PR）；仅限本仓库。
 
 on:
-  schedule:
-    - cron: '45 22 * * *'   # 06:45 北京 = 22:45 UTC，与旧 daily-sync（22:00 UTC）错开
+  workflow_call:
+    inputs:
+      reason:
+        description: 触发原因（仅用于审计输出）
+        required: false
+        type: string
+        default: manual
   workflow_dispatch:
 
 permissions:
@@ -159,11 +165,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: read          # 写操作全部由 App installation token 完成（最小权限）
+      contents: write          # 推候选分支（绝不推 main）
+      pull-requests: write     # 建/更新候选 PR（需仓库允许 Actions 创建 PR）
+      statuses: write          # 发布 route-a/verify（在精确 head SHA 上）
     outputs:
       pr_number: ${{ steps.pr.outputs.pr_number }}
       head_sha: ${{ steps.consistency.outputs.head_sha }}
-      publish_skipped: ${{ steps.creds.outputs.available != 'true' }}
+      publish_skipped: ${{ steps.auth.outputs.blocked }}
     steps:
       - name: 📥 检出默认分支（**不**检出候选内容；本 job 不执行候选代码）
         uses: actions/checkout@v7
@@ -185,39 +193,22 @@ jobs:
           test -s "$RUNNER_TEMP/changed-files.txt" || { echo "❌ 缺少变更文件清单"; exit 1; }
           echo "✅ 候选数据就位（$(wc -l < "$RUNNER_TEMP/changed-files.txt") 个文件）"
 
-      - name: 🔑 App 凭据存在性检查（缺失即跳过发布；不写入、不失败）
-        id: creds
+      - name: 🔑 Route A 认证检查（只用内置 GITHUB_TOKEN；不回退 App/PAT）
+        id: auth
         env:
-          APP_ID: ${{ secrets.PR_FIRST_APP_ID }}
-          APP_KEY: ${{ secrets.PR_FIRST_APP_PRIVATE_KEY }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -n "${APP_ID}" ] && [ -n "${APP_KEY}" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "✅ 已配置 App 凭据：将用 App installation token 发布候选分支与 PR"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "⏸️ 未配置 PR_FIRST_APP_ID / PR_FIRST_APP_PRIVATE_KEY：候选发布保持关闭"
-            echo "   （不写入任何远端内容，也不使本 workflow 失败）"
+          if [ -z "${TOKEN}" ]; then
+            echo "❌ 缺少 GITHUB_TOKEN：Route A 无法发布（fail-closed）"; exit 1
           fi
-
-      - name: 🔑 获取 App installation token（最小权限，仅本仓库）
-        id: app-token
-        if: steps.creds.outputs.available == 'true'
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2
-        with:
-          app-id: ${{ secrets.PR_FIRST_APP_ID }}
-          private-key: ${{ secrets.PR_FIRST_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: write
-          permission-pull-requests: write
+          echo "blocked=false" >> "$GITHUB_OUTPUT"
+          echo "✅ 认证路径 = 内置 GITHUB_TOKEN（contents/pull-requests/statuses 写权限）"
 
       - name: 🌿 创建/更新候选分支（幂等；只推候选分支；head SHA 取自真实远端状态）
         id: push
-        if: steps.creds.outputs.available == 'true'
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           # 硬断言：候选分支绝不等于目标分支
@@ -235,7 +226,7 @@ jobs:
           #!/bin/sh
           case "$1" in
             *Username*) printf '%s' "x-access-token" ;;
-            *) printf '%s' "${APP_TOKEN}" ;;
+            *) printf '%s' "${GITHUB_TOKEN}" ;;
           esac
           ASKPASS
           chmod +x "$RUNNER_TEMP/askpass.sh"
@@ -299,9 +290,8 @@ jobs:
 
       - name: 🔁 创建或更新 PR（幂等；App 身份创建 ⇒ 正常触发 pull_request 验证）
         id: pr
-        if: steps.creds.outputs.available == 'true'
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
@@ -355,9 +345,8 @@ jobs:
 
       - name: 🔎 一致性校验（PR 真实 head SHA / 候选分支 ref / 预期 SHA 三者一致）
         id: consistency
-        if: steps.creds.outputs.available == 'true'
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
@@ -381,7 +370,6 @@ jobs:
           echo "✅ 一致性校验通过：head=${PR_HEAD}"
 
       - name: 📊 状态摘要（artifact；不含任何秘密）
-        if: steps.creds.outputs.available == 'true'
         env:
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           HEAD_SHA: ${{ steps.consistency.outputs.head_sha }}
@@ -398,7 +386,7 @@ jobs:
             "verified_pr_head_sha": os.environ["HEAD_SHA"],
             "expected_head_sha": os.environ["EXPECTED_SHA"],
             "auto_merge_gate": os.environ.get("AUTOMERGE_FLAG", ""),
-            "writes": ["candidate branch push (App token)", "PR create/update (App token)"]},
+            "writes": ["candidate branch push (GITHUB_TOKEN)", "PR create/update (GITHUB_TOKEN)", "route-a/verify status (GITHUB_TOKEN)"]},
             ensure_ascii=False, indent=2))' > "$RUNNER_TEMP/candidate-summary.json"
           cat "$RUNNER_TEMP/candidate-summary.json"
 
@@ -411,9 +399,83 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  verify:
+    name: verify
+    needs: [gate, generate, publish]
+    if: needs.gate.outputs.enabled == 'true' && needs.publish.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read        # 只读候选树（tarball/compare）
+      pull-requests: read
+      statuses: write       # 仅在精确 head SHA 上发布 route-a/verify
+    steps:
+      - name: 📥 检出默认分支（受信脚本来源；不执行候选内容）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: python3 -m pip install pyyaml
+
+      - name: 🛡️ 受信验证候选树（范围/防自我削弱/规则集/配置）
+        id: verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if python3 scripts/ci/verify_candidate.py --repo "${GITHUB_REPOSITORY}" \
+              --base-sha "${{ needs.generate.outputs.base_sha }}" \
+              --head-sha "${{ needs.publish.outputs.head_sha }}" \
+              --json "$RUNNER_TEMP/candidate-verify.json"; then
+            echo "state=success" >> "$GITHUB_OUTPUT"
+            echo "description=受信校验通过（范围/规则集/配置）" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=failure" >> "$GITHUB_OUTPUT"
+            echo "description=受信校验失败（详见 artifact）" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 🚦 在精确 head SHA 上发布 route-a/verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/publish_status.py --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ needs.publish.outputs.pr_number }}" \
+            --head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --state "${{ steps.verify.outputs.state }}" \
+            --description "${{ steps.verify.outputs.description }}" \
+            --target-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --json "$RUNNER_TEMP/status.json"
+
+      - name: 📊 摘要与证据
+        if: always()
+        run: |
+          set -euo pipefail
+          cat "$RUNNER_TEMP/candidate-verify.json" 2>/dev/null || true
+          cat "$RUNNER_TEMP/status.json" 2>/dev/null || true
+
+      - name: ⬆️ 上传验证证据
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: route-a-verify
+          path: |
+            ${{ runner.temp }}/candidate-verify.json
+            ${{ runner.temp }}/status.json
+          retention-days: 7
+          if-no-files-found: ignore
+
   request-auto-merge:
     name: request-auto-merge
-    needs: [gate, publish]
+    needs: [gate, generate, publish, verify]
     if: needs.gate.outputs.enabled == 'true' && needs.publish.outputs.publish_skipped != 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30

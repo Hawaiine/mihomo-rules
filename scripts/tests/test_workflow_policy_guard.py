@@ -153,10 +153,29 @@ jobs:
           "$PY_BIN" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["ok"] is True, d; assert d["base_sha"] and d["head_sha"], d' "$RUNNER_TEMP/trusted-baseline.json"
 """
 
-CANDIDATE = """name: 候选分支更新（PR-first）
+ROUTE_A_DAILY = """name: 每日规则同步（PR-first 唯一入口）
 on:
   schedule:
-    - cron: '45 22 * * *'
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+jobs:
+  sync:
+    uses: ./.github/workflows/candidate-pr-sync.yml
+    with:
+      reason: daily-sync
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: write
+"""
+
+CANDIDATE = """name: 候选分支更新（PR-first · Route A）
+on:
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
@@ -178,7 +197,9 @@ jobs:
     if: needs.gate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
+      statuses: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -232,7 +253,7 @@ AUTOMERGE_STEP = ("      - name: automerge\n        env:\n          GITHUB_TOKEN
 
 
 def build_root(tmp: str, pr_verify: str = PR_VERIFY, candidate: str = CANDIDATE,
-               manifest: object = None, legacy: str | None = None,
+               manifest: object = None, legacy: str | None = ROUTE_A_DAILY,
                extra: dict | None = None, extra_files: dict | None = None) -> Path:
     root = Path(tmp)
     (root / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
@@ -296,13 +317,13 @@ class GateStructureTest(Fixture):
         self.assertTrue(any("CANDIDATE_AUTOMERGE_ENABLED" in p for p in problems), problems)
 
     def test_scheduled_writer_without_gate_is_rejected(self):
-        candidate = CANDIDATE.replace(
-            "    if: needs.gate.outputs.enabled == 'true' && vars.CANDIDATE_AUTOMERGE_ENABLED == 'true'",
-            "    if: github.event_name == 'workflow_dispatch'")
-        self.assertProblem("定时触发且持有写权限", candidate=candidate)
+        candidate = CANDIDATE.replace("on:\n  workflow_call:\n  workflow_dispatch:",
+                                      "on:\n  schedule:\n    - cron: '0 3 * * *'\n  workflow_dispatch:")
+        problems = self.problems(candidate=candidate)
+        self.assertTrue(any("schedule" in p for p in problems), problems)
 
     def test_publish_without_gate_is_rejected(self):
-        candidate = CANDIDATE.replace("    if: needs.gate.outputs.enabled == 'true'\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read",
+        candidate = CANDIDATE.replace("    if: needs.gate.outputs.enabled == 'true'\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write",
                                       "    runs-on: ubuntu-latest\n    permissions:\n      contents: write")
         problems = self.problems(candidate=candidate)
         self.assertTrue(any("publish" in p for p in problems), problems)
@@ -393,12 +414,20 @@ class AutoMergeStructureTest(Fixture):
 
 
 class PublishIsolationTest(Fixture):
-    def test_publish_with_contents_write_rejected(self):
-        candidate = CANDIDATE.replace("    permissions:\n      contents: read\n    steps:\n"
-                                      "      - uses: actions/checkout@v7\n        with:\n          ref: main",
-                                      "    permissions:\n      contents: write\n    steps:\n"
-                                      "      - uses: actions/checkout@v7\n        with:\n          ref: main")
+    def test_publish_missing_pull_requests_write_rejected(self):
+        """Route A：publish 必须恰为 contents/pull-requests/statuses write。"""
+        candidate = CANDIDATE.replace(
+            "    permissions:\n      contents: write\n      pull-requests: write\n      statuses: write\n    steps:",
+            "    permissions:\n      contents: write\n      statuses: write\n    steps:")
         self.assertProblem("publish 权限必须恰为", candidate=candidate)
+
+    def test_publish_with_app_token_rejected(self):
+        """Route A：出现 App 认证路径即失败（不得偷偷切换认证）。"""
+        candidate = CANDIDATE.replace("      - run: git apply",
+                                      "      - uses: actions/create-github-app-token@v2\n"
+                                      "        with:\n          app-id: ${{ secrets.PR_FIRST_APP_ID }}\n"
+                                      "      - run: git apply")
+        self.assertProblem("禁止 GitHub App 认证路径", candidate=candidate)
 
     def test_publish_checking_out_pr_head_rejected(self):
         candidate = CANDIDATE.replace("      - uses: actions/checkout@v7\n        with:\n          ref: main\n"
@@ -461,29 +490,40 @@ class BypassTest(Fixture):
         self.assertEqual(self.problems(), [])
 
 
-class LegacyPinTest(Fixture):
-    def _real_legacy(self) -> str:
+class DailySyncEntryTest(Fixture):
+    """Route A：daily-sync.yml 是唯一入口，自身零写入。"""
+
+    def _real(self) -> str:
         path = ROOT / ".github" / "workflows" / "daily-sync.yml"
         if not path.exists():
             self.skipTest("真实 daily-sync.yml 不存在")
         return path.read_text(encoding="utf-8")
 
-    def test_pinned_legacy_file_passes_and_reports_waiver(self):
-        legacy = self._real_legacy()
-        _, info = pol.run(build_root(self._tmp, legacy=legacy))
-        self.assertTrue(info["legacy_daily_sync_pinned_ok"])
-        self.assertEqual(info["legacy_content_rules_waived"], ["P8", "P11"])
-        self.assertEqual(pol.run(build_root(self._tmp, legacy=legacy))[0], [])
+    def test_real_entry_passes(self):
+        legacy = self._real()
+        problems, info = pol.run(build_root(self._tmp, legacy=legacy))
+        self.assertEqual(problems, [])
+        self.assertTrue(info["daily_sync_single_entry"])
 
-    def test_modified_legacy_file_is_rejected(self):
-        legacy = self._real_legacy() + "\n# tampered\n"
+    def test_direct_push_in_entry_rejected(self):
+        legacy = self._real().replace(
+            "jobs:\n  sync:", "jobs:\n  sync:\n    steps:\n      - run: git push origin HEAD:main\n")
         problems = pol.run(build_root(self._tmp, legacy=legacy))[0]
-        self.assertTrue(any("固定 pin 不一致" in p for p in problems), problems)
+        self.assertTrue(any("唯一入口不得包含写操作" in p for p in problems), problems)
 
-    def test_rearmed_legacy_direct_write_is_rejected(self):
-        legacy = self._real_legacy().replace("schedule:", "schedule:  # re-armed", 1)
+    def test_second_scheduled_workflow_rejected(self):
+        problems = pol.run(build_root(
+            self._tmp, extra={"second-sync.yml": "name: x\non:\n  schedule:\n    - cron: '0 1 * * *'\njobs: {}\n"}))[0]
+        self.assertTrue(any("只允许" in p and "schedule" in p for p in problems), problems)
+
+    def test_missing_entry_rejected(self):
+        problems = pol.run(build_root(self._tmp, legacy=None))[0]
+        self.assertTrue(any("缺少唯一入口文件" in p for p in problems), problems)
+
+    def test_entry_not_calling_candidate_rejected(self):
+        legacy = self._real().replace("uses: ./.github/workflows/candidate-pr-sync.yml", "uses: ./x.yml")
         problems = pol.run(build_root(self._tmp, legacy=legacy))[0]
-        self.assertTrue(any("禁止被修改" in p for p in problems), problems)
+        self.assertTrue(any("workflow_call" in p for p in problems), problems)
 
 
 if __name__ == "__main__":

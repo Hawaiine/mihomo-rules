@@ -351,8 +351,14 @@ class OasisicAuthorityGuardTest(unittest.TestCase):
     def _files(self):
         manifest = json.loads((ROOT / guard.MANIFEST_PATH).read_text(encoding="utf-8"))
         matcher = (ROOT / guard.MATCHER_PATH).read_text(encoding="utf-8")
-        daily_sync = (ROOT / guard.DAILY_SYNC_PATH).read_text(encoding="utf-8")
+        # Route A：daily-sync 已改为 workflow_call 委派，真正做 checkout 的是候选流程。
+        daily_sync = (ROOT / ".github" / "workflows" / "candidate-pr-sync.yml").read_text(encoding="utf-8")
         return manifest, matcher, daily_sync
+
+    def test_delegating_daily_sync_is_exempt(self):
+        manifest = json.loads((ROOT / guard.MANIFEST_PATH).read_text(encoding="utf-8"))
+        delegating = (ROOT / guard.DAILY_SYNC_PATH).read_text(encoding="utf-8")
+        self.assertEqual(guard.checkout_problems(delegating, guard.DAILY_SYNC_PATH, manifest), [])
 
     def test_real_authority_files_pass(self):
         self.assertEqual(guard.oasisic_problems(*self._files()), [])
