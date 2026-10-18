@@ -62,7 +62,7 @@ jobs:
   lock:
     name: lock
     needs: gate
-    if: needs.gate.outputs.enabled == 'true' && vars.GATE_STATE_ENABLED == 'true'
+    if: needs.gate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -75,6 +75,12 @@ jobs:
         with:
           ref: main
           persist-credentials: false
+
+      - name: 🚧 强制要求状态锁已启用（P0-2：未启用即 fail-closed，不产生任何副作用）
+        env:
+          GATE_STATE_ENABLED: ${{ vars.GATE_STATE_ENABLED }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/gate_lock.py require-enabled
 
       - name: 🔒 获取逻辑锁（CAS；占用/暂停即失败关闭）
         id: acquire
@@ -192,7 +198,7 @@ jobs:
     name: publish
     needs: [gate, lock, generate]
     if: needs.gate.outputs.enabled == 'true' && needs.generate.outputs.changed == 'true'
-        && (needs.lock.result == 'success' || needs.lock.result == 'skipped')
+        && needs.lock.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -507,7 +513,7 @@ jobs:
   finalize:
     name: finalize
     needs: [gate, lock, generate, publish, verify]
-    if: always() && vars.GATE_STATE_ENABLED == 'true' && needs.lock.result == 'success'
+    if: always() && needs.lock.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

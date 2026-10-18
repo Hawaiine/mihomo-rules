@@ -84,8 +84,26 @@ def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: 
     return STATE_PENDING, per, problems
 
 
-def choose_mode(check_runs: list[dict], contexts: list[str]) -> str:
-    """有 check-run 用 check-run 模式；否则（候选 PR）用 status 模式。"""
-    if check_runs:
-        return "check-run"
-    return "status" if contexts else "check-run"
+BOT_LOGIN = "github-actions[bot]"
+CHECK_RUN_MODE, STATUS_MODE = "check-run", "status"
+
+
+class GateModeError(RuntimeError):
+    """无法确定预期门禁模式：一律 fail-closed（绝不为兼容而自动降级）。"""
+
+
+def expected_mode(pr_obj: dict) -> str:
+    """按 PR 作者确定**唯一**预期模式（P0-3：不做运行期降级）。
+
+    * 作者是 `github-actions[bot]` → 该 PR 由 GITHUB_TOKEN 创建，不可能有 check-run，
+      预期 status 模式。
+    * 其它作者 → 人工 PR，必须有 check-run；缺失即失败，不退回 status。
+    * 作者字段缺失/未知 → 直接失败。
+    """
+    user = (pr_obj or {}).get("user") or {}
+    login = user.get("login")
+    if not isinstance(login, str) or not login:
+        raise GateModeError("PR 作者不可确定：无法固定预期门禁模式")
+    if login == BOT_LOGIN:
+        return STATUS_MODE
+    return CHECK_RUN_MODE

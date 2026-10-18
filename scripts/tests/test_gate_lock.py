@@ -89,6 +89,25 @@ class GateLockCliTest(unittest.TestCase):
         self.run_cli("--run-id", "1-1", "complete", "--result", "success")
         self.assertIn(b"completed", store.snapshot_get(2))
 
+    def test_require_enabled_accepts_true_only(self):
+        import os
+        from unittest import mock
+        for raw, expected in (("true", 0), ("TRUE", 0), ("false", 1), ("", 1), ("yes", 1), ("1", 1)):
+            with mock.patch.dict(os.environ, {"GATE_STATE_ENABLED": raw}, clear=False), \
+                    redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                rc = gl.main(["--local-dir", str(self.dir), "require-enabled"])
+            self.assertEqual(rc, expected, f"GATE_STATE_ENABLED={raw!r}")
+
+    def test_require_enabled_is_read_only(self):
+        import os
+        from unittest import mock
+        self.acquire()
+        before = (self.dir / "state.json").read_bytes()
+        with mock.patch.dict(os.environ, {"GATE_STATE_ENABLED": "true"}, clear=False), \
+                redirect_stdout(io.StringIO()):
+            gl.main(["--local-dir", str(self.dir), "require-enabled"])
+        self.assertEqual((self.dir / "state.json").read_bytes(), before)
+
     def test_status_is_read_only(self):
         self.acquire()
         before = (self.dir / "state.json").read_bytes()

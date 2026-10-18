@@ -68,7 +68,8 @@ def jobs_index(jobs):
 
 def pr(head=HEAD, state="open", base="main", base_sha=MAIN_SHA, node_id="PR_node_1", merged=False):
     return {"state": state, "merged": merged, "number": 29, "node_id": node_id,
-            "base": {"ref": base, "sha": base_sha}, "head": {"sha": head}}
+            "base": {"ref": base, "sha": base_sha}, "head": {"sha": head},
+            "user": {"login": "Hawaiine"}}
 
 
 class FakeApi:

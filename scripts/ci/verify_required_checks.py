@@ -30,7 +30,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gate_status import choose_mode, evaluate_statuses, load_status_contexts  # noqa: E402
+from gate_status import (  # noqa: E402
+    CHECK_RUN_MODE, STATUS_MODE, GateModeError, evaluate_statuses, expected_mode,
+    load_status_contexts,
+)
 from check_provenance import (  # noqa: E402
     ApiError, DEFAULT_MANIFEST, ManifestError, STRICT_CONCLUSION, collect_check_runs, collect_jobs,
     collect_workflow_runs, http_get_json, index_jobs, load_manifest, needed_run_ids, overall_state,
@@ -65,9 +68,16 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
     if head_sha != expected_head:
         problems.append(f"PR head SHA {head_sha} != 预期 {expected_head}（head 漂移）")
 
-    mode = choose_mode(check_runs, contexts or [])
+    try:
+        mode = expected_mode(pr_obj)
+    except GateModeError as exc:
+        problems.append(f"门禁模式不可确定（fail-closed）：{exc}")
+        return False, problems, report
     report["gate_mode"] = mode
-    if mode == "status":
+    if mode == STATUS_MODE and not (contexts or []):
+        problems.append("预期 status 模式但 manifest 未声明 status_contexts")
+        return False, problems, report
+    if mode == STATUS_MODE:
         cstate, per_ctx, ctx_problems = evaluate_statuses(statuses or [], contexts or [], expected_head)
         report["status_contexts"] = per_ctx
         report["gate_state"] = cstate
@@ -77,6 +87,10 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
         if pr_obj.get("state") != "open" or (pr_obj.get("head") or {}).get("sha") != expected_head:
             problems.append("PR 状态/head 在门禁判定时不匹配")
         return not problems, problems, report
+
+    if not check_runs:
+        problems.append(f"{mode} 模式要求该 head SHA 上存在必需 check-run，实际为 0（拒绝降级）")
+        return False, problems, report
 
     per_check, prov_problems = select_checks(
         check_runs=check_runs, manifest=required, workflow_runs=workflow_runs,

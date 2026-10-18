@@ -69,6 +69,17 @@ def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str) -> i
     return EXIT_OK
 
 
+def cmd_require_enabled(args) -> int:
+    """P0-2：状态锁是安全前置条件。未显式 true 时不得继续产生任何副作用。"""
+    raw = os.environ.get("GATE_STATE_ENABLED", "")
+    if raw.strip().lower() != "true":
+        print(f"❌ GATE_STATE_ENABLED={raw!r}：状态锁未启用，拒绝继续同步（fail-closed）",
+              file=sys.stderr)
+        return EXIT_INVALID
+    print("✅ GATE_STATE_ENABLED=true")
+    return EXIT_OK
+
+
 def cmd_status(args) -> int:
     state, sha = _store(args).read()
     print(json.dumps({"state": state.to_doc() if state else None, "ref_sha": sha}, ensure_ascii=False, indent=1))
@@ -175,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("status")
+    sub.add_parser("require-enabled")
 
     a = sub.add_parser("acquire")
     a.add_argument("--base-sha", required=True)
@@ -199,10 +211,10 @@ def main(argv: list[str] | None = None) -> int:
     if not args.local_dir and not args.repo:
         print("❌ 需要 --repo（或 --local-dir）", file=sys.stderr)
         return EXIT_INVALID
-    if args.cmd != "status" and not args.run_id:
+    if args.cmd not in ("status", "require-enabled") and not args.run_id:
         print("❌ 需要 --run-id（或 GITHUB_RUN_ID）", file=sys.stderr)
         return EXIT_INVALID
-    handler = {"status": cmd_status, "acquire": cmd_acquire, "complete": cmd_complete,
+    handler = {"status": cmd_status, "require-enabled": cmd_require_enabled, "acquire": cmd_acquire, "complete": cmd_complete,
                "pause": cmd_pause, "resume": cmd_resume}[args.cmd]
     try:
         return handler(args)

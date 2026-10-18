@@ -34,7 +34,10 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gate_status import choose_mode, evaluate_statuses, load_status_contexts  # noqa: E402
+from gate_status import (  # noqa: E402
+    CHECK_RUN_MODE, STATUS_MODE, GateModeError, evaluate_statuses, expected_mode,
+    load_status_contexts,
+)
 from check_provenance import (  # noqa: E402
     ApiError, DEFAULT_MANIFEST, ManifestError, STATE_MISSING, STATE_NOT_SUCCESS, STATE_SUCCESS,
     STATE_UNVERIFIED, collect_check_runs, collect_jobs, collect_workflow_runs, http_get_json,
@@ -144,7 +147,7 @@ class Poller:
         base_sha = (pr.get("base") or {}).get("sha")
         head_sha = (pr.get("head") or {}).get("sha")
         ref_sha = (ref.get("object") or {}).get("sha")
-        info = {"phase": phase, "pr_state": pr.get("state"), "base_ref": base_ref, "base_sha": base_sha,
+        info = {"phase": phase, "pr": pr, "pr_state": pr.get("state"), "base_ref": base_ref, "base_sha": base_sha,
                 "pr_head_sha": head_sha, f"refs_heads_{self.base_branch}": ref_sha}
         if pr.get("state") != "open":
             problems.append(f"{phase}：PR 状态为 {pr.get('state')!r}，非 open")
@@ -187,6 +190,7 @@ class Poller:
         try:
             ok, problems, info = self.preflight()
             report.update(info)
+            self.pr_obj = info.get("pr") or {}
             if not ok:
                 report.update({"status": STATUS_FAILED, "reason": "前置校验失败（fail-closed）",
                                "problems": problems})
@@ -196,9 +200,17 @@ class Poller:
                 check_runs, workflow_runs, jobs_by_id = self.read_provenance()
                 report["polls"] += 1
                 pr_head = (report.get("pr_head_sha") or self.expected_head)
-                mode = choose_mode(check_runs, self.contexts)
+                try:
+                    mode = expected_mode(self.pr_obj)
+                except GateModeError as exc:
+                    report.update({"status": STATUS_FAILED, "reason": f"门禁模式不可确定：{exc}"})
+                    return self._finish(report, started)
                 report["gate_mode"] = mode
-                if mode == "status":
+                if mode == STATUS_MODE and not self.contexts:
+                    report.update({"status": STATUS_FAILED,
+                                   "reason": "预期 status 模式但 manifest 未声明 status_contexts"})
+                    return self._finish(report, started)
+                if mode == STATUS_MODE:
                     statuses = self._read_statuses()
                     status, per_check, problems = evaluate_statuses(
                         statuses, self.contexts, self.expected_head)

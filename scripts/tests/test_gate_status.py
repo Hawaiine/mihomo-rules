@@ -60,16 +60,19 @@ class EvaluateStatusesTest(unittest.TestCase):
         self.assertEqual(state, "missing")
         self.assertTrue(problems)
 
-    def test_choose_mode(self):
-        self.assertEqual(gst.choose_mode([{"name": "x"}], ["route-a/verify"]), "check-run")
-        self.assertEqual(gst.choose_mode([], ["route-a/verify"]), "status")
-        self.assertEqual(gst.choose_mode([], []), "check-run")
+    def test_expected_mode_from_author(self):
+        self.assertEqual(gst.expected_mode({"user": {"login": "github-actions[bot]"}}), "status")
+        self.assertEqual(gst.expected_mode({"user": {"login": "Hawaiine"}}), "check-run")
+
+    def test_expected_mode_unknown_author_fails(self):
+        with self.assertRaises(gst.GateModeError):
+            gst.expected_mode({})
 
 
 class StatusModeVerifierTest(unittest.TestCase):
-    def _pr(self, head: str = HEAD, state: str = "open") -> dict:
+    def _pr(self, head: str = HEAD, state: str = "open", login: str = "github-actions[bot]") -> dict:
         return {"state": state, "merged": False, "head": {"sha": head},
-                "base": {"ref": "main", "sha": "m" * 40}}
+                "base": {"ref": "main", "sha": "m" * 40}, "user": {"login": login}}
 
     def test_status_mode_passes(self):
         ok, problems, report = vrc.evaluate(
@@ -84,6 +87,21 @@ class StatusModeVerifierTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(report["gate_mode"], "status")
 
+    def test_no_downgrade_when_check_runs_missing_for_human_pr(self):
+        """P0-3：人工 PR 缺 check-run 时不得退回 status 模式。"""
+        ok, problems, report = vrc.evaluate(
+            self._pr(login="Hawaiine"), [], [], {}, [], HEAD, "main", "m" * 40,
+            statuses=[status()], contexts=["route-a/verify"])
+        self.assertFalse(ok)
+        self.assertEqual(report["gate_mode"], "check-run")
+        self.assertTrue(any("拒绝降级" in p for p in problems), problems)
+
+    def test_bot_pr_without_contexts_declared_fails(self):
+        ok, problems, _ = vrc.evaluate(
+            self._pr(), [], [], {}, [], HEAD, "main", "m" * 40, statuses=[], contexts=[])
+        self.assertFalse(ok)
+        self.assertTrue(any("status_contexts" in p for p in problems), problems)
+
     def test_head_drift_still_fails_in_status_mode(self):
         ok, problems, _ = vrc.evaluate(
             self._pr(head="x" * 40), [], [], {}, [], HEAD, "main", None,
@@ -96,7 +114,7 @@ class PollerStatusModeTest(unittest.TestCase):
     def test_poller_succeeds_on_status(self):
         poller = ac.Poller(repo="o/r", pr=7, expected_head=HEAD, base_branch="main", required=[],
                            token="t", contexts=["route-a/verify"], sleeper=lambda s: None)
-        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD})), \
+        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD, "pr": {"user": {"login": "github-actions[bot]"}}})), \
              mock.patch.object(poller, "read_provenance", return_value=([], [], {})), \
              mock.patch.object(poller, "_read_statuses", return_value=[status()]), \
              mock.patch.object(poller, "recheck_pr", return_value=(True, [])):
@@ -107,7 +125,7 @@ class PollerStatusModeTest(unittest.TestCase):
     def test_poller_times_out_when_status_never_arrives(self):
         poller = ac.Poller(repo="o/r", pr=7, expected_head=HEAD, base_branch="main", required=[],
                            token="t", contexts=["route-a/verify"], timeout=0.0, sleeper=lambda s: None)
-        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD})), \
+        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD, "pr": {"user": {"login": "github-actions[bot]"}}})), \
              mock.patch.object(poller, "read_provenance", return_value=([], [], {})), \
              mock.patch.object(poller, "_read_statuses", return_value=[]):
             report = poller.run()
@@ -116,7 +134,7 @@ class PollerStatusModeTest(unittest.TestCase):
     def test_poller_fails_on_failure_status(self):
         poller = ac.Poller(repo="o/r", pr=7, expected_head=HEAD, base_branch="main", required=[],
                            token="t", contexts=["route-a/verify"], sleeper=lambda s: None)
-        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD})), \
+        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD, "pr": {"user": {"login": "github-actions[bot]"}}})), \
              mock.patch.object(poller, "read_provenance", return_value=([], [], {})), \
              mock.patch.object(poller, "_read_statuses", return_value=[status("failure")]):
             report = poller.run()
