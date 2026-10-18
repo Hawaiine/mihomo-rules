@@ -45,6 +45,14 @@ REQUIRED_CHECKS_PATH = ".github/required-checks.json"
 PR_VERIFY = ".github/workflows/pr-verify.yml"
 CANDIDATE_SYNC = ".github/workflows/candidate-pr-sync.yml"
 LEGACY_DIRECT_WRITE = ".github/workflows/daily-sync.yml"
+_WRITE_PATTERNS = tuple(re.compile(p) for p in (
+    r"git\s+push", r"git\s+commit", r"/git/refs", r"/statuses/", r"/pulls"))
+
+
+def _has_workflow_writes(text: str) -> bool:
+    """workflow 文本里是否出现任何写操作（注释行不计）。"""
+    body = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
+    return any(pattern.search(body) for pattern in _WRITE_PATTERNS)
 BASE_GUARD = "scripts/ci/verify_workflow_policy.py"
 PUSH_MAIN_RE = re.compile(r"git\s+push[^\n]*(?:\bmain\b|\$\{\{\s*github\.ref_name\s*\}\}|HEAD:main)")
 TEST_DEF_RE = re.compile(r"^\s*def test_", re.MULTILINE)
@@ -1084,9 +1092,12 @@ def weakening_problems(base: str, head: str, root: Path) -> list[str]:
         if after is None:
             continue
         if path == LEGACY_DIRECT_WRITE:
-            # 旧直推 workflow：任何修改都视为「重新武装」风险（内容同时被策略 guard 的
-            # sha256 pin 锁定），不依赖关键词出现。
-            problems.append(f"{path}: legacy direct-write workflow must never be modified or re-armed")
+            # Route A：daily-sync 只允许朝「零写入委派」方向变化。
+            #   朝写方向（重新出现 push/commit/refs/status/PR 写入）→ 视为重新武装，失败；
+            #   去写方向（改成 workflow_call 委派）→ 允许，且由策略 guard 要求零写操作。
+            if _has_workflow_writes(after):
+                problems.append(f"{path}: legacy direct-write workflow must not gain write operations "
+                                f"(re-arming forbidden)")
             continue
         if "pull_request_target" not in triggers_of(before) and "pull_request_target" in triggers_of(after):
             problems.append(f"{path}: adds pull_request_target trigger (forbidden)")

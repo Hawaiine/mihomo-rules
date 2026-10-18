@@ -336,8 +336,14 @@ class WeakeningTest(Fixture):
             "        run: '\"$PY_BIN\" scripts/ci/verify_general_pr.py'")})
 
     def test_legacy_direct_write_rearmed(self):
+        """Route A：重新引入写操作才算重新武装（注释/委派不算）。"""
         self.assertProblem("legacy direct-write workflow",
-                           {".github/workflows/daily-sync.yml": LEGACY + "\n# re-armed\n"})
+                           {".github/workflows/daily-sync.yml":
+                            LEGACY + "\n      - run: git push origin HEAD:main\n"})
+
+    def test_legacy_delegation_without_writes_is_allowed(self):
+        problems = self.problems_after({".github/workflows/daily-sync.yml": LEGACY + "\n# 注释变更\n"})
+        self.assertFalse([p for p in problems if "legacy direct-write" in p], problems)
 
     def test_test_file_deleted(self):
         self.assertProblem("test files deleted", {"scripts/tests/test_sample.py": None})
