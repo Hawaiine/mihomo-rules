@@ -96,7 +96,11 @@ class GateLockCliTest(unittest.TestCase):
         self.assertEqual((self.dir / "state.json").read_bytes(), before)
 
     def test_missing_run_id_rejected(self):
-        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+        # CI 环境本身带 GITHUB_RUN_ID；这里显式清空，避免测试依赖外部环境。
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": ""}, clear=False), \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             rc = gl.main(["--local-dir", str(self.dir), "acquire", "--base-sha", "a" * 40])
         self.assertEqual(rc, gl.EXIT_INVALID)
 
