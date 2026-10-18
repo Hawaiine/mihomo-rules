@@ -62,6 +62,21 @@ def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str) -> i
     except gs.CasConflict as exc:
         print(f"❌ CAS 冲突（{run_id}）：{exc}", file=sys.stderr)
         return EXIT_CONFLICT
+    except gs.StateError as exc:
+        # API 超时/网络错误：写入可能已生效 —— 先回读核对，不盲目重试
+        try:
+            current, _ = store.read()
+        except gs.StateError:
+            print(f"❌ 写入结果未知且状态不可读（fail-closed）：{exc}", file=sys.stderr)
+            return EXIT_INVALID
+        if (current is not None and current.generation == state.generation
+                and current.run_id == state.run_id and current.phase == state.phase):
+            print(f"⚠️ 写入报错但回读确认已生效（幂等接受）：{exc}", file=sys.stderr)
+            print(json.dumps({"ok": True, "reconciled": True, "generation": state.generation,
+                              "phase": state.phase}, ensure_ascii=False))
+            return EXIT_OK
+        print(f"❌ 写入失败且回读不一致（fail-closed）：{exc}", file=sys.stderr)
+        return EXIT_INVALID
     if not result.ok:
         print(f"❌ 写入被拒绝：{result.reason}", file=sys.stderr)
         return EXIT_CONFLICT
@@ -91,6 +106,19 @@ def _commit(store, state: gs.GateState, old_sha: str | None, meta: dict, *, run_
     return _write(store, state, old_sha, run_id=run_id)
 
 
+def cmd_require_usable(args) -> int:
+    """确认当前状态允许继续同步（非 paused / 非 recovery-required）。"""
+    state, _ = _store(args).read()
+    if state is None:
+        print("✅ 无既有状态（首次运行）")
+        return EXIT_OK
+    if state.phase in gs.BLOCKING_PHASES:
+        print(f"❌ 状态为 {state.phase}：禁止继续同步（需人工 resume）", file=sys.stderr)
+        return EXIT_NEEDS_HUMAN
+    print(f"✅ 状态可用（phase={state.phase}, generation={state.generation}）")
+    return EXIT_OK
+
+
 def cmd_status(args) -> int:
     state, sha = _store(args).read()
     print(json.dumps({"state": state.to_doc() if state else None, "ref_sha": sha}, ensure_ascii=False, indent=1))
@@ -102,8 +130,9 @@ def cmd_acquire(args) -> int:
     current, sha = store.read()
     now = time.time()
     if current is not None:
-        if current.phase == "paused":
-            print("❌ 状态处于 paused：必须先 resume（不允许普通运行清除暂停）", file=sys.stderr)
+        if current.phase in gs.BLOCKING_PHASES:
+            print(f"❌ 状态处于 {current.phase}：必须先由人工 resume（普通运行不得继续）",
+                  file=sys.stderr)
             return EXIT_NEEDS_HUMAN
         expired = bool(current.lock_owner) and current.lease_until <= now \
             and current.lock_owner != f"gate-{args.run_id}"
@@ -145,8 +174,8 @@ def cmd_complete(args) -> int:
     if current is None:
         print("❌ 无当前状态", file=sys.stderr)
         return EXIT_INVALID
-    if current.phase == "paused" and not args.resume_paused:
-        print("❌ 状态为 paused：普通完成路径不得清除暂停（需 --resume-paused 或 resume 子命令）",
+    if current.phase in gs.BLOCKING_PHASES and not args.resume_paused:
+        print(f"❌ 状态为 {current.phase}：普通完成路径不得清除（需 --resume-paused 或 resume 子命令）",
               file=sys.stderr)
         return EXIT_NEEDS_HUMAN
     if current.lock_owner != f"gate-{args.run_id}":
@@ -173,7 +202,8 @@ def cmd_pause(args) -> int:
     state = gs.GateState(
         run_id=current.run_id, generation=current.generation + 1, epoch=current.epoch,
         base_sha=current.base_sha, candidate_sha=current.candidate_sha, target_ref=current.target_ref,
-        phase="paused", check_status="failure", conclusion="failure",
+        phase="recovery-required" if args.recovery else "paused",
+        check_status="failure", conclusion="failure",
         lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time())
     return _commit(store, state, sha,
                    {"kind": "paused", "reason": args.reason, "evidence": args.evidence},
@@ -183,8 +213,8 @@ def cmd_pause(args) -> int:
 def cmd_resume(args) -> int:
     store = _store(args)
     current, sha = store.read()
-    if current is None or current.phase != "paused":
-        print("❌ 仅能从 paused 恢复", file=sys.stderr)
+    if current is None or current.phase not in gs.BLOCKING_PHASES:
+        print("❌ 仅能从 paused/recovery-required 恢复", file=sys.stderr)
         return EXIT_INVALID
     state = gs.GateState(
         run_id=args.run_id, generation=current.generation + 1, epoch=current.epoch + 1,
@@ -206,6 +236,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("status")
     sub.add_parser("require-enabled")
+    sub.add_parser("require-usable")
 
     a = sub.add_parser("acquire")
     a.add_argument("--base-sha", required=True)
@@ -224,6 +255,8 @@ def main(argv: list[str] | None = None) -> int:
     pa = sub.add_parser("pause")
     pa.add_argument("--reason", required=True)
     pa.add_argument("--evidence", default="")
+    pa.add_argument("--recovery", action="store_true",
+                    help="标记为 recovery-required（证据/状态冲突，需人工介入）")
 
     r = sub.add_parser("resume")
     r.add_argument("--reason", required=True)
@@ -232,10 +265,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.local_dir and not args.repo:
         print("❌ 需要 --repo（或 --local-dir）", file=sys.stderr)
         return EXIT_INVALID
-    if args.cmd not in ("status", "require-enabled") and not args.run_id:
+    if args.cmd not in ("status", "require-enabled", "require-usable") and not args.run_id:
         print("❌ 需要 --run-id（或 GITHUB_RUN_ID）", file=sys.stderr)
         return EXIT_INVALID
-    handler = {"status": cmd_status, "require-enabled": cmd_require_enabled, "acquire": cmd_acquire, "complete": cmd_complete,
+    handler = {"status": cmd_status, "require-enabled": cmd_require_enabled,
+               "require-usable": cmd_require_usable, "acquire": cmd_acquire, "complete": cmd_complete,
                "pause": cmd_pause, "resume": cmd_resume}[args.cmd]
     try:
         return handler(args)

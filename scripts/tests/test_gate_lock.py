@@ -134,6 +134,52 @@ class GateLockCliTest(unittest.TestCase):
             self.assertEqual(self.acquire("1-1"), gl.EXIT_INVALID)
         self.assertIsNone(gs.LocalFileStore(self.dir).read()[0], "快照失败时不得写状态")
 
+    def test_recovery_required_blocks_acquire_and_complete(self):
+        self.acquire("1-1")
+        self.assertEqual(self.run_cli("--run-id", "1-1", "pause", "--reason", "bad",
+                                      "--recovery"), 0)
+        self.assertEqual(self.state().phase, "recovery-required")
+        self.assertEqual(self.acquire("2-2"), gl.EXIT_NEEDS_HUMAN)
+        self.assertEqual(self.run_cli("--run-id", "1-1", "complete", "--result", "success"),
+                         gl.EXIT_NEEDS_HUMAN)
+        self.assertEqual(self.state().phase, "recovery-required")
+
+    def test_resume_from_recovery_required(self):
+        self.acquire("1-1")
+        self.run_cli("--run-id", "1-1", "pause", "--reason", "bad", "--recovery")
+        self.assertEqual(self.run_cli("--run-id", "3-3", "resume", "--reason", "checked"), 0)
+        self.assertEqual(self.state().phase, "candidate")
+
+    def test_require_usable(self):
+        self.assertEqual(self.run_cli("require-usable"), 0)
+        self.acquire("1-1")
+        self.assertEqual(self.run_cli("require-usable"), 0)
+        self.run_cli("--run-id", "1-1", "pause", "--reason", "x")
+        self.assertEqual(self.run_cli("require-usable"), gl.EXIT_NEEDS_HUMAN)
+
+    def test_write_timeout_reconciled_when_write_landed(self):
+        """API 超时但写入实际成功 → 回读确认后幂等接受，不重复写。"""
+        from unittest import mock
+        store = gs.LocalFileStore(self.dir)
+        real = gs.LocalFileStore.cas_write
+
+        def flaky(self_, state, *, expected_old_sha):
+            result = real(self_, state, expected_old_sha=expected_old_sha)
+            raise gs.StateError("timeout after write")
+
+        with mock.patch.object(gs.LocalFileStore, "cas_write", flaky):
+            rc = self.acquire("1-1")
+        self.assertEqual(rc, gl.EXIT_OK)
+        self.assertEqual(self.state().generation, 1)
+
+    def test_write_timeout_not_landed_fails_closed(self):
+        from unittest import mock
+        with mock.patch.object(gs.LocalFileStore, "cas_write",
+                               side_effect=gs.StateError("timeout before write")):
+            rc = self.acquire("1-1")
+        self.assertEqual(rc, gl.EXIT_INVALID)
+        self.assertIsNone(self.state())
+
     def test_status_is_read_only(self):
         self.acquire()
         before = (self.dir / "state.json").read_bytes()

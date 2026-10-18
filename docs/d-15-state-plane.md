@@ -154,12 +154,17 @@ D-15 的本地实现通过**不等于**阶段十三通过：P0-09 gate 接线、
 | VERIFYING | `phase=validation|pr|trusted-gate|gate, check_status=in_progress` | 持锁且 owner 匹配 | → FINALIZING / PAUSED | `LOCK_NOT_HELD` |
 | FINALIZING | 同上（收尾阶段） | 验证全部 success | → COMPLETED | `CHECKS_NOT_OK` |
 | PAUSED | `phase=paused, check_status=failure` | 显式 `pause` | → LOCKED（仅 `resume`） | `PAUSED_REQUIRES_RESUME` |
-| RECOVERY_REQUIRED | 待实现：`phase=paused` + 快照/租约证据冲突 | 状态或证据不可信 | → PAUSED 处理后 `resume` | `RECOVERY_EVIDENCE_MISSING` |
+| RECOVERY_REQUIRED | `phase=recovery-required`（`pause --recovery`） | 状态或证据不可信 | → LOCKED（仅 `resume`） | `RECOVERY_EVIDENCE_MISSING` |
 | COMPLETED | `phase=final-review, check_status=completed` | 全部 success | 终态 | — |
 | FAILED | `phase=failed, check_status=failure` | 验证/发布失败 | 终态 | — |
 
-关键约束：`complete` 不能清除 `PAUSED`；过期租约必须 `--takeover` 才接管（`epoch+1`）；
-`RECOVERY_REQUIRED` 尚未落为独立字段，**这是已知缺口**（M3 设计项）。
+关键约束：`complete` 不能清除 `PAUSED` 或 `RECOVERY_REQUIRED`（`BLOCKING_PHASES`）；
+`acquire` 在这两个状态下直接拒绝；`require-usable` 供 workflow 在生成前做最后一道检查；
+过期租约必须 `--takeover` 才接管（`epoch+1` 并在快照记录 `previous_owner`）。
+
+**写入超时对账**：`cas_write` 抛 `StateError`（超时/网络）时，先回读；若 `generation`、
+`run_id`、`phase` 与本次写入目标一致 → 认定"已生效"并按幂等成功处理（不再重写）；
+回读不一致或不可读 → fail-closed。
 
 ## 11. 快照错误分类（必须区分）
 

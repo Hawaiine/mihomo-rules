@@ -35,7 +35,9 @@ SCHEMA_VERSION = 1
 STATE_REF = "refs/heads/state/gate"
 STATE_PATH = "state.json"
 SNAPSHOT_TAG_PREFIX = "state/gate/gen-"
-LEGAL_PHASES = {"candidate", "validation", "pr", "trusted-gate", "gate", "final-review", "paused", "failed"}
+LEGAL_PHASES = {"candidate", "validation", "pr", "trusted-gate", "gate", "final-review",
+                "paused", "recovery-required", "failed"}
+BLOCKING_PHASES = {"paused", "recovery-required"}
 LEGAL_CHECK_STATUS = {"pending", "in_progress", "completed", "failure"}
 LEGAL_COMBINATIONS = {
     "pending": ({"candidate"}, {"none"}),
@@ -118,7 +120,7 @@ def validate_doc(doc: Any) -> list[str]:
     phase, check = doc.get("phase"), doc.get("check_status")
     if phase in LEGAL_PHASES and check in LEGAL_CHECK_STATUS:
         allowed_phases, allowed_conclusions = LEGAL_COMBINATIONS[check]
-        if phase not in allowed_phases and phase not in ("paused", "failed"):
+        if phase not in allowed_phases and phase not in ("paused", "failed", "recovery-required"):
             problems.append(f"phase={phase} 与 check_status={check} 组合非法")
         elif doc.get("conclusion", "none") not in allowed_conclusions | {"none"}:
             problems.append("conclusion 与 check_status 组合非法")
