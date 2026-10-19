@@ -6,6 +6,8 @@
 * check-run 模式：head SHA 上存在 `checks[]` 声明的 check-run（人工 PR，由 pull_request 触发）。
 * status 模式：head SHA 上不存在任何 check-run 时，改用 `status_contexts[]` 声明的
   commit status（候选 PR 由 GITHUB_TOKEN 创建，不会触发 pull_request，也无法产生 check-run）。
+  调用方给出 `expected_run_id` 时，status 的 `target_url` 必须指向该 run，否则判失败
+  （防止同一 head 上旧 run 的 success 被复用）。
 
 来源校验：commit status 的 `creator.login` 必须是 `github-actions[bot]`；字段缺失视为
 来源不可验证（fail-closed）。
@@ -14,6 +16,56 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
+
+import re
+from urllib.parse import urlparse
+
+_RUN_URL_RE = re.compile(r"^https://github\.com/([^/]+)/([^/]+)/actions/runs/(\d+)(?:/.*)?$")
+
+def parse_run_url(url: str) -> dict | None:
+    """严格解析 GitHub Actions run URL 并提取 (owner, repo, run_id)。
+
+    拒绝：非 github.com 主机、路径不含 /actions/runs/<id>、run_id 非纯数字、
+    run_id 前导零、owner/repo 段为空、URL 含 query/fragment 混淆。
+    返回 None 表示不可解析——调用方必须 fail-closed。
+    """
+    if not isinstance(url, str) or not url:
+        return None
+    m = _RUN_URL_RE.match(url)
+    if not m:
+        return None
+    owner, repo, rid_str = m.group(1), m.group(2), m.group(3)
+    # 拒绝 "01" 之类的前导零变体；拒绝非数字
+    if rid_str != str(int(rid_str)):
+        return None
+    run_id = int(rid_str)
+    if run_id < 1:
+        return None
+    return {"owner": owner, "repo": repo, "run_id": str(run_id)}
+
+
+def validate_run_binding(target_url: str, expected_run_id: str, expected_repo: str = "") -> str:
+    """检查 target_url 是否绑定到 expected_run_id。返回空字符串表示通过；返回非空为问题描述。
+
+    严格口径：必须可解析、owner+repo 可验证（若给定 expected_repo）、run_id 精确匹配。
+    前缀碰撞（1001 vs 10010）、非 github.com、畸形 URL 一律拒绝。
+    """
+    if not expected_run_id:
+        return ""   # 调用方未指定，不做检查
+    parsed = parse_run_url(target_url)
+    if parsed is None:
+        return f"status target_url 不可解析为合法 GitHub Actions run: {target_url!r}"
+    if expected_repo:
+        want_owner, _, want_repo = expected_repo.partition("/")
+        if parsed["owner"] != want_owner or parsed["repo"] != want_repo:
+            return (f"status target_url 指向 {parsed['owner']}/{parsed['repo']}"
+                    f"，非预期仓库 {expected_repo}")
+    if parsed["run_id"] != str(expected_run_id):
+        return (f"status target_url run_id={parsed['run_id']}，非 {expected_run_id}"
+                f"（拒绝前缀碰撞/模糊匹配）")
+    return ""
+
 
 TRUSTED_STATUS_CREATOR = "github-actions[bot]"
 STATE_SUCCESS, STATE_FAILED, STATE_PENDING, STATE_MISSING = "success", "failed", "pending", "missing"
@@ -41,7 +93,8 @@ def latest_statuses(statuses: list[dict]) -> dict[str, dict]:
     return latest
 
 
-def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: str) -> tuple[str, dict, list[str]]:
+def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: str,
+                      expected_run_id: str = "") -> tuple[str, dict, list[str]]:
     """返回 (overall_state, per_context, problems)。
 
     overall_state: success（全部 success）/ failed（任一终局失败或来源不可信）/ pending（尚未出现）。
@@ -77,6 +130,15 @@ def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: 
             per[ctx] = {"state": STATE_FAILED, "reason": f"来源类型不可信：type={creator_obj.get('type')!r}"}
             problems.append(f"{ctx}: 状态来源类型 {creator_obj.get('type')!r} 不是 Bot（拒绝仅凭 login 采信）")
             continue
+        if expected_run_id:
+            # 抗重放：同一 head 上**别的 run** 留下的 success 不能当作本次结果
+            # 严格解析 URL（拒绝前缀碰撞如 1001 vs 10010、非 github.com、畸形 URL）
+            target = item.get("target_url") or ""
+            err = validate_run_binding(target, expected_run_id)
+            if err:
+                per[ctx] = {"state": STATE_FAILED, "reason": err}
+                problems.append(f"{ctx}: {err}")
+                continue
         if state == "success":
             per[ctx] = {"state": STATE_SUCCESS, "target_url": item.get("target_url", "")}
         elif state in ("failure", "error"):

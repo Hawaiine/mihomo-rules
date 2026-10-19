@@ -1,0 +1,9 @@
+{
+  "schema": "mihomo-rules-approval-policy",
+  "version": 1,
+  "approvers": [],
+  "required_approvals": 1,
+  "allow_bot_approvers": false,
+  "head_binding": "exact",
+  "on_missing": "fail-closed"
+}

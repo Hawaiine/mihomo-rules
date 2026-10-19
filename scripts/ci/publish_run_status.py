@@ -24,6 +24,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gate_status  # noqa: E402
+from gate_status import parse_run_url  # noqa: E402
+
 CONTEXT = "route-a/verify"
 EXPECTED_RUN_NAME = "General PR verification"
 EXPECTED_RUN_PATH = ".github/workflows/pr-verify.yml"
@@ -176,9 +180,13 @@ def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: floa
                 last = ours[0]
                 problem = _creator_problem(last)
                 target = str(last.get("target_url") or "")
-                if not problem and expect_run_id and f"/runs/{expect_run_id}" not in target:
-                    problem = (f"status target_url 未绑定本次 run {expect_run_id}"
-                               f"（实际 {target!r}）")
+                if not problem and expect_run_id:
+                    err = parse_run_url(target)
+                    if err is None:
+                        problem = f"status target_url 不可解析为合法 run URL: {target!r}"
+                    elif err.get("run_id") != str(expect_run_id):
+                        problem = (f"status target_url run_id={err.get('run_id')}"
+                                   f" 非 {expect_run_id}（拒绝模糊匹配）")
                 if not problem and last.get("state") == "success":
                     creator = last.get("creator") or {}
                     return {"verified": True, "creator": creator.get("login"),

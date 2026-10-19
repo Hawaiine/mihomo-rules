@@ -31,13 +31,14 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import approval_policy as apol   # noqa: E402
 import gate_state as gs          # noqa: E402
 import platform_rulesets as prg  # noqa: E402
 
 SCHEMA_VERSION = 1
 CHECK_ORDER = ("ruleset_active", "route_a_required_status", "human_pr_required_checks",
-               "actions_permissions", "production_switches", "gate_state",
-               "snapshot_recovery")
+               "actions_permissions", "production_switches", "approval_policy",
+               "gate_state", "snapshot_recovery")
 SWITCHES = ("CANDIDATE_SYNC_ENABLED", "GATE_STATE_ENABLED", "CANDIDATE_AUTOMERGE_ENABLED")
 STATUS_CONTEXT = "route-a/verify"
 EXPECTED_APP_ID = 15368
@@ -303,6 +304,21 @@ def check_snapshot_recovery(repo: str, call, gate_evidence: dict) -> dict:
                   {"verified": verified, "count": len(refs)})
 
 
+def check_approval_policy(root: str) -> dict:
+    """显式审批策略必须存在、可解析、且真的配置了审批人。
+
+    空 `approvers` 不是"无需审批"，而是"尚未配置"——新增规则集路径必须 fail-closed，
+    因此这里也判为未就绪（不会因为本地测试全绿而 READY）。
+    """
+    path = os.path.join(root, apol.DEFAULT_PATH)
+    result = apol.load_policy(path)
+    evidence = dict(result.evidence)
+    evidence["policy_path"] = apol.DEFAULT_PATH
+    evidence["policy"] = result.policy.to_dict() if result.policy else None
+    reasons = [] if result.ok else (list(result.reason_codes) or ["APPROVAL_POLICY_UNVERIFIED"])
+    return _check(bool(result.ok), reasons, evidence)
+
+
 # ───────────────────────────── 汇总 ─────────────────────────────
 
 def build_report(*, repo: str, target_branch: str, call, root: str = ".") -> dict:
@@ -313,6 +329,7 @@ def build_report(*, repo: str, target_branch: str, call, root: str = ".") -> dic
     checks["human_pr_required_checks"] = check_human_pr_required_checks(root)
     checks["actions_permissions"] = check_actions_permissions(repo, call)
     checks["production_switches"] = check_production_switches(repo, call)
+    checks["approval_policy"] = check_approval_policy(root)
     checks["gate_state"] = check_gate_state(repo, call)
     checks["snapshot_recovery"] = check_snapshot_recovery(
         repo, call, checks["gate_state"].get("evidence") or {})

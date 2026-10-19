@@ -23,6 +23,101 @@ def status(state: str = "success", *, ctx: str = "route-a/verify", sha: str = HE
             "creator": {"login": creator, "type": "Bot"}, "target_url": ""}
 
 
+class RunUrlParseTest(unittest.TestCase):
+    """B1: URL 解析严格：拒绝前缀碰撞、非 github.com、畸形 URL"""
+    def test_valid_run_url(self):
+        r = gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001")
+        self.assertEqual(r, {"owner":"Hawaiine","repo":"mihomo-rules","run_id":"1001"})
+
+    def test_valid_with_job_fragment(self):
+        r = gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001/jobs/42")
+        self.assertEqual(r, {"owner":"Hawaiine","repo":"mihomo-rules","run_id":"1001"})
+
+    def test_prefix_collision_rejected_10010_contains_1001(self):
+        # "10010" 含有 "1001" 但整数不同 — 必须拒绝模糊匹配
+        r = gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/10010")
+        self.assertEqual(r["run_id"], "10010")
+        self.assertNotEqual(r["run_id"], "1001")
+
+    def test_prefix_mismatch_detected_by_binding(self):
+        err = gst.validate_run_binding(
+            "https://github.com/Hawaiine/mihomo-rules/actions/runs/10010", "1001",
+            expected_repo="Hawaiine/mihomo-rules")
+        self.assertNotEqual(err, "")
+
+    def test_wrong_host_rejected(self):
+        self.assertIsNone(gst.parse_run_url("https://gitlab.com/Hawaiine/mihomo-rules/actions/runs/1001"))
+
+    def test_wrong_path_rejected(self):
+        self.assertIsNone(gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/jobs/1001"))
+
+    def test_no_run_id_rejected(self):
+        self.assertIsNone(gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/"))
+
+    def test_leading_zero_run_id_normalized(self):
+        # "01001" 含前导零 → parse_run_url 反序列化丢失信息，应拒绝
+        self.assertIsNone(gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/01001"))
+
+    def test_non_numeric_rejected(self):
+        self.assertIsNone(gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/abc"))
+
+    def test_empty_url_rejected(self):
+        self.assertIsNone(gst.parse_run_url(""))
+
+    def test_query_fragment_rejected(self):
+        self.assertIsNone(gst.parse_run_url("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001?q=1"))
+
+    def test_validate_binding_wrong_repo(self):
+        err = gst.validate_run_binding(
+            "https://github.com/OTHER/tools/actions/runs/1001", "1001",
+            expected_repo="Hawaiine/mihomo-rules")
+        self.assertIn("非预期仓库", err)
+
+    def test_validate_binding_correct(self):
+        err = gst.validate_run_binding(
+            "https://github.com/Hawaiine/mihomo-rules/actions/runs/1001", "1001",
+            expected_repo="Hawaiine/mihomo-rules")
+        self.assertEqual(err, "")
+
+    def test_validate_binding_empty_expected(self):
+        err = gst.validate_run_binding("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001", "", "")
+        self.assertEqual(err, "")
+
+
+class EvaluateStatusesBindingTest(unittest.TestCase):
+    """B1/B2: evaluate_statuses 使用严格 URL 绑定；missing run_id fail-open 改为 fail-closed"""
+    HEAD = "c" * 40
+    def test_matching_run_id_passes(self):
+        s = {"context":"ci/check","state":"success","sha":self.HEAD,
+             "creator":{"login":"github-actions[bot]","type":"Bot"},
+             "target_url":"https://github.com/Hawaiine/mihomo-rules/actions/runs/1001"}
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        self.assertEqual(st, "success")
+        self.assertEqual(probs, [])
+
+    def test_prefix_collision_blocked(self):
+        s = {"context":"ci/check","state":"success","sha":self.HEAD,
+             "creator":{"login":"github-actions[bot]","type":"Bot"},
+             "target_url":"https://github.com/Hawaiine/mihomo-rules/actions/runs/10010"}
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        self.assertEqual(st, "failed")
+        self.assertTrue(any("run_id=10010" in p for p in probs), probs)
+
+    def test_unparseable_url_fails(self):
+        s = {"context":"ci/check","state":"success","sha":self.HEAD,
+             "creator":{"login":"github-actions[bot]","type":"Bot"},
+             "target_url":"https://evil.com/actions/runs/1001"}
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        self.assertEqual(st, "failed")
+
+    def test_missing_target_url_fails(self):
+        s = {"context":"ci/check","state":"success","sha":self.HEAD,
+             "creator":{"login":"github-actions[bot]","type":"Bot"}}
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        self.assertEqual(st, "failed")
+
+
+
 class EvaluateStatusesTest(unittest.TestCase):
     def test_success(self):
         state, per, problems = gst.evaluate_statuses([status()], ["route-a/verify"], HEAD)
@@ -66,6 +161,35 @@ class EvaluateStatusesTest(unittest.TestCase):
         older = status("failure")
         newer = status("success")
         state, _, _ = gst.evaluate_statuses([newer, older], ["route-a/verify"], HEAD)
+        self.assertEqual(state, "success")
+
+    def test_run_binding_accepts_same_run(self):
+        item = status()
+        item["target_url"] = "https://github.com/o/r/actions/runs/1001/job/9"
+        state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
+                                                   expected_run_id="1001")
+        self.assertEqual(state, "success", problems)
+
+    def test_run_binding_rejects_status_from_other_run(self):
+        item = status()
+        item["target_url"] = "https://github.com/o/r/actions/runs/999/job/9"
+        state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
+                                                   expected_run_id="1001")
+        self.assertEqual(state, "failed")
+        self.assertTrue(any("run_id=999" in p for p in problems), problems)
+
+    def test_run_binding_rejects_missing_target_url(self):
+        item = status()
+        item.pop("target_url")
+        state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
+                                                   expected_run_id="1001")
+        self.assertEqual(state, "failed")
+        self.assertTrue(problems)
+
+    def test_run_binding_disabled_when_no_expected_run(self):
+        item = status()
+        item["target_url"] = "https://github.com/o/r/actions/runs/999"
+        state, _, _ = gst.evaluate_statuses([item], ["route-a/verify"], HEAD)
         self.assertEqual(state, "success")
 
     def test_missing_manifest_contexts(self):

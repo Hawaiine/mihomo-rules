@@ -213,7 +213,8 @@ class Poller:
                 if mode == STATUS_MODE:
                     statuses = self._read_statuses()
                     status, per_check, problems = evaluate_statuses(
-                        statuses, self.contexts, self.expected_head)
+                        statuses, self.contexts, self.expected_head,
+                        expected_run_id=os.environ.get("GITHUB_RUN_ID", ""))
                     report["status_contexts"] = per_check
                 else:
                     status, per_check, problems = evaluate(check_runs, workflow_runs, jobs_by_id,

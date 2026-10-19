@@ -10,7 +10,8 @@
 1. 绑定身份：repository / PR / base SHA / head SHA / run id / lock generation；
 2. 完整读取变更清单与 base/head tree（分页 + `truncated` 检查），交给
    `classify_change.classify()` 做四分类；
-3. `NEW_RULESET` 时真实读取 review 分页并调用 `verify_approval.verify_approval()`；
+3. `NEW_RULESET` 时真实读取 review 分页，按**显式审批策略**（`approval_policy.py`）
+   调用 `verify_approval.verify_approvals()`；策略缺失/无效即 fail-closed；
 4. 把分类、必需检查、锁状态、平台只读状态交给 `decide_merge.decide()`，输出稳定
    reason code；`production_allowed` 只有在生产开关打开且平台契约已核实时才可能为 true。
 
@@ -27,6 +28,7 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import approval_policy as apol       # noqa: E402
 import classify_change as cc          # noqa: E402
 import decide_merge as dm             # noqa: E402
 import platform_rulesets as pr        # noqa: E402
@@ -47,7 +49,10 @@ class PolicyError(RuntimeError):
 def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id: str,
                     generation: int, change_class: str, changed_files: int,
                     review_complete: bool = True, reviews: list | None = None,
-                    approver: str = "", checks_ok: bool = False, checks_problems: list | None = None,
+                    approver: str = "", approvers: tuple | list = (),
+                    required_approvals: int = 1, policy_evidence: dict | None = None,
+                    policy_problems: list | None = None,
+                    checks_ok: bool = False, checks_problems: list | None = None,
                     lock_state: str = "idle", lock_evidence: dict | None = None,
                     platform_ok: bool = False, platform_evidence: dict | None = None,
                     production_mode: bool = False) -> dict:
@@ -60,16 +65,27 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
         "lock_state": lock_state, "lock": lock_evidence or {},
         "platform_ok": bool(platform_ok), "platform": platform_evidence or {},
         "production_mode": bool(production_mode),
-        "approval": {"approver": approver, "review_count": len(reviews or []),
+        "approval": {"approver": approver, "approvers": list(approvers),
+                     "required_approvals": required_approvals,
+                     "policy": policy_evidence or {},
+                     "review_count": len(reviews or []),
                      "complete": bool(review_complete)},
     }
 
     approval_ok = False
     approval_reasons: list[str] = []
     if change_class == cc.NEW_RULESET:
-        approval_ok, approval_reasons, ap_ev = va.verify_approval(
-            reviews or [], head_sha=head_sha, approver=approver, complete=review_complete)
-        evidence["approval"].update(ap_ev)
+        # 审批人只能来自显式名单；显式单人输入等价于 required=1
+        who = list(approvers) or ([approver] if approver else [])
+        need = required_approvals if approvers else 1
+        # 显式审批策略不可用 ⇒ 必失败关闭（不得用 owner 推断兜底）
+        if list(policy_problems or []):
+            approval_reasons = list(policy_problems)
+        else:
+            approval_ok, approval_reasons, ap_ev = va.verify_approvals(
+                reviews or [], head_sha=head_sha, approvers=who,
+                required=need, complete=review_complete)
+            evidence["approval"].update(ap_ev)
 
     decision = dm.decide(change_class=change_class, checks_ok=checks_ok, head_sha_ok=True,
                          base_sha_ok=True, approval_ok=approval_ok,
@@ -172,6 +188,7 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
                          generation: int, token: str, base_branch: str = "main",
                          approver: str = "", production_mode: bool = False,
                          mode: str = "merge",
+                         approval_policy_path: str = apol.DEFAULT_PATH,
                          required_manifest: str = ".github/required-checks.json") -> dict:
     # 1) PR 身份绑定
     status, pr_obj = _call(repo, token, f"/repos/{repo}/pulls/{pr}")
@@ -186,8 +203,11 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
         raise PolicyError(f"PR head 漂移：{actual_head} != {head_sha}")
     if (pr_obj.get("base") or {}).get("sha") != base_sha:
         raise PolicyError("PR base SHA 与预期不一致（base 漂移）")
-    owner = ((pr_obj.get("base") or {}).get("repo") or {}).get("owner") or {}
-    approver = approver or str(owner.get("login") or "")
+    # 审批人只能来自显式输入或仓库内显式策略；**不再**从 base.repo.owner 推断
+    approvers, required_approvals, policy_result = apol.resolve_approvers(
+        explicit=approver, policy_path=approval_policy_path)
+    policy_evidence = policy_result.to_dict() if policy_result is not None else {}
+    policy_problems = list(policy_result.reason_codes) if policy_result is not None else []
 
     # 2) 变更清单 + tree（完整证据；保留 status/previous_filename 供分类器使用）
     raw_files = vc.pr_files(repo, token, pr, head_sha)
@@ -233,7 +253,9 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
         repo=repo, pr=pr, base_sha=base_sha, head_sha=head_sha, run_id=run_id,
         generation=generation, change_class=classification.change_class,
         changed_files=len(files), review_complete=review_complete, reviews=reviews,
-        approver=approver, checks_ok=checks_ok, checks_problems=checks_problems,
+        approver=approver, approvers=approvers, required_approvals=required_approvals,
+        policy_evidence=policy_evidence, policy_problems=policy_problems,
+        checks_ok=checks_ok, checks_problems=checks_problems,
         lock_state=lock_state, lock_evidence=lock_ev, platform_ok=platform_ok,
         platform_evidence=platform_ev, production_mode=production_mode)
     out["evidence"]["classification"] = classification.to_dict()
@@ -249,8 +271,12 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
     elif classification.change_class == cc.MIXED_OR_UNKNOWN:
         verification_reasons.append("CHANGE_UNPROVEN")
     elif classification.change_class == cc.NEW_RULESET:
-        ok_approval, ap_reasons, _ = va.verify_approval(
-            reviews, head_sha=head_sha, approver=approver, complete=review_complete)
+        if policy_problems:
+            ok_approval, ap_reasons = False, policy_problems
+        else:
+            ok_approval, ap_reasons, _ = va.verify_approvals(
+                reviews, head_sha=head_sha, approvers=approvers,
+                required=required_approvals, complete=review_complete)
         verification_ok = ok_approval
         verification_reasons.extend(ap_reasons)
     out["verification_ok"] = verification_ok
@@ -270,8 +296,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--base-branch", default="main")
     ap.add_argument("--mode", choices=["verify", "merge"], default="merge",
                     help="verify=候选验证阶段（分类+审批裁决）；merge=合并前完整决策")
-    ap.add_argument("--approver", default=os.environ.get("ROUTE_A_APPROVER", ""),
-                    help="人工审批人 login；缺省用仓库 owner（真实账号，非编造）")
+    ap.add_argument("--approval-policy", default=apol.DEFAULT_PATH,
+                    help="显式审批策略（唯一来源；缺失/无效时新增规则集一律 fail-closed）")
     ap.add_argument("--production-mode", type=int, choices=[0, 1], default=0)
     ap.add_argument("--required-checks", default=".github/required-checks.json")
     ap.add_argument("--json", type=lambda p: open(p, "w", encoding="utf-8"))
@@ -285,8 +311,9 @@ def main(argv: list[str] | None = None) -> int:
         result = collect_and_evaluate(
             repo=args.repo, pr=args.pr, base_sha=args.base_sha, head_sha=args.head_sha,
             run_id=args.run_id, generation=args.generation, token=token,
-            base_branch=args.base_branch, approver=args.approver,
+            base_branch=args.base_branch, approver="",
             production_mode=bool(args.production_mode), mode=args.mode,
+            approval_policy_path=args.approval_policy,
             required_manifest=args.required_checks)
     except (PolicyError, vc.VerifyRefused, vrc.ManifestError) as exc:
         result = {"decision": dm.BLOCKED, "reason_codes": [f"ERROR:{exc}"],

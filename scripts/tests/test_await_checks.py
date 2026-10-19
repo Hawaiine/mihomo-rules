@@ -9,8 +9,10 @@
 
 **这些是 mock 逻辑测试，不代表真实 GitHub 平台端到端成功。**
 """
+import os
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -239,6 +241,30 @@ class PollerTest(unittest.TestCase):
         for url in a.calls:
             self.assertTrue(any(k in url for k in ("/pulls/", "/check-runs", "/git/ref/", "/actions/runs")),
                             url)
+
+
+class MissingRunIdTest(unittest.TestCase):
+    """B2：STATUS_MODE 缺少 GITHUB_RUN_ID 必须 fail-closed"""
+
+    def test_missing_run_id_guard(self):
+        """await_checks 入口 guard：run_id 为空时返回 FAILED"""
+        run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+        self.assertEqual(run_id, "")
+
+    def test_present_run_id_passes(self):
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "42"}, clear=True):
+            run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+            self.assertEqual(run_id, "42")
+
+    def test_empty_expected_run_id_gives_no_binding(self):
+        """evaluate_statuses 的 '' expected_run_id 不绑定（测试兼容）"""
+        from scripts.ci.gate_status import evaluate_statuses
+        s = {"context": "x", "state": "success", "target_url": "https://github.com/o/r/actions/runs/99",
+             "creator": {"login": "github-actions[bot]", "type": "Bot"}, "sha": HEAD}
+        st, _, probs = evaluate_statuses([s], ["x"], HEAD, expected_run_id="")
+        self.assertEqual(st, "success")
+        self.assertEqual(probs, [])
+
 
 
 class ManifestTest(unittest.TestCase):

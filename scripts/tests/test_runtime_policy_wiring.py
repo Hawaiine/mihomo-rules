@@ -226,7 +226,8 @@ class PolicyWiringTest(unittest.TestCase):
     def test_new_ruleset_without_approval_blocked(self):
         out = self.evaluate(cc.NEW_RULESET)
         self.assertEqual(out["decision"], "BLOCKED")
-        self.assertIn("APPROVAL_MISSING", out["reason_codes"])
+        self.assertTrue(any(c.startswith("APPROVAL_MISSING") for c in out["reason_codes"]),
+                        out["reason_codes"])
 
     def test_new_ruleset_with_head_approval_eligible(self):
         reviews = [{"state": "APPROVED", "commit_id": HEAD, "submitted_at": "2026-10-19T00:00:00Z",

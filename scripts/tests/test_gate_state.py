@@ -91,6 +91,12 @@ class LocalStoreTests(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertIn("digest", result.reason)
 
+    def test_unsupported_schema_version_rejected(self):
+        doc = make_state().to_doc()
+        doc["schema_version"] = 2
+        problems = gs.validate_doc(doc)
+        self.assertTrue(any("schema_version" in p for p in problems), problems)
+
     def test_invalid_phase_combination_rejected(self):
         with self.assertRaises(gs.StateError):
             gs.GateState.from_doc({**make_state().to_doc(), "check_status": "in_progress", "phase": "final-review"})
@@ -133,11 +139,11 @@ class RecoveryTests(unittest.TestCase):
 
     def _seal_snapshot(self, gen: int) -> None:
         """按恢复 CLI 期望的格式（含 digest）重写快照。"""
+        state = make_state(gen, epoch=gen - 1)
         body = {"schema_version": 1, "generation": gen,
-                "state": make_state(gen, epoch=gen - 1).to_doc()}
-        import hashlib
-        body["digest"] = "sha256:" + hashlib.sha256(
-            json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+                "state": state.to_doc()}
+        from scripts.ci.gate_lock import _snapshot_digest
+        body["digest"] = _snapshot_digest(gen, state.to_doc())
         path = self.store.snapshots / f"gen-{gen}.json"
         if path.exists():
             path.unlink()
@@ -180,6 +186,17 @@ class RecoveryTests(unittest.TestCase):
         path.write_text(json.dumps(doc), encoding="utf-8")
         with self.assertRaises(rec.RecoveryRefused):
             rec.recover(self.store, from_generation=1, expected_current=2, dry_run=False)
+
+    def test_truncated_snapshot_rejected(self):
+        self._seal_snapshot(1)
+        path = self.store.snapshots / "gen-1.json"
+        path.write_text(path.read_text()[: 40], encoding="utf-8")
+        with self.assertRaises(rec.RecoveryRefused):
+            rec.recover(self.store, from_generation=1, expected_current=2, dry_run=False)
+
+    def test_absent_snapshot_for_generation_rejected(self):
+        with self.assertRaises(rec.RecoveryRefused):
+            rec.recover(self.store, from_generation=99, expected_current=2, dry_run=True)
 
     def test_missing_current_state_rejected(self):
         import tempfile

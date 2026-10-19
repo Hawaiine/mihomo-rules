@@ -127,6 +127,13 @@ class GitHubRefStoreTests(ServerCase):
         self.assertIn("stale", result.reason)
         self.assertEqual([r for r in Stub.log if r[0] == "POST"], [], "冲突时不得产生任何写入")
 
+    def test_server_error_on_read_fails_closed_without_write(self):
+        Stub.routes["GET /repos/o/r/git/ref/heads/state/gate"] = (500, {"message": "boom"})
+        with self.assertRaises(gs.StateError):
+            self.store().read()
+        self.assertEqual([r for r in Stub.log if r[0] in ("POST", "PATCH", "PUT")], [],
+                         "读取失败时不得产生任何写入")
+
     def test_permission_denied_fails_closed(self):
         Stub.routes["GET /repos/o/r/git/ref/heads/state/gate"] = (403, {"message": "Resource not accessible"})
         with self.assertRaises(gs.StateError):

@@ -81,6 +81,18 @@ class ReportBase(unittest.TestCase):
             dst = os.path.join(self.tmp, rel)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy(os.path.join(ROOT, rel), dst)
+        self.write_policy()
+
+    def write_policy(self, **over):
+        doc = {"schema": "mihomo-rules-approval-policy", "version": 1,
+               "approvers": ["octocat"], "required_approvals": 1,
+               "allow_bot_approvers": False, "head_binding": "exact",
+               "on_missing": "fail-closed"}
+        doc.update(over)
+        dst = os.path.join(self.tmp, ".github", "approval-policy.json")
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -326,6 +338,58 @@ class TransportTest(ReportBase):
                 rc = vp.main(["--repo", "o/r", "--json", path, "--root", self.tmp])
             self.assertEqual(rc, expected)
             self.assertTrue(os.path.getsize(path) > 0)
+
+
+class ApprovalPolicyTest(ReportBase):
+    """显式审批策略：缺失/未配置/允许 bot/版本不符都必须阻断，不能静默放行。"""
+
+    def codes(self, report):
+        return report["checks"]["approval_policy"]["reason_codes"]
+
+    def test_missing_policy_file_blocks(self):
+        os.remove(os.path.join(self.tmp, ".github", "approval-policy.json"))
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertIn("APPROVAL_POLICY_MISSING", self.codes(r))
+
+    def test_empty_approvers_is_unconfigured_not_allowed(self):
+        self.write_policy(approvers=[])
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertIn("APPROVAL_POLICY_UNCONFIGURED", self.codes(r))
+
+    def test_bot_approvers_allowed_is_rejected(self):
+        self.write_policy(approvers=["dependabot[bot]"], allow_bot_approvers=True)
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertTrue(any(c.startswith("APPROVAL_POLICY_APPROVER_INVALID") for c in self.codes(r))
+                        or "APPROVAL_POLICY_ALLOWS_BOTS" in self.codes(r))
+
+    def test_required_exceeding_approvers_rejected(self):
+        self.write_policy(approvers=["octocat"], required_approvals=2)
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertTrue(any(c.startswith("APPROVAL_POLICY_REQUIRED_EXCEEDS_APPROVERS")
+                            for c in self.codes(r)))
+
+    def test_unknown_field_rejected(self):
+        self.write_policy(extra_field=1)
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertTrue(any(c.startswith("APPROVAL_POLICY_UNKNOWN_FIELDS") for c in self.codes(r)))
+
+    def test_invalid_json_rejected(self):
+        with open(os.path.join(self.tmp, ".github", "approval-policy.json"), "w") as fh:
+            fh.write("{not json")
+        r = self.report(World())
+        self.assertBlocked(r)
+        self.assertIn("APPROVAL_POLICY_INVALID_JSON", self.codes(r))
+
+    def test_valid_policy_ok(self):
+        r = self.report(World())
+        self.assertTrue(r["checks"]["approval_policy"]["ok"], self.codes(r))
+        self.assertEqual(r["checks"]["approval_policy"]["evidence"]["policy"]["approvers"],
+                         ["octocat"])
 
 
 if __name__ == "__main__":

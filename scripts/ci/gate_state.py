@@ -76,6 +76,11 @@ class GateState:
     snapshot_digest: str = ""
     updated_at: float = 0.0
     schema_version: int = SCHEMA_VERSION
+    # U-09 关键通知确认
+    notice_digest: str = ""
+    notice_acked: bool = False
+    notice_acked_by: str = ""
+    notice_acked_at: float = 0.0
 
     def to_doc(self) -> dict[str, Any]:
         doc = dataclasses.asdict(self)
@@ -87,12 +92,15 @@ class GateState:
         problems = validate_doc(doc)
         if problems:
             raise StateError("; ".join(problems))
-        return GateState(**{k: doc[k] for k in GateState.__dataclass_fields__ if k in doc})
+        known = GateState.__dataclass_fields__
+        return GateState(**{k: doc[k] for k in known if k in doc})
 
 
 def canonical_digest(doc: dict[str, Any]) -> str:
     """对除 snapshot_digest / updated_at 之外的字段做规范化摘要。"""
-    body = {k: v for k, v in doc.items() if k not in ("snapshot_digest", "updated_at")}
+    body = {k: v for k, v in doc.items()
+            if k not in ("snapshot_digest", "updated_at",
+                         "notice_digest", "notice_acked", "notice_acked_by", "notice_acked_at")}
     return "sha256:" + hashlib.sha256(
         json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()

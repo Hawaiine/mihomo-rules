@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import sys
@@ -70,6 +71,8 @@ def _snapshot(store, state: gs.GateState, extra: dict) -> str:
     state_doc = state.to_doc()
     body = {"schema_version": gs.SCHEMA_VERSION, "generation": state.generation,
             "state": state_doc, "meta": extra,
+            "snap_run_id": state.run_id,
+            "snap_candidate_sha": state.candidate_sha,
             "digest": _snapshot_digest(state.generation, state_doc)}
     data = json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
     try:
@@ -160,6 +163,10 @@ def cmd_require_usable(args) -> int:
     if state.phase in gs.BLOCKING_PHASES:
         print(f"❌ 状态为 {state.phase}：禁止继续同步（需人工 resume）", file=sys.stderr)
         return EXIT_NEEDS_HUMAN
+    if state.notice_digest and not state.notice_acked:
+        print(f"❌ 存在未确认的关键通知（notice_digest={state.notice_digest[:16]}...）："
+              f"请先执行 confirm-notice 或 pause --recovery", file=sys.stderr)
+        return EXIT_NEEDS_HUMAN
     print(f"✅ 状态可用（phase={state.phase}, generation={state.generation}）")
     return EXIT_OK
 
@@ -223,6 +230,9 @@ def cmd_complete(args) -> int:
         print(f"❌ 状态为 {current.phase}：complete 永远不能清除 PAUSED/RECOVERY_REQUIRED，"
               f"只能用 resume 子命令正式恢复", file=sys.stderr)
         return EXIT_NEEDS_HUMAN
+    if current.notice_digest and not current.notice_acked:
+        print(f"❌ 存在未确认的关键通知：必须先 confirm-notice 或 pause --recovery", file=sys.stderr)
+        return EXIT_NEEDS_HUMAN
     if current.lock_owner != f"gate-{args.run_id}":
         print(f"❌ 非锁持有者（当前 {current.lock_owner!r}）", file=sys.stderr)
         return EXIT_INVALID
@@ -233,9 +243,70 @@ def cmd_complete(args) -> int:
         target_ref=current.target_ref, phase="final-review" if success else "failed",
         check_status="completed" if success else "failure",
         conclusion="success" if success else "failure",
-        lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time())
+        lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time(),
+        notice_digest="", notice_acked=False, notice_acked_by="", notice_acked_at=0.0)
     return _commit(store, state, sha,
                    {"kind": "completed", "result": args.result, "pr": args.pr}, run_id=args.run_id)
+
+
+def cmd_mark_notice_needed(args) -> int:
+    """U-09：标记当前运行需要关键通知确认（设置 notice_digest）。"""
+    store = _store(args)
+    current, sha = store.read()
+    if current is None:
+        print("❌ 无当前状态", file=sys.stderr)
+        return EXIT_INVALID
+    if current.phase in gs.BLOCKING_PHASES:
+        print(f"❌ 状态为 {current.phase}：禁止标记通知", file=sys.stderr)
+        return EXIT_NEEDS_HUMAN
+    if current.lock_owner != f"gate-{args.run_id}":
+        print(f"❌ 非锁持有者（当前 {current.lock_owner!r}）", file=sys.stderr)
+        return EXIT_INVALID
+    state = gs.GateState(
+        run_id=current.run_id, generation=current.generation + 1, epoch=current.epoch,
+        base_sha=current.base_sha, candidate_sha=current.candidate_sha,
+        target_ref=current.target_ref, phase=current.phase,
+        check_status=current.check_status, conclusion=current.conclusion,
+        lock_owner=current.lock_owner, lock_token=current.lock_token,
+        lease_until=current.lease_until, snapshot_digest="",
+        notice_digest=args.digest, notice_acked=False,
+        notice_acked_by="", notice_acked_at=0.0,
+        updated_at=time.time())
+    return _commit(store, state, sha,
+                   {"kind": "notice-marked", "digest": args.digest}, run_id=args.run_id)
+
+
+def cmd_confirm_notice(args) -> int:
+    """U-09：确认关键通知（仅当 digest 匹配且状态未变）。"""
+    store = _store(args)
+    current, sha = store.read()
+    if current is None:
+        print("❌ 无当前状态", file=sys.stderr)
+        return EXIT_INVALID
+    if not current.notice_digest:
+        print("❌ 当前无待确认通知", file=sys.stderr)
+        return EXIT_INVALID
+    if current.notice_digest != args.digest:
+        print(f"❌ notice_digest 不匹配：期望 {current.notice_digest[:24]}...，"
+              f"提供 {args.digest[:24]}...", file=sys.stderr)
+        return EXIT_INVALID
+    if current.phase in gs.BLOCKING_PHASES:
+        print(f"❌ 状态为 {current.phase}：禁止确认通知", file=sys.stderr)
+        return EXIT_NEEDS_HUMAN
+    state = gs.GateState(
+        run_id=current.run_id, generation=current.generation + 1, epoch=current.epoch,
+        base_sha=current.base_sha, candidate_sha=current.candidate_sha,
+        target_ref=current.target_ref, phase=current.phase,
+        check_status=current.check_status, conclusion=current.conclusion,
+        lock_owner=current.lock_owner, lock_token=current.lock_token,
+        lease_until=current.lease_until, snapshot_digest="",
+        notice_digest=current.notice_digest, notice_acked=True,
+        notice_acked_by=args.run_id, notice_acked_at=time.time(),
+        updated_at=time.time())
+    return _commit(store, state, sha,
+                   {"kind": "notice-confirmed", "digest": args.digest,
+                    "confirmed_by": args.run_id}, run_id=args.run_id)
+
 
 
 def cmd_pause(args) -> int:
@@ -249,7 +320,8 @@ def cmd_pause(args) -> int:
         base_sha=current.base_sha, candidate_sha=current.candidate_sha, target_ref=current.target_ref,
         phase="recovery-required" if args.recovery else "paused",
         check_status="failure", conclusion="failure",
-        lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time())
+        lock_owner="", lock_token="", lease_until=0.0, updated_at=time.time(),
+        notice_digest="", notice_acked=False, notice_acked_by="", notice_acked_at=0.0)
     return _commit(store, state, sha,
                    {"kind": "paused", "reason": args.reason, "evidence": args.evidence},
                    run_id=args.run_id)
@@ -302,6 +374,12 @@ def main(argv: list[str] | None = None) -> int:
     pa.add_argument("--recovery", action="store_true",
                     help="标记为 recovery-required（证据/状态冲突，需人工介入）")
 
+    mn = sub.add_parser("mark-notice-needed")
+    mn.add_argument("--digest", required=True, help="待确认通知的规范摘要")
+
+    cn = sub.add_parser("confirm-notice")
+    cn.add_argument("--digest", required=True, help="与 mark-notice-needed 使用的 digest 精确匹配")
+
     r = sub.add_parser("resume")
     r.add_argument("--reason", required=True)
 
@@ -314,7 +392,9 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INVALID
     handler = {"status": cmd_status, "require-enabled": cmd_require_enabled,
                "require-usable": cmd_require_usable, "acquire": cmd_acquire, "complete": cmd_complete,
-               "pause": cmd_pause, "resume": cmd_resume}[args.cmd]
+               "pause": cmd_pause, "resume": cmd_resume,
+               "mark-notice-needed": cmd_mark_notice_needed,
+               "confirm-notice": cmd_confirm_notice}[args.cmd]
     try:
         return handler(args)
     except gs.StateError as exc:

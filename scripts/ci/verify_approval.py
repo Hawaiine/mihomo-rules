@@ -75,6 +75,64 @@ def verify_approval(reviews: list[dict], *, head_sha: str, approver: str,
     return not problems, problems, evidence
 
 
+def verify_approvals(reviews: list[dict], *, head_sha: str, approvers, required: int = 1,
+                     complete: bool = True, allow_bots: bool = False) -> tuple[bool, list[str], dict]:
+    """多审批人版本：按显式策略名单核验，并阻断任何"请求变更"。
+
+    与 `verify_approval` 的差异：
+    * 名单来自显式策略（不推断 owner）；
+    * 需要 `required` 个**不同**审批人各自的最新 review 都 APPROVED 且 commit_id == head；
+    * **任何人**在当前 head 上的最新 review 为 CHANGES_REQUESTED 都阻断（不能靠换人绕过）；
+    * 审批人账号类型默认必须是 `User`（`allow_bots` 仅用于策略显式允许的离线测试）。
+    """
+    problems: list[str] = []
+    who_list = [str(x) for x in (approvers or [])]
+    evidence: dict = {"head_sha": head_sha, "approvers": who_list, "required": required,
+                      "reviews": len(reviews or []), "valid_approvers": []}
+    if not complete:
+        return False, ["REVIEWS_PAGINATION_INCOMPLETE"], evidence
+    if not isinstance(reviews, list):
+        return False, ["REVIEWS_MALFORMED"], evidence
+    if not who_list:
+        return False, ["APPROVER_NOT_CONFIGURED"], evidence
+    if not isinstance(required, int) or isinstance(required, bool) or required < 1 \
+            or required > len(who_list):
+        return False, ["APPROVAL_REQUIREMENT_INVALID"], evidence
+
+    latest = latest_by_user(reviews)
+    for login, review in latest.items():
+        if review.get("state") == "CHANGES_REQUESTED" and review.get("commit_id") == head_sha:
+            problems.append(f"CHANGES_REQUESTED_PRESENT:{login}")
+
+    valid: list[str] = []
+    for who in who_list:
+        review = latest.get(who)
+        if review is None:
+            problems.append(f"APPROVAL_MISSING:{who}")
+            continue
+        utype = ((review.get("user") or {}).get("type"))
+        if utype != "User" and not allow_bots:
+            problems.append(f"APPROVER_NOT_HUMAN:{who}")
+            continue
+        state = review.get("state")
+        if state != ALLOWED_STATE:
+            problems.append(f"APPROVAL_NOT_CURRENT:{who}:{state}")
+            continue
+        commit_id = review.get("commit_id")
+        if not isinstance(commit_id, str) or len(commit_id) != 40:
+            problems.append(f"APPROVAL_MISSING_COMMIT:{who}")
+            continue
+        if commit_id != head_sha:
+            problems.append(f"APPROVAL_STALE:{who}")
+            continue
+        valid.append(who)
+    evidence["valid_approvers"] = valid
+    if len(valid) < required:
+        problems.append(f"APPROVALS_INSUFFICIENT:{len(valid)}/{required}")
+    evidence["ok"] = not problems
+    return not problems, problems, evidence
+
+
 def collect_reviews(getter, *, repo: str, pr: int, token: str,
                     api_base: str = "https://api.github.com", per_page: int = 100,
                     max_pages: int = 20) -> tuple[list[dict], bool]:

@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 
+import json
 import gate_lock as gl  # noqa: E402
 import gate_state as gs  # noqa: E402
 
@@ -196,6 +197,217 @@ class GateLockCliTest(unittest.TestCase):
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             rc = gl.main(["--local-dir", str(self.dir), "acquire", "--base-sha", "a" * 40])
         self.assertEqual(rc, gl.EXIT_INVALID)
+
+
+class NoticeTest(unittest.TestCase):
+    """B4 / U-09：关键通知确认门禁"""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def run_cli(self, *args: str) -> int:
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            return gl.main(["--local-dir", str(self.dir), *args])
+
+    def state(self) -> gs.GateState:
+        return gs.LocalFileStore(self.dir).read()[0]
+
+    def acquire(self, run_id: str = "1-1") -> int:
+        return self.run_cli("--run-id", run_id, "--lease-seconds", "60",
+                            "acquire", "--base-sha", "a" * 40,
+                            "--candidate-sha", "b" * 40)
+
+    def test_mark_notice_sets_digest(self):
+        self.assertEqual(self.acquire(), 0)
+        rc = self.run_cli("--run-id", "1-1", "mark-notice-needed",
+                          "--digest", "notice-001")
+        self.assertEqual(rc, 0)
+        st = self.state()
+        self.assertEqual(st.notice_digest, "notice-001")
+        self.assertFalse(st.notice_acked)
+
+    def test_confirm_notice_sets_acked(self):
+        self.assertEqual(self.acquire(), 0)
+        self.assertEqual(self.run_cli("--run-id", "1-1", "mark-notice-needed",
+                                      "--digest", "n1"), 0)
+        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        self.assertEqual(rc, 0)
+        st = self.state()
+        self.assertTrue(st.notice_acked)
+
+    def test_confirm_wrong_digest_rejected(self):
+        self.assertEqual(self.acquire(), 0)
+        self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
+        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n2")
+        self.assertNotEqual(rc, 0)
+
+    def test_require_usable_blocks_unacked_notice(self):
+        self.assertEqual(self.acquire(), 0)
+        self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
+        rc = self.run_cli("--run-id", "1-1", "require-usable")
+        self.assertNotEqual(rc, 0)  # 未确认时拒绝继续
+
+    def test_require_usable_allows_acked_notice(self):
+        self.assertEqual(self.acquire(), 0)
+        self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
+        self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        rc = self.run_cli("--run-id", "1-1", "require-usable")
+        self.assertEqual(rc, 0)
+
+    def test_complete_blocks_unacked_notice(self):
+        self.assertEqual(self.acquire(), 0)
+        self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
+        rc = self.run_cli("--run-id", "1-1", "complete", "--result", "success")
+        self.assertNotEqual(rc, 0)  # 未确认通知时拒绝 complete
+
+    def test_no_notice_no_blockage(self):
+        self.assertEqual(self.acquire(), 0)
+        rc = self.run_cli("--run-id", "1-1", "require-usable")
+        self.assertEqual(rc, 0)
+
+    def test_mark_notice_without_lock_rejected(self):
+        self.assertEqual(self.acquire("2-2"), 0)
+        rc = self.run_cli("--run-id", "1-1", "mark-notice-needed",
+                          "--digest", "n1")
+        self.assertNotEqual(rc, 0)
+
+    def test_confirm_no_notice_marked_rejected(self):
+        self.assertEqual(self.acquire(), 0)
+        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        self.assertNotEqual(rc, 0)
+
+
+class SnapshotBindingTest(unittest.TestCase):
+    """B5：快照与 run_id / candidate_sha 绑定，恢复验证"""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def run_cli(self, *args: str) -> int:
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            return gl.main(["--local-dir", str(self.dir), *args])
+
+    def state(self) -> gs.GateState:
+        return gs.LocalFileStore(self.dir).read()[0]
+
+    def acquire(self, run_id: str = "1-1") -> int:
+        return self.run_cli("--run-id", run_id, "--lease-seconds", "60",
+                            "acquire", "--base-sha", "a" * 40,
+                            "--candidate-sha", "b" * 40)
+
+    def test_snapshot_body_contains_run_id_and_candidate_sha(self):
+        from scripts.ci.gate_lock import _snapshot_digest
+        self.assertEqual(self.acquire(), 0)
+        st = self.state()
+        # Verify GateState fields carry run_id / candidate_sha
+        self.assertEqual(st.run_id, "1-1")
+        self.assertEqual(st.candidate_sha, "b" * 40)
+        # Snapshot body would include these via to_doc()
+
+    def test_recovery_snap_run_id_mismatch_blocked(self):
+        """快照的 snap_run_id 与当前 run_id 不匹配 → 拒绝恢复"""
+        from scripts.ci.recover_gate_state import recover, RecoveryRefused
+        from scripts.ci.gate_state import LocalFileStore
+
+        # 1) acquire with run_id "1-1"
+        self.assertEqual(self.acquire("1-1"), 0)
+        acquire_state = self.state().to_doc()  # gen=1, run_id=1-1, epoch=0
+        # 2) 先完成当前 run，推进 generation（current=gen=2）
+        self.assertEqual(self.run_cli("--run-id", "1-1", "complete", "--result", "success"), 0)
+        current = self.state()  # gen=2
+        # 3) 删除 gen=1 的真实快照，创建一个携带错误 snap_run_id 的 gen=1 假快照
+        import os as _os
+        gen_dir = Path(self.dir) / "snapshots"
+        # 删除 gen=1 快照 (acquire 产生的)
+        for p in gen_dir.glob("gen-1*.json"):
+            _os.unlink(p)
+        body = {
+            "schema_version": 1, "generation": 1,
+            "state": acquire_state,
+            "meta": {"kind": "fake"}, "digest": "sha256:fake",
+            "snap_run_id": "2-2",  # wrong run!
+            "snap_candidate_sha": "b" * 40
+        }
+        from scripts.ci.gate_lock import _snapshot_digest
+        body["digest"] = _snapshot_digest(1, body["state"])
+        store = LocalFileStore(self.dir)
+        # 直接写文件绕过 snapshot_put（store 会因 gen 重复拒绝）
+        snap_path = gen_dir / "gen-1.json"
+        snap_path.write_text(json.dumps(body, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+        # 4) attempt recovery from gen=1 snap → must fail on snap_run_id mismatch
+        with self.assertRaises(RecoveryRefused) as ctx:
+            recover(store, from_generation=1, expected_current=current.generation, dry_run=True)
+        self.assertIn("run_id", str(ctx.exception))
+
+    def test_recovery_snap_candidate_mismatch_blocked(self):
+        """快照的 snap_candidate_sha 与当前不一致 → 拒绝恢复"""
+        from scripts.ci.recover_gate_state import recover, RecoveryRefused
+        from scripts.ci.gate_state import LocalFileStore
+
+        # 1) acquire (epoch=0), pause, resume (epoch→1), complete (epoch=1)
+        self.assertEqual(self.acquire("1-1"), 0)
+        acquire_state = self.state().to_doc()  # gen=1, run_id=1-1, epoch=0, candidate=passed base
+        self.run_cli("--run-id", "1-1", "pause", "--reason", "test")
+        self.run_cli("--run-id", "2-2", "resume", "--reason", "test")
+        self.run_cli("--run-id", "2-2", "complete", "--result", "success")
+        current = self.state()  # gen=4, epoch=1, run_id=2-2
+        # 2) 删除 gen=1 真实快照，创建假 gen=1 快照（错误候选 SHA）
+        import os as _os2
+        gen_dir = Path(self.dir) / "snapshots"
+        for p in gen_dir.glob("gen-1*.json"):
+            _os2.unlink(p)
+        body = {
+            "schema_version": 1, "generation": 1,
+            "state": acquire_state,  # run_id=1-1, epoch=0 (replay guard won't trigger because current.run_id=2-2)
+            "meta": {"kind": "fake"}, "digest": "sha256:fake",
+            "snap_run_id": "2-2",  # matches current.run_id → passes run_id check
+            "snap_candidate_sha": "c" * 40  # wrong candidate → triggers rejection
+        }
+        from scripts.ci.gate_lock import _snapshot_digest
+        body["digest"] = _snapshot_digest(1, body["state"])
+        store = LocalFileStore(self.dir)
+        snap_path = gen_dir / "gen-1.json"
+        snap_path.write_text(json.dumps(body, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+        with self.assertRaises(RecoveryRefused) as ctx:
+            recover(store, from_generation=1, expected_current=current.generation, dry_run=True)
+        self.assertIn("candidate", str(ctx.exception))
+
+    def test_recovery_resets_notice_acked(self):
+        """恢复后通知状态重置，恢复后必须重新确认"""
+        from scripts.ci.recover_gate_state import recover
+        from scripts.ci.gate_state import LocalFileStore
+
+        self.assertEqual(self.acquire("1-1"), 0)
+        # pause → resume (advance epoch so recover's replay guard won't trap us)
+        self.run_cli("--run-id", "1-1", "pause", "--reason", "epoch advance")
+        self.run_cli("--run-id", "2-2", "resume", "--reason", "epoch advance")
+        gen_after_resume = self.state().generation  # 4 (after acquire→pause→resume)
+        # Set notice → gen after resume + 1 (run_id=2-2 after resume)
+        self.assertEqual(self.run_cli("--run-id", "2-2", "mark-notice-needed", "--digest", "n1"), 0)
+        # Confirm → gen after mark + 1
+        self.assertEqual(self.run_cli("--run-id", "2-2", "confirm-notice", "--digest", "n1"), 0)
+        # Bump epoch to bypass replay guard: pause → resume with same run_id (allowed)
+        self.run_cli("--run-id", "2-2", "pause", "--reason", "epoch bump")
+        self.run_cli("--run-id", "2-2", "resume", "--reason", "epoch bump")
+        self.run_cli("--run-id", "2-2", "complete", "--result", "success")
+        st = self.state()  # notice_acked=False (complete cleared it), epoch=2; but snap at gen=5 still has epoch=1
+        # Recover from gen after mark-notice-needed → new gen should reset notice
+        store = LocalFileStore(self.dir)
+        result = recover(store, from_generation=gen_after_resume + 1,  # gen=5 (has notice_digest)
+                         expected_current=st.generation, dry_run=True)   # current=gen=3
+        would_write = result["would_write"]
+        self.assertFalse(would_write.get("notice_acked"), "恢复后 notice_acked 必须重置")
+        self.assertEqual(would_write.get("notice_digest"), "")
+
+
 
 
 if __name__ == "__main__":

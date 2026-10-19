@@ -62,6 +62,25 @@ GitHub 的两条硬事实：
 模式选择**只允许** check-run → status 的单向回退，且仅在「一个 check-run 都没有」时生效；
 出现同名但来源不符的 check-run 仍按原严格口径失败。
 
+## 2.1 显式审批策略（新增）
+
+审批人**不再**从仓库 owner 推断。唯一来源是 `.github/approval-policy.json`
+（`scripts/ci/approval_policy.py` 解析）：
+
+```json
+{"schema":"mihomo-rules-approval-policy","version":1,"approvers":[],
+ "required_approvals":1,"allow_bot_approvers":false,
+ "head_binding":"exact","on_missing":"fail-closed"}
+```
+
+* 空 `approvers` = **未配置**，不是"无需审批"：新增规则集 PR 一律 BLOCKED
+  （`APPROVAL_POLICY_UNCONFIGURED`），并在 preflight 中作为独立检查项暴露；
+* 未知字段、schema/version 不符、`allow_bot_approvers=true`、`head_binding!=exact`、
+  `on_missing!=fail-closed` 全部拒绝；
+* 多人审批：`required_approvals` 个**不同**审批人各自的最新 review 都必须 APPROVED 且
+  `commit_id == 当前 head`；任何人当前 head 上 `CHANGES_REQUESTED` 都阻断；
+* 显式 `--approver` 视为人工显式输入（1 人），仍不读取 owner。
+
 ## 2.2 认证来源与逐 job 最小权限（本轮实测对账）
 
 全仓 workflow 只允许**内置 `GITHUB_TOKEN`**：不存在 GitHub App、不存在 PAT，
