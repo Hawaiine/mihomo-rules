@@ -44,7 +44,8 @@ from check_provenance import (  # noqa: E402
 def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jobs_by_id: dict,
              required: list[dict], expected_head: str, base_branch: str = "main",
              main_sha: str | None = None, statuses: list[dict] | None = None,
-             contexts: list[str] | None = None) -> tuple[bool, list[str], dict]:
+             contexts: list[str] | None = None, expected_run_id: str = "",
+             expected_repo: str = "") -> tuple[bool, list[str], dict]:
     """纯函数判定（便于负向测试）。返回 (ok, problems, report)。"""
     problems: list[str] = []
     report: dict = {"expected_head_sha": expected_head, "checks": {}, "stale_runs": []}
@@ -78,12 +79,15 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
         problems.append("预期 status 模式但 manifest 未声明 status_contexts")
         return False, problems, report
     if mode == STATUS_MODE:
-        cstate, per_ctx, ctx_problems = evaluate_statuses(statuses or [], contexts or [], expected_head)
+        status, per_ctx, ctx_problems = evaluate_statuses(
+            statuses or [], contexts or [], expected_head,
+            expected_run_id=expected_run_id,
+            expected_repo=expected_repo)
         report["status_contexts"] = per_ctx
-        report["gate_state"] = cstate
+        report["gate_state"] = status
         problems.extend(ctx_problems)
-        if cstate != "success":
-            problems.append(f"候选 PR 的必需状态未全部 success（当前 {cstate}）")
+        if status != "success":
+            problems.append(f"候选 PR 的必需状态未全部 success（当前 {status}）")
         if pr_obj.get("state") != "open" or (pr_obj.get("head") or {}).get("sha") != expected_head:
             problems.append("PR 状态/head 在门禁判定时不匹配")
         return not problems, problems, report
@@ -164,7 +168,9 @@ def verify(*, repo: str, pr: int, expected_head: str, required_manifest: str = D
         statuses = body
     ok, eval_problems, report = evaluate(pr_obj, check_runs, workflow_runs, jobs_by_id, required,
                                         expected_head, base_branch, main_sha,
-                                        statuses=statuses, contexts=contexts)
+                                        statuses=statuses, contexts=contexts,
+                                        expected_run_id=os.environ.get("GITHUB_RUN_ID", "").strip(),
+                                        expected_repo=repo)
     report.update({"repo": repo, "pr": int(pr), "required": [c["name"] for c in required],
                    "required_manifest": required_manifest, "writes_performed": []})
     for p in eval_problems:

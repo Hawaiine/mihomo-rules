@@ -18,9 +18,10 @@ HEAD = "h" * 40
 
 
 def status(state: str = "success", *, ctx: str = "route-a/verify", sha: str = HEAD,
-           creator: str = "github-actions[bot]") -> dict:
+           creator: str = "github-actions[bot]", target_url: str | None = None) -> dict:
     return {"context": ctx, "state": state, "sha": sha,
-            "creator": {"login": creator, "type": "Bot"}, "target_url": ""}
+            "creator": {"login": creator, "type": "Bot"},
+            "target_url": target_url or "https://github.com/o/r/actions/runs/1001"}
 
 
 class RunUrlParseTest(unittest.TestCase):
@@ -81,7 +82,17 @@ class RunUrlParseTest(unittest.TestCase):
 
     def test_validate_binding_empty_expected(self):
         err = gst.validate_run_binding("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001", "", "")
-        self.assertEqual(err, "")
+        self.assertIn("run_id", err)
+
+    def test_validate_binding_whitespace_expected(self):
+        err = gst.validate_run_binding("https://github.com/Hawaiine/mihomo-rules/actions/runs/1001", "   ", "")
+        self.assertIn("run_id", err)
+
+    def test_validate_binding_invalid_expected(self):
+        for run_id in ("abc", "01", "0", "-1"):
+            with self.subTest(run_id=run_id):
+                self.assertTrue(gst.validate_run_binding(
+                    "https://github.com/Hawaiine/mihomo-rules/actions/runs/1001", run_id, ""))
 
 
 class EvaluateStatusesBindingTest(unittest.TestCase):
@@ -91,7 +102,7 @@ class EvaluateStatusesBindingTest(unittest.TestCase):
         s = {"context":"ci/check","state":"success","sha":self.HEAD,
              "creator":{"login":"github-actions[bot]","type":"Bot"},
              "target_url":"https://github.com/Hawaiine/mihomo-rules/actions/runs/1001"}
-        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001", expected_repo="Hawaiine/mihomo-rules")
         self.assertEqual(st, "success")
         self.assertEqual(probs, [])
 
@@ -99,7 +110,7 @@ class EvaluateStatusesBindingTest(unittest.TestCase):
         s = {"context":"ci/check","state":"success","sha":self.HEAD,
              "creator":{"login":"github-actions[bot]","type":"Bot"},
              "target_url":"https://github.com/Hawaiine/mihomo-rules/actions/runs/10010"}
-        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001", expected_repo="Hawaiine/mihomo-rules")
         self.assertEqual(st, "failed")
         self.assertTrue(any("run_id=10010" in p for p in probs), probs)
 
@@ -107,20 +118,21 @@ class EvaluateStatusesBindingTest(unittest.TestCase):
         s = {"context":"ci/check","state":"success","sha":self.HEAD,
              "creator":{"login":"github-actions[bot]","type":"Bot"},
              "target_url":"https://evil.com/actions/runs/1001"}
-        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001", expected_repo="Hawaiine/mihomo-rules")
         self.assertEqual(st, "failed")
 
     def test_missing_target_url_fails(self):
         s = {"context":"ci/check","state":"success","sha":self.HEAD,
              "creator":{"login":"github-actions[bot]","type":"Bot"}}
-        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001")
+        st, per, probs = gst.evaluate_statuses([s],["ci/check"],self.HEAD, expected_run_id="1001", expected_repo="Hawaiine/mihomo-rules")
         self.assertEqual(st, "failed")
 
 
 
 class EvaluateStatusesTest(unittest.TestCase):
     def test_success(self):
-        state, per, problems = gst.evaluate_statuses([status()], ["route-a/verify"], HEAD)
+        state, per, problems = gst.evaluate_statuses(
+            [status()], ["route-a/verify"], HEAD, expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "success")
         self.assertEqual(problems, [])
         self.assertEqual(per["route-a/verify"]["state"], "success")
@@ -131,7 +143,8 @@ class EvaluateStatusesTest(unittest.TestCase):
         self.assertTrue(any("缺少状态" in p for p in problems))
 
     def test_failure_is_terminal(self):
-        state, _, problems = gst.evaluate_statuses([status("failure")], ["route-a/verify"], HEAD)
+        state, per, problems = gst.evaluate_statuses(
+            [status("failure")], ["route-a/verify"], HEAD, expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "failed")
         self.assertTrue(any("failure" in p for p in problems))
 
@@ -160,21 +173,22 @@ class EvaluateStatusesTest(unittest.TestCase):
     def test_latest_status_wins(self):
         older = status("failure")
         newer = status("success")
-        state, _, _ = gst.evaluate_statuses([newer, older], ["route-a/verify"], HEAD)
+        state, _, _ = gst.evaluate_statuses(
+            [newer, older], ["route-a/verify"], HEAD, expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "success")
 
     def test_run_binding_accepts_same_run(self):
         item = status()
         item["target_url"] = "https://github.com/o/r/actions/runs/1001/job/9"
         state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
-                                                   expected_run_id="1001")
+                                                   expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "success", problems)
 
     def test_run_binding_rejects_status_from_other_run(self):
         item = status()
         item["target_url"] = "https://github.com/o/r/actions/runs/999/job/9"
         state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
-                                                   expected_run_id="1001")
+                                                   expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "failed")
         self.assertTrue(any("run_id=999" in p for p in problems), problems)
 
@@ -182,15 +196,18 @@ class EvaluateStatusesTest(unittest.TestCase):
         item = status()
         item.pop("target_url")
         state, _, problems = gst.evaluate_statuses([item], ["route-a/verify"], HEAD,
-                                                   expected_run_id="1001")
+                                                   expected_run_id="1001", expected_repo="o/r")
         self.assertEqual(state, "failed")
         self.assertTrue(problems)
 
-    def test_run_binding_disabled_when_no_expected_run(self):
-        item = status()
-        item["target_url"] = "https://github.com/o/r/actions/runs/999"
-        state, _, _ = gst.evaluate_statuses([item], ["route-a/verify"], HEAD)
-        self.assertEqual(state, "success")
+    def test_missing_or_invalid_expected_run_fails_closed(self):
+        item = status(target_url="https://github.com/o/r/actions/runs/1001")
+        for run_id in ("", "   ", "bad", "0", "01001"):
+            with self.subTest(run_id=run_id):
+                state, _, problems = gst.evaluate_statuses(
+                    [item], ["route-a/verify"], HEAD, expected_run_id=run_id, expected_repo="o/r")
+                self.assertEqual(state, "failed")
+                self.assertTrue(problems)
 
     def test_missing_manifest_contexts(self):
         state, _, problems = gst.evaluate_statuses([status()], [], HEAD)
@@ -220,7 +237,8 @@ class StatusModeVerifierTest(unittest.TestCase):
     def test_status_mode_passes(self):
         ok, problems, report = vrc.evaluate(
             self._pr(), [], [], {}, [], HEAD, "main", "m" * 40,
-            statuses=[status()], contexts=["route-a/verify"])
+            statuses=[status(target_url="https://github.com/o/r/actions/runs/1001")], contexts=["route-a/verify"],
+            expected_run_id="1001", expected_repo="o/r")
         self.assertTrue(ok, problems)
         self.assertEqual(report["gate_mode"], "status")
 
@@ -257,9 +275,10 @@ class PollerStatusModeTest(unittest.TestCase):
     def test_poller_succeeds_on_status(self):
         poller = ac.Poller(repo="o/r", pr=7, expected_head=HEAD, base_branch="main", required=[],
                            token="t", contexts=["route-a/verify"], sleeper=lambda s: None)
-        with mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD, "pr": {"user": {"login": "github-actions[bot]", "type": "Bot"}}})), \
+        with mock.patch.dict("os.environ", {"GITHUB_RUN_ID": "1001"}, clear=False), \
+             mock.patch.object(poller, "preflight", return_value=(True, [], {"pr_head_sha": HEAD, "pr": {"user": {"login": "github-actions[bot]", "type": "Bot"}}})), \
              mock.patch.object(poller, "read_provenance", return_value=([], [], {})), \
-             mock.patch.object(poller, "_read_statuses", return_value=[status()]), \
+             mock.patch.object(poller, "_read_statuses", return_value=[status(target_url="https://github.com/o/r/actions/runs/1001")]), \
              mock.patch.object(poller, "recheck_pr", return_value=(True, [])):
             report = poller.run()
         self.assertEqual(report["status"], ac.STATUS_SUCCESS, report)

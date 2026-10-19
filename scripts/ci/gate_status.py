@@ -51,8 +51,14 @@ def validate_run_binding(target_url: str, expected_run_id: str, expected_repo: s
     严格口径：必须可解析、owner+repo 可验证（若给定 expected_repo）、run_id 精确匹配。
     前缀碰撞（1001 vs 10010）、非 github.com、畸形 URL 一律拒绝。
     """
-    if not expected_run_id:
-        return ""   # 调用方未指定，不做检查
+    if not isinstance(expected_run_id, str) or not expected_run_id.strip():
+        return "预期 run_id 缺失或为空（拒绝关闭运行绑定检查）"
+    expected_run_id = expected_run_id.strip()
+    if not expected_run_id.isdigit() or expected_run_id == "0" or expected_run_id != str(int(expected_run_id)):
+        return f"预期 run_id 格式非法: {expected_run_id!r}"
+    expected_repo = expected_repo.strip()
+    if not re.fullmatch(r"[^/]+/[^/]+", expected_repo):
+        return "预期仓库 owner/name 缺失或格式非法"
     parsed = parse_run_url(target_url)
     if parsed is None:
         return f"status target_url 不可解析为合法 GitHub Actions run: {target_url!r}"
@@ -94,7 +100,7 @@ def latest_statuses(statuses: list[dict]) -> dict[str, dict]:
 
 
 def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: str,
-                      expected_run_id: str = "") -> tuple[str, dict, list[str]]:
+                      expected_run_id: str = "", expected_repo: str = "") -> tuple[str, dict, list[str]]:
     """返回 (overall_state, per_context, problems)。
 
     overall_state: success（全部 success）/ failed（任一终局失败或来源不可信）/ pending（尚未出现）。
@@ -130,15 +136,12 @@ def evaluate_statuses(statuses: list[dict], contexts: list[str], expected_head: 
             per[ctx] = {"state": STATE_FAILED, "reason": f"来源类型不可信：type={creator_obj.get('type')!r}"}
             problems.append(f"{ctx}: 状态来源类型 {creator_obj.get('type')!r} 不是 Bot（拒绝仅凭 login 采信）")
             continue
-        if expected_run_id:
-            # 抗重放：同一 head 上**别的 run** 留下的 success 不能当作本次结果
-            # 严格解析 URL（拒绝前缀碰撞如 1001 vs 10010、非 github.com、畸形 URL）
-            target = item.get("target_url") or ""
-            err = validate_run_binding(target, expected_run_id)
-            if err:
-                per[ctx] = {"state": STATE_FAILED, "reason": err}
-                problems.append(f"{ctx}: {err}")
-                continue
+        # 抗重放和仓库绑定：缺失/非法 run_id、缺失/非法 URL、错误仓库或错误 run 均失败关闭。
+        err = validate_run_binding(item.get("target_url") or "", expected_run_id, expected_repo)
+        if err:
+            per[ctx] = {"state": STATE_FAILED, "reason": err}
+            problems.append(f"{ctx}: {err}")
+            continue
         if state == "success":
             per[ctx] = {"state": STATE_SUCCESS, "target_url": item.get("target_url", "")}
         elif state in ("failure", "error"):

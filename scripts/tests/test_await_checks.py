@@ -256,14 +256,15 @@ class MissingRunIdTest(unittest.TestCase):
             run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
             self.assertEqual(run_id, "42")
 
-    def test_empty_expected_run_id_gives_no_binding(self):
-        """evaluate_statuses 的 '' expected_run_id 不绑定（测试兼容）"""
+    def test_empty_expected_run_id_fails_closed(self):
         from scripts.ci.gate_status import evaluate_statuses
         s = {"context": "x", "state": "success", "target_url": "https://github.com/o/r/actions/runs/99",
              "creator": {"login": "github-actions[bot]", "type": "Bot"}, "sha": HEAD}
-        st, _, probs = evaluate_statuses([s], ["x"], HEAD, expected_run_id="")
-        self.assertEqual(st, "success")
-        self.assertEqual(probs, [])
+        for run_id in ("", "   ", "invalid"):
+            with self.subTest(run_id=run_id):
+                st, _, probs = evaluate_statuses([s], ["x"], HEAD, expected_run_id=run_id, expected_repo="o/r")
+                self.assertEqual(st, "failed")
+                self.assertTrue(probs)
 
 
 

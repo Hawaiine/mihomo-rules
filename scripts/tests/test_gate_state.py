@@ -19,7 +19,7 @@ import gate_state as gs  # noqa: E402
 import recover_gate_state as rec  # noqa: E402
 
 
-def make_state(gen: int = 1, *, run_id: str = "run-1", epoch: int = 0, phase: str = "candidate",
+def make_state(gen: int = 1, *, run_id: str = "1-1", epoch: int = 0, phase: str = "candidate",
                check: str = "pending", candidate_sha: str = "a" * 40,
                digest: bool = True) -> gs.GateState:
     state = gs.GateState(run_id=run_id, generation=gen, epoch=epoch, base_sha="b" * 40,
@@ -141,9 +141,10 @@ class RecoveryTests(unittest.TestCase):
         """按恢复 CLI 期望的格式（含 digest）重写快照。"""
         state = make_state(gen, epoch=gen - 1)
         body = {"schema_version": 1, "generation": gen,
-                "state": state.to_doc()}
+                "state": state.to_doc(), "snap_run_id": state.run_id,
+                "snap_candidate_sha": state.candidate_sha}
         from scripts.ci.gate_lock import _snapshot_digest
-        body["digest"] = _snapshot_digest(gen, state.to_doc())
+        body["digest"] = _snapshot_digest(gen, state.to_doc(), state.run_id, state.candidate_sha)
         path = self.store.snapshots / f"gen-{gen}.json"
         if path.exists():
             path.unlink()

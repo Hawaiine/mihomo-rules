@@ -230,14 +230,15 @@ class NoticeTest(unittest.TestCase):
         self.assertEqual(st.notice_digest, "notice-001")
         self.assertFalse(st.notice_acked)
 
-    def test_confirm_notice_sets_acked(self):
+    def test_confirm_notice_refuses_unverified_run_identity(self):
         self.assertEqual(self.acquire(), 0)
         self.assertEqual(self.run_cli("--run-id", "1-1", "mark-notice-needed",
                                       "--digest", "n1"), 0)
         rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, gl.EXIT_NEEDS_HUMAN)
         st = self.state()
-        self.assertTrue(st.notice_acked)
+        self.assertFalse(st.notice_acked)
+        self.assertEqual(st.notice_acked_by, "")
 
     def test_confirm_wrong_digest_rejected(self):
         self.assertEqual(self.acquire(), 0)
@@ -256,7 +257,7 @@ class NoticeTest(unittest.TestCase):
         self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
         self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
         rc = self.run_cli("--run-id", "1-1", "require-usable")
-        self.assertEqual(rc, 0)
+        self.assertNotEqual(rc, 0)  # 自动命令不能伪造人工确认
 
     def test_complete_blocks_unacked_notice(self):
         self.assertEqual(self.acquire(), 0)
@@ -337,7 +338,7 @@ class SnapshotBindingTest(unittest.TestCase):
             "snap_candidate_sha": "b" * 40
         }
         from scripts.ci.gate_lock import _snapshot_digest
-        body["digest"] = _snapshot_digest(1, body["state"])
+        body["digest"] = _snapshot_digest(1, body["state"], body["snap_run_id"], body["snap_candidate_sha"])
         store = LocalFileStore(self.dir)
         # 直接写文件绕过 snapshot_put（store 会因 gen 重复拒绝）
         snap_path = gen_dir / "gen-1.json"
@@ -372,13 +373,57 @@ class SnapshotBindingTest(unittest.TestCase):
             "snap_candidate_sha": "c" * 40  # wrong candidate → triggers rejection
         }
         from scripts.ci.gate_lock import _snapshot_digest
-        body["digest"] = _snapshot_digest(1, body["state"])
+        body["digest"] = _snapshot_digest(1, body["state"], body["snap_run_id"], body["snap_candidate_sha"])
         store = LocalFileStore(self.dir)
         snap_path = gen_dir / "gen-1.json"
         snap_path.write_text(json.dumps(body, ensure_ascii=False, sort_keys=True), encoding="utf-8")
         with self.assertRaises(RecoveryRefused) as ctx:
             recover(store, from_generation=1, expected_current=current.generation, dry_run=True)
         self.assertIn("candidate", str(ctx.exception))
+
+    def test_recovery_legacy_snapshot_without_binding_rejected(self):
+        """旧格式快照（缺 snap_run_id / snap_candidate_sha）必须拒绝恢复，且摘要不能掩盖缺字段。"""
+        from scripts.ci.recover_gate_state import recover, RecoveryRefused
+        from scripts.ci.gate_state import LocalFileStore
+        from scripts.ci.gate_lock import _snapshot_digest
+
+        self.assertEqual(self.acquire("1-1"), 0)
+        acquire_state = self.state().to_doc()
+        self.run_cli("--run-id", "1-1", "complete", "--result", "success")
+        current = self.state()
+        gen_dir = Path(self.dir) / "snapshots"
+        for p in gen_dir.glob("gen-1*.json"):
+            p.unlink()
+
+        # 旧格式：无绑定字段；摘要按旧口径（仅 generation+state）计算，仍必须被拒绝
+        legacy = {"schema_version": 1, "generation": 1, "state": acquire_state,
+                  "meta": {"kind": "legacy"}}
+        legacy["digest"] = _snapshot_digest(1, legacy["state"], "", "")
+        path = gen_dir / "gen-1.json"
+        path.write_text(json.dumps(legacy, sort_keys=True), encoding="utf-8")
+
+        store = LocalFileStore(self.dir)
+        with self.assertRaises(RecoveryRefused) as ctx:
+            recover(store, from_generation=1, expected_current=current.generation, dry_run=True)
+        self.assertIn("snap_", str(ctx.exception))
+
+    def test_recovery_tampered_binding_field_rejected(self):
+        """绑定字段被改写但摘要未同步 → 摘要不符，拒绝恢复。"""
+        from scripts.ci.recover_gate_state import recover, RecoveryRefused
+        from scripts.ci.gate_state import LocalFileStore
+
+        self.assertEqual(self.acquire("1-1"), 0)
+        self.run_cli("--run-id", "1-1", "complete", "--result", "success")
+        current = self.state()
+        gen_dir = Path(self.dir) / "snapshots"
+        snap = json.loads((gen_dir / "gen-1.json").read_text(encoding="utf-8"))
+        snap["snap_candidate_sha"] = "e" * 40  # 改绑定字段，不动 digest
+        (gen_dir / "gen-1.json").write_text(json.dumps(snap, sort_keys=True), encoding="utf-8")
+
+        store = LocalFileStore(self.dir)
+        with self.assertRaises(RecoveryRefused) as ctx:
+            recover(store, from_generation=1, expected_current=current.generation, dry_run=True)
+        self.assertIn("digest", str(ctx.exception))
 
     def test_recovery_resets_notice_acked(self):
         """恢复后通知状态重置，恢复后必须重新确认"""
@@ -392,8 +437,9 @@ class SnapshotBindingTest(unittest.TestCase):
         gen_after_resume = self.state().generation  # 4 (after acquire→pause→resume)
         # Set notice → gen after resume + 1 (run_id=2-2 after resume)
         self.assertEqual(self.run_cli("--run-id", "2-2", "mark-notice-needed", "--digest", "n1"), 0)
-        # Confirm → gen after mark + 1
-        self.assertEqual(self.run_cli("--run-id", "2-2", "confirm-notice", "--digest", "n1"), 0)
+        # Automated run identity is not human acknowledgement; preserve unacked state.
+        self.assertEqual(self.run_cli("--run-id", "2-2", "confirm-notice", "--digest", "n1"),
+                         gl.EXIT_NEEDS_HUMAN)
         # Bump epoch to bypass replay guard: pause → resume with same run_id (allowed)
         self.run_cli("--run-id", "2-2", "pause", "--reason", "epoch bump")
         self.run_cli("--run-id", "2-2", "resume", "--reason", "epoch bump")

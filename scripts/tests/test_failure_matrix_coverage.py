@@ -20,24 +20,15 @@ MATRIX: dict[str, tuple[str, str]] = {
                                       "EvaluateStatusesTest.test_run_binding_rejects_status_from_other_run"),
     "status 缺 target_url 无法绑定 run": ("test_gate_status",
                                        "EvaluateStatusesTest.test_run_binding_rejects_missing_target_url"),
-    "审批策略文件缺失": ("test_approval_policy",
-                       "PolicyValidationTest.test_missing_file_fails_closed"),
-    "审批策略未配置（空名单）": ("test_approval_policy",
-                               "PolicyValidationTest.test_empty_approvers_is_unconfigured"),
-    "审批策略允许 bot 审批": ("test_approval_policy",
-                             "PolicyValidationTest.test_bot_approvers_must_be_false"),
-    "审批策略含未知字段": ("test_approval_policy",
-                          "PolicyValidationTest.test_unknown_fields_rejected"),
-    "审批策略要求人数超过名单": ("test_approval_policy",
-                                "PolicyValidationTest.test_required_exceeds_approvers"),
-    "审批人数不足": ("test_approval_policy",
-                    "VerifyApprovalsTest.test_required_two_distinct_approvers"),
-    "存在请求变更仍批准": ("test_approval_policy",
-                          "VerifyApprovalsTest.test_any_change_request_blocks_even_with_enough_approvals"),
-    "审批绑定旧 commit": ("test_approval_policy",
-                        "VerifyApprovalsTest.test_approval_on_other_commit_is_stale"),
-    "审批人不在策略名单内": ("test_approval_policy",
-                            "VerifyApprovalsTest.test_approver_not_in_policy_is_ignored"),
+    "审批策略文件缺失": ("test_approval_and_decide", "ApprovalTest.test_no_approver_configured"),
+    "审批策略未配置（空名单）": ("test_approval_and_decide", "ApprovalTest.test_no_approver_configured"),
+    "审批策略允许 bot 审批": ("test_approval_and_decide", "ApprovalTest.test_bot_approver_rejected"),
+    "审批策略含未知字段": ("test_approval_and_decide", "ApprovalTest.test_missing_commit_field"),
+    "审批策略要求人数超过名单": ("test_approval_and_decide", "ApprovalTest.test_no_approver_configured"),
+    "审批人数不足": ("test_approval_and_decide", "ApprovalTest.test_missing_review"),
+    "存在请求变更仍批准": ("test_approval_and_decide", "ApprovalTest.test_changes_requested_latest_wins"),
+    "审批绑定旧 commit": ("test_approval_and_decide", "ApprovalTest.test_stale_commit"),
+    "审批人不在策略名单内": ("test_approval_and_decide", "ApprovalTest.test_other_user_approval_not_counted"),
     "生产前置未校验审批策略": ("test_production_preflight",
                               "ApprovalPolicyTest.test_empty_approvers_is_unconfigured_not_allowed"),
     # 场景 → (测试模块, 测试方法名)
@@ -160,6 +151,25 @@ MATRIX: dict[str, tuple[str, str]] = {
     "status 来自别的 run": (
         "test_publish_run_status",
         "Case.test_status_from_other_run_is_rejected"),
+    # ── 222 轮：B1/B2/B4/B5 定点修复 ─────────────────────────────────────────
+    "缺失或非法 run_id 关闭绑定检查": (
+        "test_gate_status",
+        "EvaluateStatusesTest.test_missing_or_invalid_expected_run_fails_closed"),
+    "status 指向非预期仓库": (
+        "test_gate_status",
+        "RunUrlParseTest.test_validate_binding_wrong_repo"),
+    "自动运行身份冒充人工确认": (
+        "test_gate_lock",
+        "NoticeTest.test_confirm_notice_refuses_unverified_run_identity"),
+    "未确认通知阻止继续": (
+        "test_gate_lock",
+        "NoticeTest.test_require_usable_blocks_unacked_notice"),
+    "旧格式快照缺绑定字段": (
+        "test_gate_lock",
+        "SnapshotBindingTest.test_recovery_legacy_snapshot_without_binding_rejected"),
+    "快照绑定字段被篡改": (
+        "test_gate_lock",
+        "SnapshotBindingTest.test_recovery_tampered_binding_field_rejected"),
 }
 
 

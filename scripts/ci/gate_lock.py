@@ -40,21 +40,14 @@ def _fingerprint(state: gs.GateState) -> dict:
             "phase": state.phase, "check_status": state.check_status}
 
 
-def _snapshot_digest(generation: int, state_doc: dict) -> str:
-    """规范化摘要：覆盖 schema/generation + 状态的**语义字段**。
-
-    排除项及理由：
-    * ``snapshot_digest`` —— 自指字段，写入状态时才会补上；
-    * ``updated_at`` —— 写入时刻，不代表状态语义（同代重跑会变）；
-    * 审计 ``meta`` —— 记录本次写入上下文（acquired/completed/pre-acquire），不属于状态。
-
-    因此"同一 generation 的同一状态"跨进程可复算，而任何语义字段变化（phase /
-    check_status / conclusion / lock_owner / sha）都会改变摘要，从而暴露冲突。
-    """
+def _snapshot_digest(generation: int, state_doc: dict, snap_run_id: str, snap_candidate_sha: str) -> str:
+    """摘要覆盖状态及外层身份绑定；meta 仍排除以保留同状态幂等性。"""
     import hashlib
     semantic = {k: v for k, v in (state_doc or {}).items()
                 if k not in ("snapshot_digest", "updated_at")}
     canonical = json.dumps({"schema_version": gs.SCHEMA_VERSION, "generation": generation,
+                            "snap_run_id": snap_run_id,
+                            "snap_candidate_sha": snap_candidate_sha,
                             "state": semantic}, ensure_ascii=False, sort_keys=True,
                            separators=(",", ":")).encode()
     return "sha256:" + hashlib.sha256(canonical).hexdigest()
@@ -73,7 +66,7 @@ def _snapshot(store, state: gs.GateState, extra: dict) -> str:
             "state": state_doc, "meta": extra,
             "snap_run_id": state.run_id,
             "snap_candidate_sha": state.candidate_sha,
-            "digest": _snapshot_digest(state.generation, state_doc)}
+            "digest": _snapshot_digest(state.generation, state_doc, state.run_id, state.candidate_sha)}
     data = json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
     try:
         return store.snapshot_put(state, data)
@@ -90,7 +83,9 @@ def _snapshot(store, state: gs.GateState, extra: dict) -> str:
                 f"SNAPSHOT_UNVERIFIABLE: gen-{state.generation} 内容不可解析（{exc}）") from exc
         recorded = doc.get("digest") if isinstance(doc, dict) else None
         state_now = doc.get("state") if isinstance(doc, dict) else None
-        if not isinstance(recorded, str) or recorded != _snapshot_digest(state.generation, state_now or {}):
+        if not isinstance(recorded, str) or recorded != _snapshot_digest(
+                state.generation, state_now or {}, doc.get("snap_run_id", ""),
+                doc.get("snap_candidate_sha", "")):
             raise gs.StateError(
                 f"SNAPSHOT_CONFLICT: gen-{state.generation} 已有快照的 digest 与自身内容不符"
                 f"（recorded={recorded!r}）")
@@ -293,19 +288,10 @@ def cmd_confirm_notice(args) -> int:
     if current.phase in gs.BLOCKING_PHASES:
         print(f"❌ 状态为 {current.phase}：禁止确认通知", file=sys.stderr)
         return EXIT_NEEDS_HUMAN
-    state = gs.GateState(
-        run_id=current.run_id, generation=current.generation + 1, epoch=current.epoch,
-        base_sha=current.base_sha, candidate_sha=current.candidate_sha,
-        target_ref=current.target_ref, phase=current.phase,
-        check_status=current.check_status, conclusion=current.conclusion,
-        lock_owner=current.lock_owner, lock_token=current.lock_token,
-        lease_until=current.lease_until, snapshot_digest="",
-        notice_digest=current.notice_digest, notice_acked=True,
-        notice_acked_by=args.run_id, notice_acked_at=time.time(),
-        updated_at=time.time())
-    return _commit(store, state, sha,
-                   {"kind": "notice-confirmed", "digest": args.digest,
-                    "confirmed_by": args.run_id}, run_id=args.run_id)
+    # No trusted human-identity attestation interface exists yet. Never treat a workflow run ID
+    # as a human acknowledgement; keep the notice pending and fail closed.
+    print("❌ 无可信人工身份凭证接口：拒绝将 run_id 当作确认者身份", file=sys.stderr)
+    return EXIT_NEEDS_HUMAN
 
 
 

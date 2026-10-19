@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -51,7 +52,14 @@ def _load_snapshot(store, generation: int) -> dict:
     state = doc.get("state")
     if not isinstance(state, dict):
         raise RecoveryRefused("快照缺少合法 state 字段")
-    actual = _gl_internal._snapshot_digest(doc["generation"], state)
+    snap_run_id = doc.get("snap_run_id")
+    snap_candidate = doc.get("snap_candidate_sha")
+    if not isinstance(snap_run_id, str) or not re.fullmatch(r"[0-9]+-[0-9]+", snap_run_id):
+        raise RecoveryRefused("快照缺少合法 snap_run_id（拒绝旧格式恢复）")
+    if not isinstance(snap_candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", snap_candidate):
+        raise RecoveryRefused("快照缺少合法 snap_candidate_sha（拒绝旧格式恢复）")
+    actual = _gl_internal._snapshot_digest(
+        doc["generation"], state, snap_run_id, snap_candidate)
     if recorded != actual:
         raise RecoveryRefused("快照 digest 不符（可能被篡改或损坏）")
     return doc
@@ -68,17 +76,18 @@ def recover(store, *, from_generation: int, expected_current: int, dry_run: bool
         raise RecoveryRefused("目标快照必须来自更早的 generation（防止重放/回退）")
     snap = _load_snapshot(store, from_generation)
     base_state = gs.GateState.from_doc(snap["state"])
+    snap_run_id = snap["snap_run_id"]
+    snap_candidate = snap["snap_candidate_sha"]
     if base_state.run_id == current.run_id and base_state.epoch >= current.epoch:
         raise RecoveryRefused("检测到恢复重放：同 run_id 的 epoch 未推进")
     # U-03 / D-15 快照必须与当前运行 ID / candidate SHA 绑定
-    snap_run_id = snap.get("snap_run_id", "")
-    if snap_run_id and snap_run_id != current.run_id:
+    if snap_run_id != current.run_id:
         raise RecoveryRefused(
             f"快照 run_id={snap_run_id!r} 与当前 run_id={current.run_id!r} 不匹配")
-    snap_candidate = snap.get("snap_candidate_sha", "")
-    if snap_candidate and snap_candidate != current.candidate_sha:
+    if snap_candidate != current.candidate_sha or base_state.candidate_sha != current.candidate_sha:
         raise RecoveryRefused(
-            f"快照 candidate_sha={snap_candidate} 与当前 {current.candidate_sha} 不匹配")
+            f"快照 candidate_sha 不匹配：binding={snap_candidate!r}, "
+            f"state={base_state.candidate_sha!r}, current={current.candidate_sha!r}")
 
     new_state = gs.GateState(
         run_id=current.run_id, generation=current.generation + 1,
