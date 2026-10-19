@@ -81,6 +81,15 @@ MATRIX: dict[str, tuple[str, str]] = {
     "治理变更绕过分类器": (
         "test_runtime_policy_wiring",
         "PolicyWiringTest.test_governance_change_blocked"),
+    "tree 截断仍继续判定": (
+        "test_runtime_policy_wiring",
+        "CollectorTest.test_truncated_tree_fails_closed"),
+    "平台缺 required context 仍判可合并": (
+        "test_runtime_policy_wiring",
+        "CollectorTest.test_platform_missing_required_context_blocks"),
+    "已关闭 PR 仍进入判定": (
+        "test_runtime_policy_wiring",
+        "CollectorTest.test_closed_pr_fails_closed"),
 }
 
 

@@ -245,5 +245,109 @@ class PolicyWiringTest(unittest.TestCase):
         self.assertTrue(out["production_allowed"])
 
 
+class CollectorTest(unittest.TestCase):
+    """collect_and_evaluate 的采集层：tree 截断/平台未就绪/锁缺失都必须 fail-closed。
+
+    用注入的 `_call` 模拟 GitHub API（不联网），验证真实入口的判定，而不只是纯函数。
+    """
+
+    BASE = "b" * 40
+    HEAD = "c" * 40
+
+    def _fake(self, *, truncated=False, contexts=None, pr_state="open", files=None,
+              reviews=None, lock=None):
+        files = files if files is not None else [
+            {"filename": "ruleset/Apple/Apple.yaml", "status": "modified"}]
+        contexts = contexts if contexts is not None else ["route-a/verify"]
+        routes: dict[str, tuple[int, object]] = {
+            "/repos/o/r/pulls/7": (200, {
+                "number": 7, "state": pr_state, "merged": False,
+                "base": {"ref": "main", "sha": self.BASE,
+                         "repo": {"owner": {"login": "Hawaiine"}}},
+                "head": {"sha": self.HEAD}, "changed_files": len(files)}),
+            "/repos/o/r/git/trees/" + self.BASE + "?recursive=1": (
+                200, {"truncated": truncated,
+                      "tree": [{"path": "ruleset/Apple/Apple.yaml", "type": "blob"}]}),
+            "/repos/o/r/git/trees/" + self.HEAD + "?recursive=1": (
+                200, {"truncated": truncated,
+                      "tree": [{"path": "ruleset/Apple/Apple.yaml", "type": "blob"}]}),
+            "/repos/o/r/rulesets": (200, [{"id": 1, "name": "protect-main",
+                                           "target": "branch", "enforcement": "active"}]),
+            "/repos/o/r/rulesets/1": (200, {
+                "id": 1, "target": "branch", "enforcement": "active",
+                "rules": [{"type": "required_status_checks",
+                           "parameters": {"required_status_checks":
+                                          [{"context": c} for c in contexts]}}]}),
+        }
+        for page in range(1, 3):
+            if page == 1:
+                routes[f"/repos/o/r/pulls/7/files?per_page=100&page=1"] = (200, files)
+            else:
+                routes[f"/repos/o/r/pulls/7/files?per_page=100&page={page}"] = (200, [])
+        if reviews is not None:
+            routes["/repos/o/r/pulls/7/reviews?per_page=100&page=1"] = (200, reviews)
+            routes["/repos/o/r/pulls/7/reviews?per_page=100&page=2"] = (200, [])
+
+        def fake_call(repo, token, path):
+            return routes.get(path, (404, {"message": "not found"}))
+
+        return fake_call
+
+    def _run(self, fake, *, mode="merge", generation=1, production=True, reviews=()):
+        from unittest import mock
+        import gate_state as gs
+
+        class Store:
+            backend = "stub"
+
+            def __init__(self, *a, **k):
+                pass
+
+            def read(self):
+                state = gs.GateState(run_id="9-9", generation=generation, epoch=0,
+                                     base_sha=self_base, candidate_sha=self_head,
+                                     target_ref="refs/heads/candidate/rules-update",
+                                     phase="final-review", check_status="completed",
+                                     conclusion="success")
+                return state, "sha"
+
+        self_base, self_head = self.BASE, self.HEAD
+        with mock.patch.object(ecp, "_call", fake), \
+                mock.patch.object(ecp.vc, "_call", fake), \
+                mock.patch.object(ecp.vrc, "verify", return_value=(True, {"gate_mode": "check-run"}, [])), \
+                mock.patch.object(gs, "GitHubRefStore", Store):
+            return ecp.collect_and_evaluate(
+                repo="o/r", pr=7, base_sha=self.BASE, head_sha=self.HEAD,
+                run_id="9-9", generation=generation, token="t",
+                mode=mode, production_mode=production)
+
+    def test_happy_path_existing_data_is_eligible_with_production(self):
+        out = self._run(self._fake(), mode="merge")
+        self.assertEqual(out["change_class"], cc.EXISTING_DATA_ONLY)
+        self.assertEqual(out["decision"], "ELIGIBLE_EXISTING_DATA")
+        self.assertTrue(out["production_allowed"])
+
+    def test_truncated_tree_fails_closed(self):
+        with self.assertRaises(ecp.PolicyError):
+            self._run(self._fake(truncated=True))
+
+    def test_platform_missing_required_context_blocks(self):
+        out = self._run(self._fake(contexts=["general-pr-verify"]), mode="merge")
+        self.assertFalse(out["evidence"]["platform_ok"])
+        self.assertEqual(out["decision"], "BLOCKED")
+        self.assertIn("PLATFORM_NOT_READY", out["reason_codes"])
+        self.assertFalse(out["production_allowed"])
+
+    def test_closed_pr_fails_closed(self):
+        with self.assertRaises(ecp.PolicyError):
+            self._run(self._fake(pr_state="closed"))
+
+    def test_verify_mode_ignores_merge_decision(self):
+        """verify 模式只看分类/审批；平台未就绪不应把数据校验判死。"""
+        out = self._run(self._fake(contexts=["general-pr-verify"]), mode="verify")
+        self.assertTrue(out["verification_ok"])
+        self.assertEqual(out["decision"], "BLOCKED")
+
+
 if __name__ == "__main__":
     unittest.main()
