@@ -39,14 +39,31 @@ class PolicyValidationTest(unittest.TestCase):
                 r = apol.validate_doc(self.valid(approver_ids=ids))
                 self.assertFalse(r.ok)
 
+    def test_policy_cannot_expand_trusted_approver_set(self):
+        self.assertFalse(apol.validate_doc(self.valid(approvers=["Hawaiine", "other"], approver_ids=[152380613, 999])).ok)
+        self.assertIn("APPROVAL_POLICY_TRUSTED_APPROVER_SET_MISMATCH",
+                      apol.validate_doc(self.valid(approvers=["Hawaiine", "other"], approver_ids=[152380613, 999])).reason_codes)
+
+    def test_required_approvals_uses_policy_count(self):
+        doc = self.valid(required_approvals=2)
+        result = apol.validate_doc(doc)
+        self.assertFalse(result.ok)
+        self.assertIn("APPROVAL_POLICY_REQUIRED_EXCEEDS_APPROVERS:2>1", result.reason_codes)
+    def test_cli_no_longer_accepts_login_only_approver(self):
+        import subprocess, sys
+        p = subprocess.run([sys.executable, str(ROOT / "scripts/ci/verify_approval.py"),
+                            "--repo", "o/r", "--pr", "1", "--head-sha", "a" * 40,
+                            "--approver", "Hawaiine", "--reviews-json", "-"],
+                           input="[]", text=True, capture_output=True)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("approver-id", p.stderr)
+
     def test_login_override_cannot_grant_approval(self):
         who, required, result = apol.resolve_approvers(explicit="Hawaiine")
         self.assertEqual(who, ())
         self.assertEqual(required, 0)
         self.assertFalse(result.ok)
         self.assertIn("APPROVAL_POLICY_LOGIN_OVERRIDE_FORBIDDEN", result.reason_codes)
-
-
 class UserIdApprovalTest(unittest.TestCase):
     HEAD = "a" * 40
 

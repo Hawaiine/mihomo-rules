@@ -41,40 +41,6 @@ def latest_by_user(reviews: list[dict]) -> dict[str, dict]:
     return latest
 
 
-def verify_approval(reviews: list[dict], *, head_sha: str, approver: str,
-                    complete: bool = True) -> tuple[bool, list[str], dict]:
-    problems: list[str] = []
-    evidence: dict = {"head_sha": head_sha, "approver": approver, "reviews": len(reviews or [])}
-    if not complete:
-        return False, ["REVIEWS_PAGINATION_INCOMPLETE"], evidence
-    if not isinstance(reviews, list):
-        return False, ["REVIEWS_MALFORMED"], evidence
-    if not approver:
-        return False, ["APPROVER_NOT_CONFIGURED"], evidence
-
-    latest = latest_by_user(reviews)
-    review = latest.get(approver)
-    if review is None:
-        return False, ["APPROVAL_MISSING"], evidence
-
-    state = review.get("state")
-    commit_id = review.get("commit_id")
-    utype = ((review.get("user") or {}).get("type"))
-    evidence.update({"state": state, "commit_id": commit_id, "user_type": utype,
-                     "submitted_at": review.get("submitted_at")})
-    if utype != "User":
-        problems.append("APPROVER_NOT_HUMAN")
-    if state in INVALIDATING_STATES:
-        problems.append("APPROVAL_INVALIDATED")
-    elif state != ALLOWED_STATE:
-        problems.append("APPROVAL_NOT_APPROVED")
-    if not isinstance(commit_id, str) or len(commit_id) != 40:
-        problems.append("APPROVAL_MISSING_COMMIT")
-    elif commit_id != head_sha:
-        problems.append("APPROVAL_STALE")
-    return not problems, problems, evidence
-
-
 def latest_by_id(reviews: list[dict]) -> dict[int, dict]:
     latest: dict[int, dict] = {}
     for review in reviews:
@@ -181,7 +147,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", required=True)
     ap.add_argument("--pr", type=int, required=True)
     ap.add_argument("--head-sha", required=True)
-    ap.add_argument("--approver", required=True)
+    ap.add_argument("--approver-id", type=int, action="append", required=True,
+                    help="可信 GitHub user.id；可重复指定多个")
     ap.add_argument("--reviews-json", help="离线模式：直接给 reviews 数组文件")
     ap.add_argument("--json", type=lambda p: open(p, "w", encoding="utf-8"))
     args = ap.parse_args(argv)
@@ -195,8 +162,9 @@ def main(argv: list[str] | None = None) -> int:
                 _default_getter, repo=args.repo, pr=args.pr,
                 token=os.environ.get("GITHUB_TOKEN", ""),
                 api_base=os.environ.get("GITHUB_API_URL", "https://api.github.com"))
-        ok, problems, evidence = verify_approval(reviews, head_sha=args.head_sha,
-                                                 approver=args.approver, complete=complete)
+        ok, problems, evidence = verify_approvals(
+            reviews, head_sha=args.head_sha, approver_ids=args.approver_id,
+            required=len(args.approver_id), complete=complete)
     except (OSError, json.JSONDecodeError, ApprovalError) as exc:
         ok, problems, evidence = False, [f"ERROR:{exc}"], {}
     report = {"ok": ok, "problems": problems, "evidence": evidence}

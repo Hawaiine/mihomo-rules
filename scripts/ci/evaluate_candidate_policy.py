@@ -66,6 +66,7 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
         "platform_ok": bool(platform_ok), "platform": platform_evidence or {},
         "production_mode": bool(production_mode),
         "approval": {"approver": approver, "approvers": list(approvers),
+                     "approver_ids": list(approver_ids),
                      "required_approvals": required_approvals,
                      "policy": policy_evidence or {},
                      "review_count": len(reviews or []),
@@ -76,14 +77,14 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
     approval_reasons: list[str] = []
     if change_class == cc.NEW_RULESET:
         evidence["approval"].update({"approver_ids": list(approver_ids)})
-        who = list(approvers) or ([approver] if approver else [])
-        need = required_approvals if approvers else 1
-        if list(policy_problems or []):
+        if not approver_ids or list(approvers) or approver:
+            approval_reasons = ["APPROVAL_POLICY_ID_ONLY_REQUIRED"]
+        elif list(policy_problems or []):
             approval_reasons = list(policy_problems)
         else:
             approval_ok, approval_reasons, ap_ev = va.verify_approvals(
                 reviews or [], head_sha=head_sha, approver_ids=approver_ids,
-                required=need, complete=review_complete)
+                required=required_approvals, complete=review_complete)
             evidence["approval"].update(ap_ev)
 
     decision = dm.decide(change_class=change_class, checks_ok=checks_ok, head_sha_ok=True,

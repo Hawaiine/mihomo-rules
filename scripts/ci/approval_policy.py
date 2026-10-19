@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 SCHEMA = "mihomo-rules-approval-policy"
 VERSION = 1
 DEFAULT_PATH = ".github/approval-policy.json"
+TRUSTED_APPROVER_ID = 152380613
+TRUSTED_APPROVER_LOGIN = "Hawaiine"
 
 REQUIRED_FIELDS = ("schema", "version", "approvers", "approver_ids", "required_approvals",
                    "allow_bot_approvers", "head_binding", "on_missing")
@@ -132,6 +134,11 @@ def validate_doc(doc: object, *, source: str = "") -> PolicyResult:
             # 空名单（或全部条目非法）不是"不需要审批"，而是"没有可用审批人"——
             # 必须显式阻断新增规则集路径，绝不能退化成"无需批准"。
             problems.append("APPROVAL_POLICY_UNCONFIGURED")
+
+    if approver_ids != [TRUSTED_APPROVER_ID]:
+        problems.append("APPROVAL_POLICY_TRUSTED_APPROVER_SET_MISMATCH")
+    if approvers != [TRUSTED_APPROVER_LOGIN]:
+        problems.append("APPROVAL_POLICY_TRUSTED_APPROVER_LOGIN_MISMATCH")
 
     required = doc.get("required_approvals")
     if not isinstance(required, int) or isinstance(required, bool) or required < 1:

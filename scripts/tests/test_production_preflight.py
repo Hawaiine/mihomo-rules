@@ -85,7 +85,7 @@ class ReportBase(unittest.TestCase):
 
     def write_policy(self, **over):
         doc = {"schema": "mihomo-rules-approval-policy", "version": 1,
-               "approvers": ["octocat"], "approver_ids": [1], "required_approvals": 1,
+               "approvers": ["Hawaiine"], "approver_ids": [152380613], "required_approvals": 1,
                "allow_bot_approvers": False, "head_binding": "exact",
                "on_missing": "fail-closed"}
         doc.update(over)
@@ -389,7 +389,7 @@ class ApprovalPolicyTest(ReportBase):
         r = self.report(World())
         self.assertTrue(r["checks"]["approval_policy"]["ok"], self.codes(r))
         self.assertEqual(r["checks"]["approval_policy"]["evidence"]["policy"]["approvers"],
-                         ["octocat"])
+                         ["Hawaiine"])
 
 
 if __name__ == "__main__":

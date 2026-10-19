@@ -201,7 +201,7 @@ class PolicyWiringTest(unittest.TestCase):
     """D-NEW-1：分类/审批/决策在运行时入口被真实执行（纯函数层）。"""
 
     def evaluate(self, change_class, *, production=False, platform=True,
-                 reviews=None, approver="Hawaiine", complete=True):
+                 reviews=None, approver="", complete=True):
         return ecp.evaluate_policy(
             repo="Hawaiine/mihomo-rules", pr=29, base_sha="b" * 40, head_sha=HEAD,
             run_id=RUN_ID, generation=1, change_class=change_class, changed_files=3,
@@ -226,7 +226,7 @@ class PolicyWiringTest(unittest.TestCase):
     def test_new_ruleset_without_approval_blocked(self):
         out = self.evaluate(cc.NEW_RULESET)
         self.assertEqual(out["decision"], "BLOCKED")
-        self.assertTrue(any(c.startswith("APPROVAL_MISSING") for c in out["reason_codes"]),
+        self.assertTrue(any(c.startswith("APPROVAL_") for c in out["reason_codes"]),
                         out["reason_codes"])
 
     def test_new_ruleset_with_head_approval_eligible(self):
@@ -234,6 +234,21 @@ class PolicyWiringTest(unittest.TestCase):
                     "user": {"id": 152380613, "login": "Hawaiine", "type": "User"}}]
         out = self.evaluate(cc.NEW_RULESET, reviews=reviews, production=True)
         self.assertEqual(out["decision"], "ELIGIBLE_NEW_RULESET_AFTER_APPROVAL")
+
+    def test_required_approvals_not_lowered_by_empty_display_names(self):
+        reviews = [{"state": "APPROVED", "commit_id": "a" * 40,
+                    "submitted_at": "2026-10-19T00:00:00Z",
+                    "user": {"id": 152380613, "login": "Hawaiine", "type": "User"}}]
+        out = ecp.evaluate_policy(repo="o/r", pr=1, base_sha="b" * 40, head_sha="a" * 40,
+            run_id="1-1", generation=1, change_class=cc.NEW_RULESET, changed_files=1,
+            reviews=reviews, approvers=(), approver_ids=[152380613], required_approvals=2,
+            policy_evidence={"ok": True}, checks_ok=True, lock_state="held", platform_ok=True)
+        self.assertEqual(out["decision"], "BLOCKED")
+        self.assertTrue(any("APPROVAL" in x for x in out["reason_codes"]))
+
+    def test_existing_data_does_not_require_approval(self):
+        out = self.evaluate(cc.EXISTING_DATA_ONLY)
+        self.assertEqual(out["decision"], "ELIGIBLE_EXISTING_DATA")
 
     def test_platform_not_ready_blocks_and_forbids_production(self):
         out = self.evaluate(cc.EXISTING_DATA_ONLY, production=True, platform=False)

@@ -14,19 +14,19 @@ import verify_approval as va  # noqa: E402
 
 HEAD = "c" * 40
 OLD = "d" * 40
-APPROVER = "Hawaiine"
+APPROVER_ID = 152380613
 
 
-def review(state="APPROVED", *, login=APPROVER, utype="User", commit=HEAD, when="2026-10-18T04:00:00Z"):
+def review(state="APPROVED", *, login="Hawaiine", user_id=APPROVER_ID, utype="User", commit=HEAD, when="2026-10-18T04:00:00Z"):
     return {"state": state, "commit_id": commit, "submitted_at": when,
-            "user": {"login": login, "type": utype}}
+            "user": {"id": user_id, "login": login, "type": utype}}
 
 
 class ApprovalTest(unittest.TestCase):
     def ok(self, reviews, **kw):
         kw.setdefault("head_sha", HEAD)
-        kw.setdefault("approver", APPROVER)
-        return va.verify_approval(reviews, **kw)
+        kw.setdefault("approver_ids", [APPROVER_ID])
+        return va.verify_approvals(reviews, **kw)
 
     def test_approved_on_head(self):
         ok, problems, _ = self.ok([review()])
@@ -35,39 +35,39 @@ class ApprovalTest(unittest.TestCase):
     def test_missing_review(self):
         ok, problems, _ = self.ok([])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_MISSING", problems)
+        self.assertTrue(any("APPROVAL_MISSING_ID" in p for p in problems))
 
     def test_stale_commit(self):
         ok, problems, _ = self.ok([review(commit=OLD)])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_STALE", problems)
+        self.assertTrue(any("APPROVAL_STALE_ID" in p for p in problems))
 
     def test_missing_commit_field(self):
         item = review()
         item.pop("commit_id")
         ok, problems, _ = self.ok([item])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_MISSING_COMMIT", problems)
+        self.assertTrue(any("APPROVAL_MISSING_COMMIT_ID" in p for p in problems))
 
     def test_dismissed_latest_wins(self):
         ok, problems, _ = self.ok([review(), review("DISMISSED", when="2026-10-18T05:00:00Z")])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_INVALIDATED", problems)
+        self.assertIn("APPROVAL_NOT_CURRENT_ID", problems[0])
 
     def test_changes_requested_latest_wins(self):
         ok, problems, _ = self.ok([review(), review("CHANGES_REQUESTED", when="2026-10-18T06:00:00Z")])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_INVALIDATED", problems)
+        self.assertTrue(any("CHANGES_REQUESTED_PRESENT" in p for p in problems))
 
     def test_bot_approver_rejected(self):
         ok, problems, _ = self.ok([review(utype="Bot")])
         self.assertFalse(ok)
-        self.assertIn("APPROVER_NOT_HUMAN", problems)
+        self.assertTrue(any("APPROVER_NOT_HUMAN_ID" in p for p in problems))
 
     def test_other_user_approval_not_counted(self):
-        ok, problems, _ = self.ok([review(login="someone-else")])
+        ok, problems, _ = self.ok([review(login="someone-else", user_id=999999)])
         self.assertFalse(ok)
-        self.assertIn("APPROVAL_MISSING", problems)
+        self.assertTrue(any("APPROVAL_MISSING_ID" in p for p in problems))
 
     def test_incomplete_pagination_rejected(self):
         ok, problems, _ = self.ok([review()], complete=False)
@@ -75,9 +75,9 @@ class ApprovalTest(unittest.TestCase):
         self.assertIn("REVIEWS_PAGINATION_INCOMPLETE", problems)
 
     def test_no_approver_configured(self):
-        ok, problems, _ = va.verify_approval([review()], head_sha=HEAD, approver="")
+        ok, problems, _ = va.verify_approvals([review()], head_sha=HEAD, approver_ids=[])
         self.assertFalse(ok)
-        self.assertIn("APPROVER_NOT_CONFIGURED", problems)
+        self.assertIn("APPROVER_ID_POLICY_INVALID", problems)
 
 
 class DecideTest(unittest.TestCase):
