@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 """verify_approval.py — 人工审批校验（可信代码；只读 GitHub review API）。
 
-规则（全部满足才算"当前 head 已获有效人工批准"）：
-
-* 审批者是**已核实的真实人类**：`user.login` 精确等于 `--approver` 且 `user.type == "User"`；
-* 取该用户**最新**一条 review（按 `submitted_at`，同时间取列表中后出现者）；
-* 该条状态必须是 `APPROVED`；
-* 该条的 `commit_id` 必须**精确等于当前 PR head SHA**（缺失即失败）；
-* 后续若有 `DISMISSED` / `CHANGES_REQUESTED`，因"取最新"自然失效；
-* review 列表必须是**完整分页**结果，否则视为无法验证。
-
-不信任 PR body、label、commit message、分支名或 workflow 输出。
+授权只由 ``verify_approvals()`` 按策略中的不可变 GitHub user ID 判定；login 只用于展示。
+最新 review 必须来自 ``type == "User"``、状态 ``APPROVED``，且 ``commit_id`` 精确等于
+当前 PR head SHA；不完整分页、缺失身份字段或不合法记录均 fail-closed。
+不信任 PR body、label、commit message、分支名、login 输入或 workflow 输出。
 """
 from __future__ import annotations
 
@@ -22,23 +16,10 @@ import urllib.error
 import urllib.request
 
 ALLOWED_STATE = "APPROVED"
-INVALIDATING_STATES = {"DISMISSED", "CHANGES_REQUESTED"}
 
 
 class ApprovalError(RuntimeError):
     pass
-
-
-def latest_by_user(reviews: list[dict]) -> dict[str, dict]:
-    latest: dict[str, dict] = {}
-    for review in reviews:
-        login = ((review.get("user") or {}).get("login") or "")
-        if not login:
-            continue
-        prev = latest.get(login)
-        if prev is None or str(review.get("submitted_at") or "") >= str(prev.get("submitted_at") or ""):
-            latest[login] = review
-    return latest
 
 
 def latest_by_id(reviews: list[dict]) -> dict[int, dict]:
@@ -59,8 +40,7 @@ def verify_approvals(reviews: list[dict], *, head_sha: str, approvers=None,
     """多审批人版本：按显式策略名单核验，并阻断任何"请求变更"。
 
     与 `verify_approval` 的差异：
-    * 名单来自显式策略（不推断 owner）；
-    * 需要 `required` 个**不同**审批人各自的最新 review 都 APPROVED 且 commit_id == head；
+    * 需要 `required` 个**不同的受信 user ID** 各自最新 review 均 APPROVED 且 `commit_id == head`；
     * **任何人**在当前 head 上的最新 review 为 CHANGES_REQUESTED 都阻断（不能靠换人绕过）；
     * 审批人账号类型默认必须是 `User`（`allow_bots` 仅用于策略显式允许的离线测试）。
     """
@@ -147,24 +127,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", required=True)
     ap.add_argument("--pr", type=int, required=True)
     ap.add_argument("--head-sha", required=True)
-    ap.add_argument("--approver-id", type=int, action="append", required=True,
-                    help="可信 GitHub user.id；可重复指定多个")
-    ap.add_argument("--reviews-json", help="离线模式：直接给 reviews 数组文件")
+    ap.add_argument("--policy", default=".github/approval-policy.json",
+                    help="可信审批策略；缺失或不一致时 fail-closed")
     ap.add_argument("--json", type=lambda p: open(p, "w", encoding="utf-8"))
     args = ap.parse_args(argv)
 
     try:
-        if args.reviews_json:
-            reviews = json.loads(open(args.reviews_json, encoding="utf-8").read())
-            complete = True
+        import approval_policy as apol
+        policy_result = apol.load_policy(args.policy)
+        if not policy_result.ok or policy_result.policy is None:
+            ok, problems, evidence = False, list(policy_result.reason_codes), {
+                "policy": policy_result.to_dict(), "head_sha": args.head_sha}
         else:
             reviews, complete = collect_reviews(
                 _default_getter, repo=args.repo, pr=args.pr,
                 token=os.environ.get("GITHUB_TOKEN", ""),
                 api_base=os.environ.get("GITHUB_API_URL", "https://api.github.com"))
-        ok, problems, evidence = verify_approvals(
-            reviews, head_sha=args.head_sha, approver_ids=args.approver_id,
-            required=len(args.approver_id), complete=complete)
+            ok, problems, evidence = verify_approvals(
+                reviews, head_sha=args.head_sha,
+                approver_ids=policy_result.policy.approver_ids,
+                required=policy_result.policy.required_approvals,
+                complete=complete)
+            evidence["policy"] = policy_result.to_dict()
     except (OSError, json.JSONDecodeError, ApprovalError) as exc:
         ok, problems, evidence = False, [f"ERROR:{exc}"], {}
     report = {"ok": ok, "problems": problems, "evidence": evidence}

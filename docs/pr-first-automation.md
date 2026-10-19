@@ -68,18 +68,32 @@ GitHub 的两条硬事实：
 （`scripts/ci/approval_policy.py` 解析）：
 
 ```json
-{"schema":"mihomo-rules-approval-policy","version":1,"approvers":[],
- "required_approvals":1,"allow_bot_approvers":false,
- "head_binding":"exact","on_missing":"fail-closed"}
+{
+  "schema": "mihomo-rules-approval-policy",
+  "version": 1,
+  "approvers": ["Hawaiine"],
+  "approver_ids": [152380613],
+  "required_approvals": 1,
+  "allow_bot_approvers": false,
+  "head_binding": "exact",
+  "on_missing": "fail-closed"
+}
 ```
 
-* 空 `approvers` = **未配置**，不是"无需审批"：新增规则集 PR 一律 BLOCKED
+* `approver_ids` 是唯一授权依据；当前只允许用户本人 `Hawaiine`（GitHub user ID `152380613`）。
+  `approvers` 中的 login 只用于审计展示，不单独授予权限；策略校验器会拒绝名单扩展或替换。
+* 空 `approvers` 或空 `approver_ids` = **未配置**，不是“无需审批”：新增规则集 PR 一律 BLOCKED
   （`APPROVAL_POLICY_UNCONFIGURED`），并在 preflight 中作为独立检查项暴露；
 * 未知字段、schema/version 不符、`allow_bot_approvers=true`、`head_binding!=exact`、
   `on_missing!=fail-closed` 全部拒绝；
-* 多人审批：`required_approvals` 个**不同**审批人各自的最新 review 都必须 APPROVED 且
-  `commit_id == 当前 head`；任何人当前 head 上 `CHANGES_REQUESTED` 都阻断；
-* 显式 `--approver` 视为人工显式输入（1 人），仍不读取 owner。
+* 多人审批：`required_approvals` 个不同授权 user ID 的最新 review 必须是 `APPROVED`，
+  `user.type == "User"`，且 `commit_id == 当前 head`；任何人当前 head 上 `CHANGES_REQUESTED` 都阻断；
+* 显式 `--approver` login 覆盖已禁止（`APPROVAL_POLICY_LOGIN_OVERRIDE_FORBIDDEN`）；
+  `verify_approval.py` CLI 只接受 `--approver-id` 并使用相同 ID-based 校验；
+* CLI 参数、命令成功、workflow 输出、普通评论或机器人行为均不构成真实人工审批；
+  新增 Ruleset/治理变更必须有授权用户对当前 head SHA 提交的真实 `APPROVED` review；
+* `EXISTING_DATA_ONLY` 普通日常数据更新不进入人工审批分支，既定自动化路径保持不变。
+
 
 ## 2.2 认证来源与逐 job 最小权限（本轮实测对账）
 

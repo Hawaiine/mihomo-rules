@@ -49,14 +49,22 @@ class PolicyValidationTest(unittest.TestCase):
         result = apol.validate_doc(doc)
         self.assertFalse(result.ok)
         self.assertIn("APPROVAL_POLICY_REQUIRED_EXCEEDS_APPROVERS:2>1", result.reason_codes)
-    def test_cli_no_longer_accepts_login_only_approver(self):
+    def test_approval_policy_doc_matches_enforced_id_schema(self):
+        text = (ROOT / "docs" / "pr-first-automation.md").read_text(encoding="utf-8")
+        self.assertIn('"approver_ids": [152380613]', text)
+        self.assertIn("login 覆盖已禁止", text)
+        self.assertNotIn("视为人工显式输入", text)
+        self.assertIn("EXISTING_DATA_ONLY", text)
+
+    def test_cli_no_longer_accepts_login_override_or_inline_id(self):
         import subprocess, sys
-        p = subprocess.run([sys.executable, str(ROOT / "scripts/ci/verify_approval.py"),
-                            "--repo", "o/r", "--pr", "1", "--head-sha", "a" * 40,
-                            "--approver", "Hawaiine", "--reviews-json", "-"],
-                           input="[]", text=True, capture_output=True)
-        self.assertNotEqual(p.returncode, 0)
-        self.assertIn("approver-id", p.stderr)
+        base = [sys.executable, str(ROOT / "scripts/ci/verify_approval.py"),
+                "--repo", "o/r", "--pr", "1", "--head-sha", "a" * 40]
+        for extra in (["--approver", "Hawaiine"], ["--approver-id", "152380613"], ["--reviews-json", "-"]):
+            with self.subTest(extra=extra):
+                p = subprocess.run(base + list(extra), input="[]", text=True, capture_output=True)
+                self.assertNotEqual(p.returncode, 0)
+                self.assertIn("policy", p.stderr.lower())
 
     def test_login_override_cannot_grant_approval(self):
         who, required, result = apol.resolve_approvers(explicit="Hawaiine")
