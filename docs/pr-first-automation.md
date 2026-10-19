@@ -107,6 +107,7 @@ GitHub 的两条硬事实：
 | `verify_workflow_policy.py` | **结构化**判定：门控必须是真实 `if`；必需 job 集合/命名一致；auto-merge 先验证后 mutation；publish 权限恰为 `{contents: write, pull-requests: write, statuses: write}`；**禁止 App/PAT 认证路径**；禁止直推 main；`daily-sync.yml` 必须是唯一入口且自身零写入；全仓只允许一个 `schedule` |
 | `verify_policy_baseline.py` | 用 **PR base 提交** 的 guard 逻辑校验候选树；删除必需检查/削弱来源绑定/删除或改名 job/新增 `pull_request_target`/`write-all`/直推 main/删除测试 均硬失败 |
 | `verify_candidate.py` | Route A 运行期受信验证（防自我削弱 + 规则集/配置自洽），结果发布为 `route-a/verify` |
+| `verify_production_prerequisites.py` | **生产前置只读检查器**：main Ruleset 是否真的覆盖默认分支、是否含 `route-a/verify` 且来源为 GitHub Actions、必需检查清单与 workflow 是否一致、Actions 默认权限、三个生产开关、`state/gate` 与快照可恢复性。任何一项读不到即 `UNVERIFIABLE`（exit 3），绝不 READY |
 
 `daily-sync.yml` 的历史直推实现（直接推送默认分支）**已删除**；现在它只有
 `workflow_call` 委派，守卫逐行扫描该文件，出现任何写操作即失败。
@@ -123,6 +124,11 @@ GitHub 的两条硬事实：
 
 ## 6. 尚未验证 / 治理边界
 
+* **平台契约与设计存在已知差异（2026-10-19 只读实测）**：`protect-main` 目前只有
+  `deletion` / `non_fast_forward` / `required_status_checks` 三条规则，**没有 `pull_request`
+  规则**（即不强制人工 review），也没有 `route-a/verify` context。前者是"是否要求人工审阅"
+  的治理选择（需用户裁定），后者会让候选 bot PR 永久无法满足门禁（R8）。
+  两者都必须通过平台写入修正，`verify_production_prerequisites.py` 会把它们判为未就绪。
 * Ruleset 未创建、auto-merge 未开启、"Actions 创建 PR" 开关未开启、定时更新关闭。
 * `verify_candidate` / `publish_status` / 状态锁的协议语义由**进程内 stub + 单测**覆盖，
   **不代表真实平台端到端成功**。
