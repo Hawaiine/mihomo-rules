@@ -114,6 +114,15 @@ MATRIX: dict[str, tuple[str, str]] = {
     "Ruleset 详情读不到": (
         "test_platform_rulesets",
         "ReadFailureTest.test_detail_403_blocks_everything"),
+    "生产前置检查误判就绪": (
+        "test_production_preflight",
+        "RulesetNegativeTest.test_other_branch_only_is_blocked"),
+    "生产开关值不可解释": (
+        "test_production_preflight",
+        "ActionsAndSwitchesTest.test_unknown_switch_value_fails_closed"),
+    "状态 ref 损坏却继续": (
+        "test_production_preflight",
+        "GateStateTest.test_corrupt_payload_is_blocked"),
     "发布者 type 未校验": (
         "test_publish_run_status",
         "Case.test_creator_type_user_is_rejected"),
