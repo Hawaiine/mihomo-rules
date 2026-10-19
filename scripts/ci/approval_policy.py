@@ -11,8 +11,9 @@
 {
   "schema": "mihomo-rules-approval-policy",
   "version": 1,
-  "approvers": ["<github-login>", ...],     # 允许批准新增规则集的人类账号
-  "required_approvals": 1,                  # 1..len(approvers)
+  "approvers": ["<github-login>", ...],     # 审计展示字段，不单独授予权限
+  "approver_ids": [<github-user-id>, ...],  # 唯一授权键（GitHub 不可变 user.id）
+  "required_approvals": 1,                  # 1..len(approver_ids)
   "allow_bot_approvers": false,             # 必须为 false（Route A 不引入 App/bot 审批）
   "head_binding": "exact",                  # 审批必须精确绑定当前 PR head
   "on_missing": "fail-closed"                # 策略缺失/无效时的行为，必须 fail-closed
