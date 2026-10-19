@@ -9,8 +9,11 @@
 
 ## 1. 方法与边界
 
-* 覆盖范围：本 PR 相对 main 的**全部 57 个文件**（53 个既有变更 + 本轮新增的
+* 覆盖范围：审计对象为**代码/测试/文档共 57 个文件**（53 个既有变更 + 本轮新增的
   `platform_rulesets.py`、`verify_production_prerequisites.py` 及两个测试文件）。
+  该 57 个文件**不含**本文件、`pr29-production-preflight.md`、`pr29-four-gate-acceptance.md`
+  这三份审计产物本身；加上它们，PR #29 当前共 **60 个变更文件**（`[本轮实测]` PR API
+  `changed_files=60`）。
 * 三类证据：
   1. **结构扫描**：对 57 个文件做危险模式扫描（`|| true`、`continue-on-error`、
      `shell=True`、`eval/exec`、`APP_TOKEN`、`persist-credentials: true`、
@@ -37,7 +40,7 @@ GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} → 14 处
 
 ---
 
-## 2. 覆盖清单（57/57）
+## 2. 覆盖清单（代码/测试/既有文档 57/57）
 
 | # | 文件 | 行数 | 风险 | 审计动作 |
 |---|---|---|---|---|
