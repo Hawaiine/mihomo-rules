@@ -90,7 +90,8 @@ class Case(unittest.TestCase):
             f"POST /repos/o/r/statuses/{HEAD}": (201, {"state": "success"}),
             f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
                 {"context": "route-a/verify", "state": "success",
-                 "creator": {"login": "github-actions[bot]"}}]),
+                 "target_url": "https://github.com/o/r/actions/runs/9",
+                 "creator": {"login": "github-actions[bot]", "type": "Bot"}}]),
         }
         routes.update(over.get("routes", {}))
         Stub.routes = routes
@@ -173,6 +174,32 @@ class Case(unittest.TestCase):
         Stub.routes["GET /repos/o/r/pulls/29"] = (200, self.pr_doc(head="z" * 40))
         with self.assertRaises(prs.Refused):
             prs.verify_pr(self.client, 29, HEAD)
+
+    def test_creator_type_user_is_rejected(self):
+        """login 对得上但 type=User → 必须拒绝（防同名冒充）。"""
+        self.base_routes(routes={f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
+            {"context": "route-a/verify", "state": "success",
+             "target_url": "https://github.com/o/r/actions/runs/9",
+             "creator": {"login": "github-actions[bot]", "type": "User"}}])})
+        with self.assertRaises(prs.Refused):
+            self.publish()
+
+    def test_missing_creator_type_is_rejected(self):
+        self.base_routes(routes={f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
+            {"context": "route-a/verify", "state": "success",
+             "target_url": "https://github.com/o/r/actions/runs/9",
+             "creator": {"login": "github-actions[bot]"}}])})
+        with self.assertRaises(prs.Refused):
+            self.publish()
+
+    def test_status_from_other_run_is_rejected(self):
+        """同一 context 但 target_url 指向别的 run → 不能当成本次验证成功。"""
+        self.base_routes(routes={f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
+            {"context": "route-a/verify", "state": "success",
+             "target_url": "https://github.com/o/r/actions/runs/1",
+             "creator": {"login": "github-actions[bot]", "type": "Bot"}}])})
+        with self.assertRaises(prs.Refused):
+            self.publish()
 
     def test_duplicate_status_creator_rejected(self):
         self.base_routes(routes={f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [

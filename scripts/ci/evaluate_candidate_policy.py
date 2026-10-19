@@ -29,6 +29,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import classify_change as cc          # noqa: E402
 import decide_merge as dm             # noqa: E402
+import platform_rulesets as pr        # noqa: E402
 import verify_approval as va          # noqa: E402
 import verify_candidate as vc         # noqa: E402  （共用完整分页的变更清单读取）
 import verify_required_checks as vrc  # noqa: E402
@@ -124,41 +125,25 @@ def _tree_paths(repo: str, token: str, sha: str) -> set[str]:
 
 
 def _platform_state(repo: str, token: str) -> tuple[bool, dict]:
-    """只读检查仓库 rulesets 是否把 `route-a/verify` 作为目标分支的必需 context。
+    """只读判定目标分支（main）是否**真的**要求 `route-a/verify`。
 
-    读不到（403/404/字段缺失）一律视为**未就绪**，绝不以"大概已配置"放行。
+    旧实现把所有 active branch ruleset 的 context 汇总后做"成员判断"，会把
+    **只作用于其他分支**的规则误当成 main 的规则（P0/P1-B）。现在统一走
+    `platform_rulesets`：校验 target/enforcement/conditions 覆盖、context 精确相等、
+    以及 `integration_id`（来源）——任何读不到/说不清都判未就绪。
     """
-    status, items = _call(repo, token, f"/repos/{repo}/rulesets")
-    if status != 200 or not isinstance(items, list):
-        return False, {"readable": False, "http": status,
-                       "reason": "无法读取 rulesets（需要只读管理权限）"}
-    evidence: dict = {"readable": True, "rulesets": [], "required_contexts": []}
-    for item in items:
-        if not isinstance(item, dict) or not item.get("id"):
-            continue
-        rid = item["id"]
-        st, doc = _call(repo, token, f"/repos/{repo}/rulesets/{rid}")
-        entry = {"id": rid, "name": item.get("name"), "target": item.get("target"),
-                 "enforcement": item.get("enforcement"), "readable": st == 200}
-        contexts: list[str] = []
-        if st == 200 and isinstance(doc, dict):
-            entry["enforcement"] = doc.get("enforcement", entry["enforcement"])
-            for rule in doc.get("rules") or []:
-                if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
-                    continue
-                for check in (rule.get("parameters") or {}).get("required_status_checks") or []:
-                    ctx = (check or {}).get("context")
-                    if isinstance(ctx, str) and ctx:
-                        contexts.append(ctx)
-        entry["contexts"] = contexts
-        evidence["rulesets"].append(entry)
-        if item.get("target") == "branch" and item.get("enforcement") == "active":
-            evidence["required_contexts"].extend(contexts)
-    ok = STATUS_CONTEXT in evidence["required_contexts"]
-    if not ok:
-        evidence["reason"] = (f"active branch ruleset 未包含 {STATUS_CONTEXT}"
-                              f"（实际 {sorted(set(evidence['required_contexts']))}）")
-    return ok, evidence
+    try:
+        out = pr.fetch_and_evaluate(repo, token, target_branch="main",
+                                    required_contexts=[STATUS_CONTEXT])
+    except pr.PlatformError as exc:
+        return False, {"readable": False, "reason": str(exc),
+                       "reason_codes": ["PLATFORM_UNREADABLE"]}
+    evidence = dict(out.get("evidence") or {})
+    evidence["readable"] = "RULESET_UNREADABLE" not in (out.get("reason_codes") or [])
+    evidence["reason_codes"] = out.get("reason_codes") or []
+    if not out.get("ok"):
+        evidence.setdefault("reason", "main ruleset 未严格满足 route-a/verify 契约")
+    return bool(out.get("ok")), evidence
 
 
 def _lock_state(repo: str, token: str, run_id: str, generation: int) -> tuple[str, dict]:

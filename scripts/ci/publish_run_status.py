@@ -28,6 +28,7 @@ CONTEXT = "route-a/verify"
 EXPECTED_RUN_NAME = "General PR verification"
 EXPECTED_RUN_PATH = ".github/workflows/pr-verify.yml"
 TRUSTED_BOT = "github-actions[bot]"
+TRUSTED_CREATOR_TYPE = "Bot"
 
 
 class Refused(RuntimeError):
@@ -150,19 +151,42 @@ def publish(client: Client, sha: str, run_id: str, description: str, target_url:
     return {"posted": True, "sha": sha, "context": CONTEXT}
 
 
-def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: float = 1.0) -> dict:
+def _creator_problem(obj: dict) -> str:
+    """发布者身份必须 login + type 双向成立，且不能只看 context 字符串。"""
+    creator = obj.get("creator")
+    if not isinstance(creator, dict):
+        return "status 缺少 creator 对象（来源不可验证）"
+    login, utype = creator.get("login"), creator.get("type")
+    if login != TRUSTED_BOT:
+        return f"status creator.login={login!r} 不在可信名单（{TRUSTED_BOT}）"
+    if utype != TRUSTED_CREATOR_TYPE:
+        return f"status creator.type={utype!r} 非 {TRUSTED_CREATOR_TYPE}（拒绝仅凭 login 采信）"
+    return ""
+
+
+def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: float = 1.0,
+                     expect_run_id: str = "") -> dict:
     last = None
+    last_problem = ""
     for i in range(attempts):
         status, items = client.call(f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
         if status == 200 and isinstance(items, list):
             ours = [s for s in items if s.get("context") == CONTEXT]
             if ours:
                 last = ours[0]
-                creator = ((last.get("creator") or {}).get("login") or "")
-                if last.get("state") == "success" and creator == TRUSTED_BOT:
-                    return {"verified": True, "creator": creator, "state": last["state"]}
+                problem = _creator_problem(last)
+                target = str(last.get("target_url") or "")
+                if not problem and expect_run_id and f"/runs/{expect_run_id}" not in target:
+                    problem = (f"status target_url 未绑定本次 run {expect_run_id}"
+                               f"（实际 {target!r}）")
+                if not problem and last.get("state") == "success":
+                    creator = last.get("creator") or {}
+                    return {"verified": True, "creator": creator.get("login"),
+                            "creator_type": creator.get("type"), "state": last["state"],
+                            "target_url": target}
+                last_problem = problem or f"state={last.get('state')!r}"
         time.sleep(delay * (i + 1))
-    raise Refused(f"发布后回读未看到可信 {CONTEXT}=success（当前 {last!r}）")
+    raise Refused(f"发布后回读未看到可信 {CONTEXT}=success（当前 {last!r}；{last_problem}）")
 
 
 def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required: set[str],
@@ -174,7 +198,7 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
     run_info = verify_run(client, run_id, head_sha, required, pr=pr)
     pr_info = verify_pr(client, pr, head_sha)
     posted = publish(client, head_sha, run_id, "受信校验通过（run 级核验）", target_url)
-    verified = verify_published(client, head_sha, attempts=attempts)
+    verified = verify_published(client, head_sha, attempts=attempts, expect_run_id=run_id)
     after = verify_pr(client, pr, head_sha)          # 发布后再次确认未漂移
     return {"ok": True, "run": run_info, "pr": pr_info, **posted, "verify": verified, "after": after}
 

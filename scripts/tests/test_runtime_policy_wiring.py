@@ -27,6 +27,7 @@ import classify_change as cc  # noqa: E402
 import evaluate_candidate_policy as ecp  # noqa: E402
 import gate_lock as gl  # noqa: E402
 import gate_state as gs  # noqa: E402
+import platform_rulesets as pr  # noqa: E402
 import publish_status as ps  # noqa: E402
 import verify_candidate as vc  # noqa: E402
 import verify_workflow_policy as vwp  # noqa: E402
@@ -273,11 +274,18 @@ class CollectorTest(unittest.TestCase):
                       "tree": [{"path": "ruleset/Apple/Apple.yaml", "type": "blob"}]}),
             "/repos/o/r/rulesets": (200, [{"id": 1, "name": "protect-main",
                                            "target": "branch", "enforcement": "active"}]),
+            "/repos/o/r/rulesets?per_page=100&page=1": (
+                200, [{"id": 1, "name": "protect-main",
+                       "target": "branch", "enforcement": "active"}]),
+            "/repos/o/r/rulesets?per_page=100&page=2": (200, []),
+            "/repos/o/r": (200, {"default_branch": "main"}),
             "/repos/o/r/rulesets/1": (200, {
                 "id": 1, "target": "branch", "enforcement": "active",
+                "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
                 "rules": [{"type": "required_status_checks",
                            "parameters": {"required_status_checks":
-                                          [{"context": c} for c in contexts]}}]}),
+                                          [{"context": c, "integration_id": 15368}
+                                           for c in contexts]}}]}),
         }
         for page in range(1, 3):
             if page == 1:
@@ -291,6 +299,7 @@ class CollectorTest(unittest.TestCase):
         def fake_call(repo, token, path):
             return routes.get(path, (404, {"message": "not found"}))
 
+        fake_call.routes = routes  # 供 platform_rulesets 的 _http_get 复用同一套响应
         return fake_call
 
     def _run(self, fake, *, mode="merge", generation=1, production=True, reviews=()):
@@ -314,6 +323,9 @@ class CollectorTest(unittest.TestCase):
         self_base, self_head = self.BASE, self.HEAD
         with mock.patch.object(ecp, "_call", fake), \
                 mock.patch.object(ecp.vc, "_call", fake), \
+                mock.patch.object(pr, "_http_get",
+                                  lambda path, token, api=None: fake.routes.get(
+                                      path, (404, {"message": "not found"}))), \
                 mock.patch.object(ecp.vrc, "verify", return_value=(True, {"gate_mode": "check-run"}, [])), \
                 mock.patch.object(gs, "GitHubRefStore", Store):
             return ecp.collect_and_evaluate(

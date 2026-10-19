@@ -99,6 +99,27 @@ MATRIX: dict[str, tuple[str, str]] = {
     "verify 失败不退出非零": (
         "test_runtime_policy_wiring",
         "WorkflowFailureSemanticsTest.test_guard_requires_nonzero_exit_on_verify_failure"),
+    "规则要求只存在于其他分支": (
+        "test_platform_rulesets",
+        "CoverageTest.test_context_only_on_other_branch_is_blocked"),
+    "Ruleset 未启用仍算就绪": (
+        "test_platform_rulesets",
+        "CoverageTest.test_inactive_ruleset_is_blocked"),
+    "context 名近似但不精确": (
+        "test_platform_rulesets",
+        "ContextTest.test_near_miss_context_is_blocked"),
+    "status 来源不可验证": (
+        "test_platform_rulesets",
+        "ContextTest.test_wrong_integration_is_blocked"),
+    "Ruleset 详情读不到": (
+        "test_platform_rulesets",
+        "ReadFailureTest.test_detail_403_blocks_everything"),
+    "发布者 type 未校验": (
+        "test_publish_run_status",
+        "Case.test_creator_type_user_is_rejected"),
+    "status 来自别的 run": (
+        "test_publish_run_status",
+        "Case.test_status_from_other_run_is_rejected"),
 }
 
 
