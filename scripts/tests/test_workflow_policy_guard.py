@@ -233,8 +233,19 @@ jobs:
     permissions:
       contents: write
     steps:
-      - run: python3 scripts/ci/gate_lock.py complete --result success || true
-      - run: python3 scripts/ci/gate_lock.py pause --reason failed || true
+      - env:
+          GENERATE_CHANGED: ${{ needs.generate.outputs.changed }}
+        run: python3 scripts/ci/gate_lock.py complete --result success || RC=$?
+      - run: python3 scripts/ci/gate_lock.py pause --reason failed || RC=$?
+  verify:
+    name: verify
+    needs: [gate, lock, generate, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - id: verify
+        run: echo "state=success" >> "$GITHUB_OUTPUT"
+      - if: steps.verify.outputs.state != 'success'
+        run: exit 1
   request-auto-merge:
     name: request-auto-merge
     needs: [gate, publish]
@@ -373,7 +384,7 @@ class LockOrderTest(Fixture):
 
     def test_finalize_without_pause_is_rejected(self):
         candidate = CANDIDATE.replace(
-            "      - run: python3 scripts/ci/gate_lock.py pause --reason failed || true\n", "")
+            "      - run: python3 scripts/ci/gate_lock.py pause --reason failed || RC=$?\n", "")
         problems = self.problems(candidate=candidate)
         self.assertTrue(any("必须在非成功路径写 pause" in p for p in problems), problems)
 

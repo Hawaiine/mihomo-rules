@@ -349,5 +349,60 @@ class CollectorTest(unittest.TestCase):
         self.assertEqual(out["decision"], "BLOCKED")
 
 
+class WorkflowFailureSemanticsTest(unittest.TestCase):
+    """P18：workflow 的失败语义必须有结构化守卫（非注释、非人工约定）。"""
+
+    def doc(self, *, finalize_run, verify_steps=None):
+        return {"on": {"workflow_call": None}, "permissions": {"contents": "read"},
+                "jobs": {
+                    "gate": {"runs-on": "x", "steps": [{"run": "true"}]},
+                    "lock": {"runs-on": "x", "needs": "gate", "steps": [{"run": "true"}]},
+                    "generate": {"runs-on": "x", "needs": ["gate", "lock"],
+                                 "steps": [{"run": "true"}]},
+                    "publish": {"runs-on": "x", "needs": ["gate", "lock", "generate"],
+                                "if": "needs.gate.outputs.enabled == 'true'",
+                                "steps": [{"run": "true"}]},
+                    "verify": {"runs-on": "x", "needs": ["gate", "lock", "generate", "publish"],
+                               "steps": verify_steps or [{"run": "true"}]},
+                    "finalize": {"runs-on": "x", "needs": ["gate", "lock", "generate", "publish", "verify"],
+                                 "if": "always() && needs.lock.result == 'success'",
+                                 "steps": [{"run": finalize_run}]},
+                }}
+
+    def test_real_workflow_passes_the_semantics_guard(self):
+        doc = yaml.safe_load(CANDIDATE.read_text(encoding="utf-8"))
+        problems = vwp.check_workflow(CANDIDATE, "candidate-pr-sync.yml", doc, [])
+        self.assertEqual([p for p in problems if "P18" in p or "no-op" in p or "非零退出" in p], [])
+
+    def test_guard_rejects_finalize_without_change_branch(self):
+        bad = self.doc(finalize_run="python3 gate_lock.py complete --result success\n"
+                                    "python3 gate_lock.py pause --reason x")
+        problems = vwp.check_workflow(CANDIDATE, "candidate-pr-sync.yml", bad, [])
+        self.assertTrue(any("generate.changed" in p for p in problems), problems)
+
+    def test_guard_rejects_swallowed_errors_in_finalize(self):
+        bad = self.doc(finalize_run="set -e\nGENERATE_CHANGED=${GENERATE_CHANGED}\n"
+                                    "python3 gate_lock.py complete --result success || true\n"
+                                    "python3 gate_lock.py pause --reason x || true")
+        problems = vwp.check_workflow(CANDIDATE, "candidate-pr-sync.yml", bad, [])
+        self.assertTrue(any("|| true" in p for p in problems), problems)
+
+    def test_readonly_reconcile_may_ignore_errors(self):
+        """只读回读步骤允许 `|| true`，不得因此误报（真实 workflow 中它是独立步骤）。"""
+        ok = self.doc(finalize_run="GENERATE_CHANGED=${GENERATE_CHANGED}\n"
+                                   "python3 gate_lock.py complete --result success || RC=$?\n"
+                                   "python3 gate_lock.py pause --reason x || RC=$?",
+                      verify_steps=[{"run": "exit 1", "if": "steps.v.outputs.state != 'success'"}])
+        ok["jobs"]["finalize"]["steps"].append({"run": "python3 gate_lock.py status | tee s.json || true"})
+        problems = vwp.check_workflow(CANDIDATE, "candidate-pr-sync.yml", ok, [])
+        self.assertFalse(any("|| true" in p for p in problems), problems)
+
+    def test_guard_requires_nonzero_exit_on_verify_failure(self):
+        bad = self.doc(finalize_run="GENERATE_CHANGED=x\ncomplete --result success\npause",
+                       verify_steps=[{"run": "true"}])
+        problems = vwp.check_workflow(CANDIDATE, "candidate-pr-sync.yml", bad, [])
+        self.assertTrue(any("非零退出" in p for p in problems), problems)
+
+
 if __name__ == "__main__":
     unittest.main()

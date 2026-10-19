@@ -323,6 +323,25 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
         if "complete --result success" in fin_runs and "pause" not in fin_runs:
             problems.append(f"{name}: finalize 必须在非成功路径写 pause（不得只写成功终态）")
 
+        # P18：失败语义结构化（no-change 不得暂停；验证失败不得假绿；不得吞错）
+        if ("needs.generate.outputs.changed" not in str(finalize)
+                and "GENERATE_CHANGED" not in fin_runs):
+            problems.append(f"{name}: finalize 必须显式区分 generate.changed（no-op 不得被当成失败）")
+        # 只约束**写状态**的步骤；只读回读步骤允许 `|| true`（不改变状态）。
+        state_runs = [str(st.get("run") or "") for st in _steps(finalize)
+                      if "complete --result" in str(st.get("run") or "")
+                      or "pause --reason" in str(st.get("run") or "")]
+        if any("|| true" in run for run in state_runs):
+            problems.append(f"{name}: finalize 的写状态步骤不得用 `|| true` 隐藏错误"
+                            f"（应记录退出码并 fail-closed）")
+        verify_job = jobs.get("verify") or {}
+        fail_steps = [s for s in _steps(verify_job)
+                      if "exit 1" in str(s.get("run") or "")
+                      and "state" in str(s.get("if") or "")]
+        if not fail_steps:
+            problems.append(f"{name}: verify job 必须有「状态非 success 即非零退出」的步骤"
+                            f"（否则 failure status 发布后 job 仍可能 success）")
+
         publish = jobs.get("publish") or {}
         if GATE_OUTPUT not in _job_if(publish):
             problems.append(f"{name}: publish 必须门控于 {GATE_OUTPUT}"

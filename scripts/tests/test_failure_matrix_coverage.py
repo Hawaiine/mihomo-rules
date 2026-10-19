@@ -90,6 +90,15 @@ MATRIX: dict[str, tuple[str, str]] = {
     "已关闭 PR 仍进入判定": (
         "test_runtime_policy_wiring",
         "CollectorTest.test_closed_pr_fails_closed"),
+    "finalize 缺少 no-op 分支": (
+        "test_runtime_policy_wiring",
+        "WorkflowFailureSemanticsTest.test_guard_rejects_finalize_without_change_branch"),
+    "finalize 吞掉状态写入错误": (
+        "test_runtime_policy_wiring",
+        "WorkflowFailureSemanticsTest.test_guard_rejects_swallowed_errors_in_finalize"),
+    "verify 失败不退出非零": (
+        "test_runtime_policy_wiring",
+        "WorkflowFailureSemanticsTest.test_guard_requires_nonzero_exit_on_verify_failure"),
 }
 
 

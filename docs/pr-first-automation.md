@@ -62,6 +62,26 @@ GitHub 的两条硬事实：
 模式选择**只允许** check-run → status 的单向回退，且仅在「一个 check-run 都没有」时生效；
 出现同名但来源不符的 check-run 仍按原严格口径失败。
 
+## 2.2 认证来源与逐 job 最小权限（本轮实测对账）
+
+全仓 workflow 只允许**内置 `GITHUB_TOKEN`**：不存在 GitHub App、不存在 PAT，
+`secrets.*` 的引用集合就是 `{GITHUB_TOKEN}`（`candidate-pr-sync.yml` 与
+`route-a-status.yml` 均如此）。按 job 收敛如下：
+
+| job | permissions | 用途 | 凭据注入 |
+|---|---|---|---|
+| gate | 继承顶层 `contents: read` | 只读 `vars.CANDIDATE_SYNC_ENABLED` | 无 |
+| lock | `contents: write` | D-15 状态 ref 的 CAS 写入 | `secrets.GITHUB_TOKEN` |
+| generate | `contents: read` | 生成候选（不推送） | 无 |
+| publish | `contents: write` + `pull-requests: write` + `statuses: write` | 推候选分支、建/更新 PR | `GITHUB_TOKEN`（GIT_ASKPASS 注入，不进 argv/URL/日志） |
+| verify | `contents: read` + `pull-requests: read` + `statuses: write` | 受信验证 + 发布 `route-a/verify` | `GITHUB_TOKEN` |
+| finalize | `contents: write` | 写终态/释放锁 | `GITHUB_TOKEN` |
+| request-auto-merge | `contents: read` + `pull-requests: write` + `checks: read` + `actions: read` | 判定后请求 auto-merge | `GITHUB_TOKEN` |
+
+规则：写权限只出现在确实需要写的 job；`verify` 与 `finalize` 不接触候选代码；
+`publish` 在应用候选补丁之后不再执行仓库脚本。任何新增 job 都必须先在此表登记
+权限与用途，并由 `verify_workflow_policy.py` 的结构化判定守住。
+
 ## 3. 严格口径（fail-closed）
 
 * **状态**：只有 `success` 视为满足；`pending` / `failure` / `error` 一律禁止合并。
