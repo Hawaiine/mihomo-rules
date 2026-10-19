@@ -18,6 +18,7 @@ import argparse
 import dataclasses
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -96,7 +97,8 @@ def _snapshot(store, state: gs.GateState, extra: dict) -> str:
         return f"existing-same:{hashlib.sha256(data).hexdigest()}"
 
 
-def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str) -> int:
+def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str,
+           reject_uncertain: bool = False) -> int:
     doc = state.to_doc()
     doc["snapshot_digest"] = gs.canonical_digest(doc)
     state = gs.GateState.from_doc(doc)
@@ -114,6 +116,9 @@ def _write(store, state: gs.GateState, old_sha: str | None, *, run_id: str) -> i
             return EXIT_INVALID
         if (current is not None and current.generation == state.generation
                 and current.run_id == state.run_id and current.phase == state.phase):
+            if reject_uncertain:
+                print(f"❌ 写入响应不确定：确认操作一律不把超时对账成成功（fail-closed）：{exc}", file=sys.stderr)
+                return EXIT_INVALID
             print(f"⚠️ 写入报错但回读确认已生效（幂等接受）：{exc}", file=sys.stderr)
             print(json.dumps({"ok": True, "reconciled": True, "generation": state.generation,
                               "phase": state.phase}, ensure_ascii=False))
@@ -139,14 +144,15 @@ def cmd_require_enabled(args) -> int:
     return EXIT_OK
 
 
-def _commit(store, state: gs.GateState, old_sha: str | None, meta: dict, *, run_id: str) -> int:
+def _commit(store, state: gs.GateState, old_sha: str | None, meta: dict, *, run_id: str,
+            reject_uncertain: bool = False) -> int:
     """先落快照、再 CAS 写状态：快照失败则不改变任何状态。"""
     try:
         _snapshot(store, state, meta)
     except gs.StateError as exc:
         print(f"❌ 快照写入失败，状态未变更（fail-closed）：{exc}", file=sys.stderr)
         return EXIT_INVALID
-    return _write(store, state, old_sha, run_id=run_id)
+    return _write(store, state, old_sha, run_id=run_id, reject_uncertain=reject_uncertain)
 
 
 def cmd_require_usable(args) -> int:
@@ -271,26 +277,64 @@ def cmd_mark_notice_needed(args) -> int:
                    {"kind": "notice-marked", "digest": args.digest}, run_id=args.run_id)
 
 
-def cmd_confirm_notice(args) -> int:
-    """U-09：确认关键通知（仅当 digest 匹配且状态未变）。"""
-    store = _store(args)
+def confirm_notice(store, *, notice_run_id: str, notice_digest: str, expected_generation: int,
+                   actor_id: int, actor_login: str, actor_type: str, now: float | None = None,
+                   strict_write: bool = False):
+    """Perform a state transition only after the caller supplies verified actor data."""
     current, sha = store.read()
+    evidence = {"ok": False, "notice_run_id": notice_run_id, "notice_digest": notice_digest,
+                "expected_generation": expected_generation, "generation_before": None,
+                "generation_after": None, "actor_id": actor_id, "actor_login": actor_login,
+                "actor_type": actor_type, "decision": "reject", "reason": "", "state_written": False}
+    def reject(reason, code=EXIT_INVALID):
+        evidence["reason"] = reason
+        print(json.dumps(evidence, ensure_ascii=False))
+        return code
     if current is None:
-        print("❌ 无当前状态", file=sys.stderr)
-        return EXIT_INVALID
-    if not current.notice_digest:
-        print("❌ 当前无待确认通知", file=sys.stderr)
-        return EXIT_INVALID
-    if current.notice_digest != args.digest:
-        print(f"❌ notice_digest 不匹配：期望 {current.notice_digest[:24]}...，"
-              f"提供 {args.digest[:24]}...", file=sys.stderr)
-        return EXIT_INVALID
+        return reject("STATE_MISSING")
+    evidence["generation_before"] = current.generation
+    if (not isinstance(notice_run_id, str) or not re.fullmatch(r"[1-9][0-9]*(?:-[1-9][0-9]*)?", notice_run_id)
+            or not isinstance(notice_digest, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", notice_digest)
+            or not isinstance(expected_generation, int)
+            or isinstance(expected_generation, bool) or expected_generation < 1):
+        return reject("REQUEST_INVALID")
+    if actor_id != 152380613 or actor_login != "Hawaiine" or actor_type != "User":
+        return reject("ACTOR_NOT_AUTHORIZED", EXIT_NEEDS_HUMAN)
+    if not strict_write:
+        return reject("TRUSTED_EVENT_ATTESTATION_REQUIRED", EXIT_NEEDS_HUMAN)
+    if current.generation != expected_generation:
+        return reject("GENERATION_MISMATCH")
+    if current.run_id != notice_run_id:
+        return reject("NOTICE_RUN_ID_MISMATCH")
+    if current.notice_digest != notice_digest:
+        return reject("NOTICE_DIGEST_MISMATCH")
+    if not current.notice_digest or current.notice_acked:
+        return reject("NOTICE_NOT_PENDING")
     if current.phase in gs.BLOCKING_PHASES:
-        print(f"❌ 状态为 {current.phase}：禁止确认通知", file=sys.stderr)
-        return EXIT_NEEDS_HUMAN
-    # No trusted human-identity attestation interface exists yet. Never treat a workflow run ID
-    # as a human acknowledgement; keep the notice pending and fail closed.
-    print("❌ 无可信人工身份凭证接口：拒绝将 run_id 当作确认者身份", file=sys.stderr)
+        return reject("PHASE_BLOCKS_CONFIRMATION", EXIT_NEEDS_HUMAN)
+    after = current.generation + 1
+    stamp = now or time.time()
+    state = dataclasses.replace(current, generation=after, updated_at=stamp,
+        notice_acked=True, notice_acked_by=f"{actor_login} ({actor_id})", notice_acked_at=stamp,
+        notice_acked_by_id=actor_id, notice_acked_by_login=actor_login,
+        notice_acked_run_id=notice_run_id, notice_acked_digest=notice_digest,
+        notice_acked_generation_from=current.generation, notice_acked_generation_to=after)
+    rc = _commit(store, state, sha, {"kind": "notice-confirmed", "actor_id": actor_id,
+        "actor_login": actor_login, "notice_run_id": notice_run_id, "notice_digest": notice_digest},
+        run_id=f"notice-{notice_run_id}", reject_uncertain=True)
+    if rc != EXIT_OK:
+        return reject("SNAPSHOT_OR_CAS_WRITE_FAILED", rc)
+    evidence.update(ok=True, decision="confirm", generation_after=after, state_written=True, reason="CONFIRMED")
+    print(json.dumps(evidence, ensure_ascii=False))
+    return EXIT_OK
+
+
+def cmd_confirm_notice(args) -> int:
+    """CLI has no trusted event attestation path; refuse user-supplied identity claims."""
+    evidence = {"ok": False, "decision": "reject", "reason": "TRUSTED_EVENT_ATTESTATION_REQUIRED",
+                "notice_run_id": args.notice_run_id, "notice_digest": args.digest,
+                "expected_generation": args.expected_generation, "state_written": False}
+    print(json.dumps(evidence, ensure_ascii=False))
     return EXIT_NEEDS_HUMAN
 
 
@@ -364,7 +408,9 @@ def main(argv: list[str] | None = None) -> int:
     mn.add_argument("--digest", required=True, help="待确认通知的规范摘要")
 
     cn = sub.add_parser("confirm-notice")
+    cn.add_argument("--notice-run-id", required=True)
     cn.add_argument("--digest", required=True, help="与 mark-notice-needed 使用的 digest 精确匹配")
+    cn.add_argument("--expected-generation", required=True, type=int)
 
     r = sub.add_parser("resume")
     r.add_argument("--reason", required=True)

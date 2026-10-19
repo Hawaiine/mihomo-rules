@@ -88,11 +88,10 @@ GitHub 的两条硬事实：
   `on_missing!=fail-closed` 全部拒绝；
 * 多人审批：`required_approvals` 个不同授权 user ID 的最新 review 必须是 `APPROVED`，
   `user.type == "User"`，且 `commit_id == 当前 head`；任何人当前 head 上 `CHANGES_REQUESTED` 都阻断；
-* 显式 `--approver` login 覆盖已禁止（`APPROVAL_POLICY_LOGIN_OVERRIDE_FORBIDDEN`）；
-  `verify_approval.py` CLI 只接受 `--approver-id` 并使用相同 ID-based 校验；
-* CLI 参数、命令成功、workflow 输出、普通评论或机器人行为均不构成真实人工审批；
-  新增 Ruleset/治理变更必须有授权用户对当前 head SHA 提交的真实 `APPROVED` review；
-* `EXISTING_DATA_ONLY` 普通日常数据更新不进入人工审批分支，既定自动化路径保持不变。
+* `approver_ids` 是唯一授权依据；login 仅用于审计展示，不单独授权。
+* `--approver` login 覆盖已禁止；CLI 使用 `--policy` 读取可信策略，不接收用户自行注入的 login、ID 或 inline review 授权。
+* CLI 参数、命令成功或 workflow 输出不是人工审批；新增 Ruleset / 治理变更仍须授权用户对当前 head SHA 的真实 `APPROVED` review。
+* `EXISTING_DATA_ONLY` 日常纯数据更新保持全自动，不要求每次人工审批。
 
 
 ## 2.2 认证来源与逐 job 最小权限（本轮实测对账）

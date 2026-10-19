@@ -81,6 +81,12 @@ class GateState:
     notice_acked: bool = False
     notice_acked_by: str = ""
     notice_acked_at: float = 0.0
+    notice_acked_by_id: int = 0
+    notice_acked_by_login: str = ""
+    notice_acked_run_id: str = ""
+    notice_acked_digest: str = ""
+    notice_acked_generation_from: int = 0
+    notice_acked_generation_to: int = 0
 
     def to_doc(self) -> dict[str, Any]:
         doc = dataclasses.asdict(self)
@@ -97,10 +103,14 @@ class GateState:
 
 
 def canonical_digest(doc: dict[str, Any]) -> str:
-    """对除 snapshot_digest / updated_at 之外的字段做规范化摘要。"""
-    body = {k: v for k, v in doc.items()
-            if k not in ("snapshot_digest", "updated_at",
-                         "notice_digest", "notice_acked", "notice_acked_by", "notice_acked_at")}
+    """Canonical content digest; legacy documents without notice fields retain schema-1 digest semantics."""
+    legacy_notice_keys = {"notice_digest", "notice_acked", "notice_acked_by", "notice_acked_at",
+                          "notice_acked_by_id", "notice_acked_by_login", "notice_acked_run_id",
+                          "notice_acked_digest", "notice_acked_generation_from", "notice_acked_generation_to"}
+    excluded = {"snapshot_digest", "updated_at"}
+    if not any(doc.get(key) for key in legacy_notice_keys):
+        excluded |= legacy_notice_keys
+    body = {k: v for k, v in doc.items() if k not in excluded}
     return "sha256:" + hashlib.sha256(
         json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()
@@ -134,6 +144,21 @@ def validate_doc(doc: Any) -> list[str]:
             problems.append("conclusion 与 check_status 组合非法")
     if check == "completed" and phase == "final-review" and not doc.get("check_status"):
         problems.append("completed 必须有结论")
+    if doc.get("notice_acked"):
+        for key in ("notice_acked_by_id", "notice_acked_generation_from", "notice_acked_generation_to"):
+            value = doc.get(key)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                problems.append(f"{key} 必须是正整数")
+        for key in ("notice_acked_by_login", "notice_acked_run_id", "notice_acked_digest"):
+            if not isinstance(doc.get(key), str) or not doc.get(key):
+                problems.append(f"{key} 必须是非空字符串")
+        if isinstance(gen, int) and not isinstance(gen, bool):
+            if doc.get("notice_acked_generation_to") != gen:
+                problems.append("notice_acked_generation_to 必须等于当前 generation")
+            if doc.get("notice_acked_generation_from") != gen - 1:
+                problems.append("notice_acked_generation_from 必须是当前 generation 的前一代")
+        if doc.get("notice_acked_digest") != doc.get("notice_digest"):
+            problems.append("notice_acked_digest 必须与 notice_digest 一致")
     digest = doc.get("snapshot_digest", "")
     if digest:
         expected = canonical_digest(doc)

@@ -1,0 +1,60 @@
+name: Manual notice confirmation request
+
+on:
+  workflow_dispatch:
+    inputs:
+      notice_run_id:
+        description: Run ID embedded in the pending notice
+        required: true
+        type: string
+      notice_digest:
+        description: Exact current notice digest
+        required: true
+        type: string
+      expected_generation:
+        description: Expected current gate-state generation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-request:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate exact repository, default ref, and input formats
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          NOTICE_RUN_ID: ${{ inputs.notice_run_id }}
+          NOTICE_DIGEST: ${{ inputs.notice_digest }}
+          EXPECTED_GENERATION: ${{ inputs.expected_generation }}
+        run: |
+          set -euo pipefail
+          test "$REPOSITORY" = Hawaiine/mihomo-rules
+          test "$REF" = refs/heads/main
+          [[ "$NOTICE_RUN_ID" =~ ^[1-9][0-9]*(-[1-9][0-9]*)?$ ]]
+          [[ "$NOTICE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_GENERATION" =~ ^[1-9][0-9]*$ ]]
+      - name: Save structured request artifact
+        env:
+          NOTICE_RUN_ID: ${{ inputs.notice_run_id }}
+          NOTICE_DIGEST: ${{ inputs.notice_digest }}
+          EXPECTED_GENERATION: ${{ inputs.expected_generation }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open(os.environ['RUNNER_TEMP'] + '/notice-request.json', 'w', encoding='utf-8') as f:
+              json.dump({'notice_run_id': os.environ['NOTICE_RUN_ID'],
+                         'notice_digest': os.environ['NOTICE_DIGEST'],
+                         'expected_generation': os.environ['EXPECTED_GENERATION']}, f)
+          PY
+      - uses: actions/upload-artifact@v5
+        with:
+          name: manual-notice-request-${{ github.run_id }}
+          path: ${{ runner.temp }}/notice-request.json
+          retention-days: 1
+          if-no-files-found: error

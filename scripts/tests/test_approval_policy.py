@@ -52,8 +52,11 @@ class PolicyValidationTest(unittest.TestCase):
     def test_approval_policy_doc_matches_enforced_id_schema(self):
         text = (ROOT / "docs" / "pr-first-automation.md").read_text(encoding="utf-8")
         self.assertIn('"approver_ids": [152380613]', text)
-        self.assertIn("login 覆盖已禁止", text)
-        self.assertNotIn("视为人工显式输入", text)
+        self.assertIn("login 仅用于审计展示", text)
+        self.assertIn("使用 `--policy` 读取可信策略", text)
+        self.assertIn("不接收用户自行注入的 login、ID 或 inline review", text)
+        self.assertIn("当前 head SHA 的真实 `APPROVED` review", text)
+        self.assertNotIn("只接受 `--approver-id`", text)
         self.assertIn("EXISTING_DATA_ONLY", text)
 
     def test_cli_no_longer_accepts_login_override_or_inline_id(self):

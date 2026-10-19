@@ -1,0 +1,37 @@
+name: Manual notice confirmation (trusted handler)
+
+on:
+  workflow_run:
+    workflows: ["Manual notice confirmation request"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  confirm:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout trusted default branch only
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify source run and confirm through D-15 CAS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = Hawaiine/mihomo-rules
+          test "$GITHUB_EVENT_NAME" = workflow_run
+          test "$GITHUB_REF" = refs/heads/main
+          python3 scripts/ci/confirm_notice_workflow.py

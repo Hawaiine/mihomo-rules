@@ -90,6 +90,68 @@ class GateLockCliTest(unittest.TestCase):
         self.run_cli("--run-id", "1-1", "complete", "--result", "success")
         self.assertIn(b"completed", store.snapshot_get(2))
 
+    def test_confirm_notice_cli_fails_closed_without_trusted_event(self):
+        self.assertEqual(self.run_cli("--run-id", "123-1", "acquire", "--base-sha", "a" * 40), 0)
+        self.assertEqual(self.run_cli("--run-id", "123-1", "mark-notice-needed", "--digest", "n1"), 0)
+        self.assertEqual(self.run_cli("--run-id", "123-1", "confirm-notice", "--notice-run-id", "123-1",
+                         "--digest", "sha256:" + "a" * 64, "--expected-generation", "2"),
+                         gl.EXIT_NEEDS_HUMAN)
+        self.assertFalse(self.state().notice_acked)
+        self.assertEqual(self.state().generation, 2)
+
+    def test_confirmation_transition_checks_actor_and_binding(self):
+        self.acquire("123-1")
+        store = gs.LocalFileStore(self.dir)
+        st, sha = store.read()
+        st = gs.dataclasses.replace(st, generation=2, notice_digest="sha256:" + "a" * 64)
+        doc = st.to_doc()
+        doc["snapshot_digest"] = gs.canonical_digest(doc)
+        st = gs.GateState.from_doc(doc)
+        self.assertTrue(store.cas_write(st, expected_old_sha=sha).ok)
+        store = gs.LocalFileStore(self.dir)
+        from contextlib import redirect_stdout
+        for fields, expected in [
+            ({"actor_id": 999, "actor_login": "Hawaiine", "actor_type": "User"}, "ACTOR_NOT_AUTHORIZED"),
+            ({"actor_id": 152380613, "actor_login": "other", "actor_type": "User"}, "ACTOR_NOT_AUTHORIZED"),
+            ({"actor_id": 152380613, "actor_login": "Hawaiine", "actor_type": "Bot"}, "ACTOR_NOT_AUTHORIZED"),
+        ]:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = gl.confirm_notice(store, notice_run_id="123", notice_digest="sha256:" + "a" * 64,
+                                       expected_generation=2, **fields)
+            self.assertNotEqual(rc, gl.EXIT_OK)
+            self.assertEqual(json.loads(out.getvalue())["reason"], expected)
+            self.assertEqual(store.read()[0].generation, 2)
+
+    def test_confirmation_replay_and_generation_mismatch_fail_closed(self):
+        self.acquire("123-1")
+        store = gs.LocalFileStore(self.dir)
+        st, sha = store.read()
+        st = gs.dataclasses.replace(st, generation=2, notice_digest="sha256:" + "a" * 64)
+        doc = st.to_doc()
+        doc["snapshot_digest"] = gs.canonical_digest(doc)
+        st = gs.GateState.from_doc(doc)
+        store.cas_write(st, expected_old_sha=sha)
+        out = io.StringIO()
+        from contextlib import redirect_stdout
+        with redirect_stdout(out):
+            rc = gl.confirm_notice(store, notice_run_id="123", notice_digest="sha256:" + "a" * 64,
+                expected_generation=1, actor_id=152380613, actor_login="Hawaiine", actor_type="User", strict_write=True)
+        self.assertNotEqual(rc, gl.EXIT_OK)
+        self.assertEqual(json.loads(out.getvalue())["reason"], "GENERATION_MISMATCH")
+        self.assertFalse(store.read()[0].notice_acked)
+
+    def test_acknowledged_state_audit_schema_validates(self):
+        self.acquire("123-1")
+        st, _ = gs.LocalFileStore(self.dir).read()
+        doc = st.to_doc()
+        doc.update(generation=2, notice_digest="sha256:" + "a" * 64, notice_acked=True,
+                   notice_acked_by_id=152380613, notice_acked_by_login="Hawaiine",
+                   notice_acked_run_id="123", notice_acked_digest="sha256:" + "a" * 64,
+                   notice_acked_generation_from=1, notice_acked_generation_to=2)
+        doc["snapshot_digest"] = gs.canonical_digest(doc)
+        self.assertEqual(gs.validate_doc(doc), [])
+
     def test_require_enabled_accepts_true_only(self):
         import os
         from unittest import mock
@@ -230,11 +292,14 @@ class NoticeTest(unittest.TestCase):
         self.assertEqual(st.notice_digest, "notice-001")
         self.assertFalse(st.notice_acked)
 
+    def confirm_args(self, run_id="1-1", digest="n1"):
+        return ("--run-id", run_id, "confirm-notice", "--notice-run-id", run_id.split("-", 1)[0],
+                "--digest", digest, "--expected-generation", str(self.state().generation))
+
     def test_confirm_notice_refuses_unverified_run_identity(self):
         self.assertEqual(self.acquire(), 0)
-        self.assertEqual(self.run_cli("--run-id", "1-1", "mark-notice-needed",
-                                      "--digest", "n1"), 0)
-        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        self.assertEqual(self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1"), 0)
+        rc = self.run_cli(*self.confirm_args())
         self.assertEqual(rc, gl.EXIT_NEEDS_HUMAN)
         st = self.state()
         self.assertFalse(st.notice_acked)
@@ -243,7 +308,7 @@ class NoticeTest(unittest.TestCase):
     def test_confirm_wrong_digest_rejected(self):
         self.assertEqual(self.acquire(), 0)
         self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
-        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n2")
+        rc = self.run_cli(*self.confirm_args(digest="n2"))
         self.assertNotEqual(rc, 0)
 
     def test_require_usable_blocks_unacked_notice(self):
@@ -255,7 +320,7 @@ class NoticeTest(unittest.TestCase):
     def test_require_usable_allows_acked_notice(self):
         self.assertEqual(self.acquire(), 0)
         self.run_cli("--run-id", "1-1", "mark-notice-needed", "--digest", "n1")
-        self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        self.run_cli(*self.confirm_args())
         rc = self.run_cli("--run-id", "1-1", "require-usable")
         self.assertNotEqual(rc, 0)  # 自动命令不能伪造人工确认
 
@@ -278,12 +343,16 @@ class NoticeTest(unittest.TestCase):
 
     def test_confirm_no_notice_marked_rejected(self):
         self.assertEqual(self.acquire(), 0)
-        rc = self.run_cli("--run-id", "1-1", "confirm-notice", "--digest", "n1")
+        rc = self.run_cli(*self.confirm_args())
         self.assertNotEqual(rc, 0)
 
 
 class SnapshotBindingTest(unittest.TestCase):
     """B5：快照与 run_id / candidate_sha 绑定，恢复验证"""
+
+    def confirm_args(self, run_id="1-1", digest="n1"):
+        return ("--run-id", run_id, "confirm-notice", "--notice-run-id", run_id.split("-", 1)[0],
+                "--digest", digest, "--expected-generation", str(self.state().generation))
 
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -438,7 +507,7 @@ class SnapshotBindingTest(unittest.TestCase):
         # Set notice → gen after resume + 1 (run_id=2-2 after resume)
         self.assertEqual(self.run_cli("--run-id", "2-2", "mark-notice-needed", "--digest", "n1"), 0)
         # Automated run identity is not human acknowledgement; preserve unacked state.
-        self.assertEqual(self.run_cli("--run-id", "2-2", "confirm-notice", "--digest", "n1"),
+        self.assertEqual(self.run_cli(*self.confirm_args("2-2")),
                          gl.EXIT_NEEDS_HUMAN)
         # Bump epoch to bypass replay guard: pause → resume with same run_id (allowed)
         self.run_cli("--run-id", "2-2", "pause", "--reason", "epoch bump")
