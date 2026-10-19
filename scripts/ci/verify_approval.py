@@ -75,7 +75,20 @@ def verify_approval(reviews: list[dict], *, head_sha: str, approver: str,
     return not problems, problems, evidence
 
 
-def verify_approvals(reviews: list[dict], *, head_sha: str, approvers, required: int = 1,
+def latest_by_id(reviews: list[dict]) -> dict[int, dict]:
+    latest: dict[int, dict] = {}
+    for review in reviews:
+        raw_id = ((review.get("user") or {}).get("id"))
+        if isinstance(raw_id, bool) or not isinstance(raw_id, int) or raw_id < 1:
+            continue
+        prev = latest.get(raw_id)
+        if prev is None or str(review.get("submitted_at") or "") >= str(prev.get("submitted_at") or ""):
+            latest[raw_id] = review
+    return latest
+
+
+def verify_approvals(reviews: list[dict], *, head_sha: str, approvers=None,
+                     approver_ids=None, required: int = 1,
                      complete: bool = True, allow_bots: bool = False) -> tuple[bool, list[str], dict]:
     """多审批人版本：按显式策略名单核验，并阻断任何"请求变更"。
 
@@ -86,47 +99,48 @@ def verify_approvals(reviews: list[dict], *, head_sha: str, approvers, required:
     * 审批人账号类型默认必须是 `User`（`allow_bots` 仅用于策略显式允许的离线测试）。
     """
     problems: list[str] = []
-    who_list = [str(x) for x in (approvers or [])]
-    evidence: dict = {"head_sha": head_sha, "approvers": who_list, "required": required,
-                      "reviews": len(reviews or []), "valid_approvers": []}
+    evidence: dict = {"head_sha": head_sha, "approver_ids": list(approver_ids or []),
+                      "required": required, "reviews": len(reviews or []),
+                      "valid_approver_ids": []}
     if not complete:
         return False, ["REVIEWS_PAGINATION_INCOMPLETE"], evidence
     if not isinstance(reviews, list):
         return False, ["REVIEWS_MALFORMED"], evidence
-    if not who_list:
-        return False, ["APPROVER_NOT_CONFIGURED"], evidence
+    if approver_ids is None:
+        return False, ["APPROVER_ID_POLICY_REQUIRED"], evidence
+    id_list = [x for x in approver_ids if isinstance(x, int) and not isinstance(x, bool) and x > 0]
+    if len(id_list) != len(list(approver_ids)) or not id_list:
+        return False, ["APPROVER_ID_POLICY_INVALID"], evidence
     if not isinstance(required, int) or isinstance(required, bool) or required < 1 \
-            or required > len(who_list):
+            or required > len(id_list):
         return False, ["APPROVAL_REQUIREMENT_INVALID"], evidence
-
-    latest = latest_by_user(reviews)
-    for login, review in latest.items():
+    evidence["approver_ids"] = id_list
+    latest = latest_by_id(reviews)
+    for user_id, review in latest.items():
         if review.get("state") == "CHANGES_REQUESTED" and review.get("commit_id") == head_sha:
-            problems.append(f"CHANGES_REQUESTED_PRESENT:{login}")
-
-    valid: list[str] = []
-    for who in who_list:
-        review = latest.get(who)
+            problems.append(f"CHANGES_REQUESTED_PRESENT:{user_id}")
+    valid: list[int] = []
+    for user_id in id_list:
+        review = latest.get(user_id)
         if review is None:
-            problems.append(f"APPROVAL_MISSING:{who}")
+            problems.append(f"APPROVAL_MISSING_ID:{user_id}")
             continue
         utype = ((review.get("user") or {}).get("type"))
         if utype != "User" and not allow_bots:
-            problems.append(f"APPROVER_NOT_HUMAN:{who}")
+            problems.append(f"APPROVER_NOT_HUMAN_ID:{user_id}")
             continue
-        state = review.get("state")
-        if state != ALLOWED_STATE:
-            problems.append(f"APPROVAL_NOT_CURRENT:{who}:{state}")
+        if review.get("state") != ALLOWED_STATE:
+            problems.append(f"APPROVAL_NOT_CURRENT_ID:{user_id}:{review.get('state')}")
             continue
         commit_id = review.get("commit_id")
         if not isinstance(commit_id, str) or len(commit_id) != 40:
-            problems.append(f"APPROVAL_MISSING_COMMIT:{who}")
+            problems.append(f"APPROVAL_MISSING_COMMIT_ID:{user_id}")
             continue
         if commit_id != head_sha:
-            problems.append(f"APPROVAL_STALE:{who}")
+            problems.append(f"APPROVAL_STALE_ID:{user_id}")
             continue
-        valid.append(who)
-    evidence["valid_approvers"] = valid
+        valid.append(user_id)
+    evidence["valid_approver_ids"] = valid
     if len(valid) < required:
         problems.append(f"APPROVALS_INSUFFICIENT:{len(valid)}/{required}")
     evidence["ok"] = not problems

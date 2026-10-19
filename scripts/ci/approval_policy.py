@@ -32,7 +32,7 @@ SCHEMA = "mihomo-rules-approval-policy"
 VERSION = 1
 DEFAULT_PATH = ".github/approval-policy.json"
 
-REQUIRED_FIELDS = ("schema", "version", "approvers", "required_approvals",
+REQUIRED_FIELDS = ("schema", "version", "approvers", "approver_ids", "required_approvals",
                    "allow_bot_approvers", "head_binding", "on_missing")
 # GitHub 账号名：1-39 字符，字母数字与单个连字符，不能以连字符开头/结尾
 LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$")
@@ -40,6 +40,7 @@ LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$")
 
 @dataclass(frozen=True)
 class Policy:
+    approver_ids: tuple[int, ...]
     approvers: tuple[str, ...]
     required_approvals: int
     allow_bot_approvers: bool
@@ -48,7 +49,8 @@ class Policy:
     source: str
 
     def to_dict(self) -> dict:
-        return {"approvers": list(self.approvers),
+        return {"approver_ids": list(self.approver_ids),
+                "approvers": list(self.approvers),
                 "required_approvals": self.required_approvals,
                 "allow_bot_approvers": self.allow_bot_approvers,
                 "head_binding": self.head_binding,
@@ -96,6 +98,22 @@ def validate_doc(doc: object, *, source: str = "") -> PolicyResult:
     if doc.get("on_missing") != "fail-closed":
         problems.append("APPROVAL_POLICY_ON_MISSING_UNSAFE")
 
+    raw_approver_ids = doc.get("approver_ids")
+    approver_ids: list[int] = []
+    if not isinstance(raw_approver_ids, list):
+        problems.append("APPROVAL_POLICY_APPROVER_IDS_INVALID:not-a-list")
+    else:
+        for item in raw_approver_ids:
+            if isinstance(item, bool) or not isinstance(item, int) or item < 1:
+                problems.append(f"APPROVAL_POLICY_APPROVER_ID_INVALID:{item!r}")
+                continue
+            if item in approver_ids:
+                problems.append(f"APPROVAL_POLICY_DUPLICATE_APPROVER_ID:{item}")
+                continue
+            approver_ids.append(item)
+        if not approver_ids:
+            problems.append("APPROVAL_POLICY_UNCONFIGURED")
+
     raw_approvers = doc.get("approvers")
     approvers: list[str] = []
     if not isinstance(raw_approvers, list):
@@ -121,11 +139,13 @@ def validate_doc(doc: object, *, source: str = "") -> PolicyResult:
         problems.append(f"APPROVAL_POLICY_REQUIRED_EXCEEDS_APPROVERS:{required}>{len(approvers)}")
 
     required_int = required if isinstance(required, int) and not isinstance(required, bool) else 0
-    evidence.update({"approvers": approvers, "required_approvals": required_int,
+    evidence.update({"approver_ids": approver_ids, "approvers": approvers,
+                     "required_approvals": required_int,
                      "declared_approvers": len(raw_approvers) if isinstance(raw_approvers, list) else 0})
     if problems:
         return PolicyResult(False, None, problems, evidence)
-    policy = Policy(approvers=tuple(approvers), required_approvals=required_int,
+    policy = Policy(approver_ids=tuple(approver_ids), approvers=tuple(approvers),
+                    required_approvals=required_int,
                     allow_bot_approvers=False, head_binding="exact",
                     on_missing="fail-closed", source=source)
     return PolicyResult(True, policy, [], evidence)
@@ -153,16 +173,16 @@ def load_policy(path: str = DEFAULT_PATH, *, read=None) -> PolicyResult:
 
 
 def resolve_approvers(*, explicit: str = "", policy_path: str = DEFAULT_PATH,
-                      read=None) -> tuple[tuple[str, ...], int, PolicyResult | None]:
-    """确定本次判定的审批人与所需批准数。
+                      read=None) -> tuple[tuple[int, ...], int, PolicyResult | None]:
+    """确定本次判定的审批人不可变 GitHub user ID。
 
-    * 显式 `--approver` 视为**人工显式输入**（不是推断），只需 1 人；
-    * 否则必须由策略文件给出；策略不可用时返回空审批人集合，让调用方 fail-closed。
+    login 只作为审计展示字段；审批资格必须来自策略中的 approver_ids。
+    旧的显式 login 旁路不再授予权限，保留参数仅为兼容并 fail-closed。
     """
     if explicit:
-        return (explicit,), 1, PolicyResult(True, policy=None, reason_codes=[],
-                                            evidence={"source": "explicit-cli"})
+        return (), 0, PolicyResult(False, None, ["APPROVAL_POLICY_LOGIN_OVERRIDE_FORBIDDEN"],
+                                   {"source": "explicit-cli"})
     result = load_policy(policy_path, read=read)
     if result.ok and result.policy is not None:
-        return result.policy.approvers, result.policy.required_approvals, result
+        return result.policy.approver_ids, result.policy.required_approvals, result
     return (), 0, result

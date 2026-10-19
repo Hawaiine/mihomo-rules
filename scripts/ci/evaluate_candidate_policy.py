@@ -49,7 +49,7 @@ class PolicyError(RuntimeError):
 def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id: str,
                     generation: int, change_class: str, changed_files: int,
                     review_complete: bool = True, reviews: list | None = None,
-                    approver: str = "", approvers: tuple | list = (),
+                    approver: str = "", approvers: tuple | list = (), approver_ids: tuple | list = (),
                     required_approvals: int = 1, policy_evidence: dict | None = None,
                     policy_problems: list | None = None,
                     checks_ok: bool = False, checks_problems: list | None = None,
@@ -75,15 +75,14 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
     approval_ok = False
     approval_reasons: list[str] = []
     if change_class == cc.NEW_RULESET:
-        # 审批人只能来自显式名单；显式单人输入等价于 required=1
+        evidence["approval"].update({"approver_ids": list(approver_ids)})
         who = list(approvers) or ([approver] if approver else [])
         need = required_approvals if approvers else 1
-        # 显式审批策略不可用 ⇒ 必失败关闭（不得用 owner 推断兜底）
         if list(policy_problems or []):
             approval_reasons = list(policy_problems)
         else:
             approval_ok, approval_reasons, ap_ev = va.verify_approvals(
-                reviews or [], head_sha=head_sha, approvers=who,
+                reviews or [], head_sha=head_sha, approver_ids=approver_ids,
                 required=need, complete=review_complete)
             evidence["approval"].update(ap_ev)
 
@@ -204,7 +203,7 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
     if (pr_obj.get("base") or {}).get("sha") != base_sha:
         raise PolicyError("PR base SHA 与预期不一致（base 漂移）")
     # 审批人只能来自显式输入或仓库内显式策略；**不再**从 base.repo.owner 推断
-    approvers, required_approvals, policy_result = apol.resolve_approvers(
+    approver_ids, required_approvals, policy_result = apol.resolve_approvers(
         explicit=approver, policy_path=approval_policy_path)
     policy_evidence = policy_result.to_dict() if policy_result is not None else {}
     policy_problems = list(policy_result.reason_codes) if policy_result is not None else []
@@ -253,7 +252,7 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
         repo=repo, pr=pr, base_sha=base_sha, head_sha=head_sha, run_id=run_id,
         generation=generation, change_class=classification.change_class,
         changed_files=len(files), review_complete=review_complete, reviews=reviews,
-        approver=approver, approvers=approvers, required_approvals=required_approvals,
+        approver=approver, approvers=(), approver_ids=approver_ids, required_approvals=required_approvals,
         policy_evidence=policy_evidence, policy_problems=policy_problems,
         checks_ok=checks_ok, checks_problems=checks_problems,
         lock_state=lock_state, lock_evidence=lock_ev, platform_ok=platform_ok,
@@ -275,7 +274,7 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
             ok_approval, ap_reasons = False, policy_problems
         else:
             ok_approval, ap_reasons, _ = va.verify_approvals(
-                reviews, head_sha=head_sha, approvers=approvers,
+                reviews, head_sha=head_sha, approver_ids=approver_ids,
                 required=required_approvals, complete=review_complete)
         verification_ok = ok_approval
         verification_reasons.extend(ap_reasons)

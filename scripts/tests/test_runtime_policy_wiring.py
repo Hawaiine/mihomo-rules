@@ -205,7 +205,7 @@ class PolicyWiringTest(unittest.TestCase):
         return ecp.evaluate_policy(
             repo="Hawaiine/mihomo-rules", pr=29, base_sha="b" * 40, head_sha=HEAD,
             run_id=RUN_ID, generation=1, change_class=change_class, changed_files=3,
-            review_complete=complete, reviews=reviews or [], approver=approver,
+            review_complete=complete, reviews=reviews or [], approver=approver, approver_ids=[152380613],
             checks_ok=True, lock_state="held", platform_ok=platform,
             production_mode=production)
 
@@ -231,7 +231,7 @@ class PolicyWiringTest(unittest.TestCase):
 
     def test_new_ruleset_with_head_approval_eligible(self):
         reviews = [{"state": "APPROVED", "commit_id": HEAD, "submitted_at": "2026-10-19T00:00:00Z",
-                    "user": {"login": "Hawaiine", "type": "User"}}]
+                    "user": {"id": 152380613, "login": "Hawaiine", "type": "User"}}]
         out = self.evaluate(cc.NEW_RULESET, reviews=reviews, production=True)
         self.assertEqual(out["decision"], "ELIGIBLE_NEW_RULESET_AFTER_APPROVAL")
 
