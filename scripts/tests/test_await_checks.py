@@ -244,27 +244,51 @@ class PollerTest(unittest.TestCase):
 
 
 class MissingRunIdTest(unittest.TestCase):
-    """B2：STATUS_MODE 缺少 GITHUB_RUN_ID 必须 fail-closed"""
+    """B2：STATUS_MODE 的 run 绑定必须失败关闭；不得因 run_id 缺失/非法而跳过校验。
+
+    断言对象是 evaluate_statuses 的真实判定（生产 await_checks/verify_required_checks 都走它），
+    不再断言“环境变量恰好为空”——CI 里 GITHUB_RUN_ID 总是存在，旧断言因此在 CI 红、本地绿。
+    """
+
+    CONTEXT = ["route-a/verify"]
+    URL = "https://github.com/o/r/actions/runs/1001"
+
+    def _status(self, url: str | None = None) -> dict:
+        return {"context": "route-a/verify", "state": "success", "sha": HEAD,
+                "creator": {"login": "github-actions[bot]", "type": "Bot"},
+                "target_url": self.URL if url is None else url}
+
+    def _eval(self, run_id: str, *statuses) -> tuple[str, dict, list[str]]:
+        from scripts.ci.gate_status import evaluate_statuses
+        return evaluate_statuses(list(statuses) or [self._status()], self.CONTEXT, HEAD,
+                                 expected_run_id=run_id, expected_repo="o/r")
 
     def test_missing_run_id_guard(self):
-        """await_checks 入口 guard：run_id 为空时返回 FAILED"""
-        run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
-        self.assertEqual(run_id, "")
+        """环境变量缺失 → 生产入口取到空串 → 判定 failed（不是 success）"""
+        with mock.patch.dict(os.environ, {}, clear=True):
+            run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+        st, _, probs = self._eval(run_id)
+        self.assertEqual(st, "failed")
+        self.assertTrue(probs)
 
     def test_present_run_id_passes(self):
-        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "42"}, clear=True):
-            run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
-            self.assertEqual(run_id, "42")
+        """有效 run_id 与 status 绑定一致 → success"""
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "1001"}, clear=False):
+            st, _, probs = self._eval(os.environ["GITHUB_RUN_ID"].strip())
+        self.assertEqual(st, "success", probs)
 
     def test_empty_expected_run_id_fails_closed(self):
-        from scripts.ci.gate_status import evaluate_statuses
-        s = {"context": "x", "state": "success", "target_url": "https://github.com/o/r/actions/runs/99",
-             "creator": {"login": "github-actions[bot]", "type": "Bot"}, "sha": HEAD}
-        for run_id in ("", "   ", "invalid"):
+        for run_id in ("", "   ", "invalid", "0", "01001"):
             with self.subTest(run_id=run_id):
-                st, _, probs = evaluate_statuses([s], ["x"], HEAD, expected_run_id=run_id, expected_repo="o/r")
+                st, _, probs = self._eval(run_id)
                 self.assertEqual(st, "failed")
                 self.assertTrue(probs)
+
+    def test_stale_status_from_previous_run_rejected(self):
+        """同一 head 上旧 run 留下的 success 不得被本次采信（防重放）"""
+        st, _, probs = self._eval("1001", self._status("https://github.com/o/r/actions/runs/999"))
+        self.assertEqual(st, "failed")
+        self.assertTrue(any("999" in p for p in probs), probs)
 
 
 
