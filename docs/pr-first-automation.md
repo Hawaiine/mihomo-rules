@@ -46,9 +46,10 @@ GitHub 的两条硬事实：
 * 三个 check-run 继续服务人工 PR（保证人工改动能被完整校验）；
 * 两者都在 `.github/required-checks.json` 登记（`checks[]` + `status_contexts[]`）。
 
-**平台前提（未配置，属阻塞项）**：仓库必须开启 *Settings → Actions → General →
+**平台前提（2026-10-20 只读实测：已满足）**：仓库必须开启 *Settings → Actions → General →
 "Allow GitHub Actions to create and approve pull requests"*，否则 `publish` 建 PR 返回 403。
-此时流程 fail-closed 并报 BLOCKED，**绝不回退到 App/PAT**。
+当前 `GET /actions/permissions/workflow` 返回 `can_approve_pull_request_reviews=true`，该前提已成立。
+若该开关被关闭，流程 fail-closed 并报 BLOCKED，**绝不回退到 App/PAT**。
 
 ## 2.1 门禁数据源：两种模式，同等强度
 
@@ -151,9 +152,13 @@ GitHub 的两条硬事实：
 ## 5. 上线顺序（本轮**未**执行）
 
 1. 本 PR 通过独立审阅。
-2. 创建 `main` Ruleset：`pull_request` + 三个 check-run（strict）+ **`route-a/verify` 状态**
-   + `non_fast_forward` + `deletion`，bypass 列表为空；GET 回读 `enforcement=active`。
-3. 打开 "Allow GitHub Actions to create and approve pull requests"（P0-14，**需用户批准**）。
+2. `main` Ruleset 的 required status checks **只引用单一 context `route-a/verify`**（strict），
+   再加 `non_fast_forward` + `deletion`，bypass 列表为空；GET 回读 `enforcement=active`。
+   **不要**把三个 check-run 与 `route-a/verify` 同时列为必需项：候选 bot PR 不产生 check-run，
+   同时要求两者会让候选 PR 永久无法满足门禁（R8）。人工 PR 的 `route-a/verify` 由
+   `route-a-status.yml` 核验该 run 的三个 job 全部 success 后发布，因此单一 context 已隐含三检查。
+3. 确认 "Allow GitHub Actions to create and approve pull requests" 已开启
+   （2026-10-20 实测为 `can_approve_pull_request_reviews=true`，无需再次变更）。
 4. 开启仓库 auto-merge（`allow_auto_merge`），在隔离分支上跑一次真实候选流程，
    确认 `route-a/verify` 落在候选 PR 的精确 head SHA 上。
 5. 全部通过后设置 `CANDIDATE_SYNC_ENABLED=true`；`CANDIDATE_AUTOMERGE_ENABLED` 单独评估。
@@ -165,7 +170,10 @@ GitHub 的两条硬事实：
   规则**（即不强制人工 review），也没有 `route-a/verify` context。前者是"是否要求人工审阅"
   的治理选择（需用户裁定），后者会让候选 bot PR 永久无法满足门禁（R8）。
   两者都必须通过平台写入修正，`verify_production_prerequisites.py` 会把它们判为未就绪。
-* Ruleset 未创建、auto-merge 未开启、"Actions 创建 PR" 开关未开启、定时更新关闭。
+* 截至 2026-10-20 只读实测：`protect-main` Ruleset **已创建且 active**（含上述三条规则，
+  required checks 为三个 check-run，`bypass_actors=[]`）；auto-merge **未开启**
+  （`allow_auto_merge=false`）；"Actions 创建 PR" 开关**已开启**；定时更新关闭
+  （`daily-sync.yml` = `disabled_manually`，仓库无任何 Actions Variables）。
 * `verify_candidate` / `publish_status` / 状态锁的协议语义由**进程内 stub + 单测**覆盖，
   **不代表真实平台端到端成功**。
 * **Ruleset 不能约束所有者权限本身**：admin 身份仍可修改 Ruleset、分支保护与仓库设置。
