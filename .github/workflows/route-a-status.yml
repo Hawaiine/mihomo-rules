@@ -31,6 +31,9 @@ permissions:
   actions: read
   pull-requests: read
   statuses: write
+  # Check Run 是 R-1 的**可证明来源**：返回对象含 app.id=15368（GitHub Actions App），
+  # 而 commit status 对象没有 app 字段。两条都发（dual），任一失败即失败，不静默降级。
+  checks: write
 
 concurrency:
   group: route-a-status-${{ github.event.workflow_run.head_sha || inputs.head-sha }}
@@ -54,7 +57,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 🚦 核验 run → 发布 route-a/verify → 回读
+      - name: 🚦 核验 run → 发布 route-a/verify（status + check run）→ 回读
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.event.workflow_run.id || inputs.run-id }}
@@ -67,6 +70,7 @@ jobs:
             --run-id "${RUN_ID}" \
             --pr "${PR_NUM}" \
             --head-sha "${HEAD_SHA}" \
+            --publish-mode dual \
             --target-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
             --json "$RUNNER_TEMP/status-publish.json"
 

@@ -96,9 +96,83 @@ class Case(unittest.TestCase):
         routes.update(over.get("routes", {}))
         Stub.routes = routes
 
-    def publish(self, attempts: int = 1):
+    def publish(self, attempts: int = 1, mode: str = "status"):
         return prs.publish_for_run(repo="o/r", run_id="9", pr=29, head_sha=HEAD, required=REQUIRED,
-                                   token="tok", api=self.api, attempts=attempts)
+                                   token="tok", api=self.api, attempts=attempts, publish_mode=mode)
+
+    def check_routes(self, app_id: int = 15368, external_id: str = "route-a-run:9",
+                     conclusion: str = "success", present: bool = True):
+        cr = {"id": 77, "name": "route-a/verify", "head_sha": HEAD, "status": "completed",
+              "conclusion": conclusion, "external_id": external_id,
+              "details_url": "https://github.com/o/r/actions/runs/9",
+              "app": {"id": app_id, "slug": "github-actions"}}
+        return {
+            "POST /repos/o/r/check-runs": (201, dict(cr)),
+            f"GET /repos/o/r/commits/{HEAD}/check-runs":
+                (200, {"check_runs": [cr] if present else []}),
+        }
+
+    def full_routes(self, **cr):
+        self.base_routes()
+        Stub.routes.update(self.check_routes(**cr))
+
+    # ── Check Run（可证明 app.id）──
+
+    def test_dual_publishes_status_and_check_run(self):
+        self.full_routes()
+        out = self.publish(mode="dual")
+        self.assertEqual(out["check_run"]["verify"]["app_id"], 15368)
+        self.assertEqual(out["check_run"]["external_id"], "route-a-run:9")
+        posts = [path for method, path, _ in Stub.log if method == "POST"]
+        self.assertIn("/repos/o/r/check-runs", posts)
+        self.assertIn(f"/repos/o/r/statuses/{HEAD}", posts)
+        body = [b for m, p, b in Stub.log if m == "POST" and p == "/repos/o/r/check-runs"][0]
+        self.assertEqual(body["name"], "route-a/verify")
+        self.assertEqual(body["head_sha"], HEAD)
+        self.assertEqual(body["status"], "completed")
+        self.assertEqual(body["conclusion"], "success")
+
+    def test_check_run_only_skips_status(self):
+        self.full_routes()
+        out = self.publish(mode="check-run")
+        self.assertIn("check_run", out)
+        self.assertNotIn("status", out)
+        self.assertNotIn(f"/repos/o/r/statuses/{HEAD}",
+                         [p for m, p, _ in Stub.log if m == "POST"])
+
+    def test_check_run_wrong_app_id_refused(self):
+        self.full_routes(app_id=9999)
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="check-run")
+        self.assertIn("9999", str(ctx.exception))
+
+    def test_check_run_missing_refused(self):
+        self.full_routes(present=False)
+        with self.assertRaises(prs.Refused):
+            self.publish(attempts=1, mode="check-run")
+
+    def test_check_run_unbound_external_id_refused(self):
+        self.full_routes(external_id="route-a-run:10")
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="check-run")
+        self.assertIn("external_id", str(ctx.exception))
+
+    def test_check_run_failed_conclusion_refused(self):
+        self.full_routes(conclusion="failure")
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="check-run")
+
+    def test_check_run_creation_http_error_refused(self):
+        self.base_routes()
+        Stub.routes["POST /repos/o/r/check-runs"] = (403, {"message": "Resource not accessible"})
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="check-run")
+        self.assertIn("403", str(ctx.exception))
+
+    def test_unknown_publish_mode_refused(self):
+        self.base_routes()
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="bogus")
 
     def test_happy_path(self):
         self.base_routes()

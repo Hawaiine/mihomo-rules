@@ -42,7 +42,9 @@ GitHub 的两条硬事实：
 
 于是：
 
-* `route-a/verify`（由 `verify` job 发布）是**候选 PR 的唯一必需门槛**；
+* `route-a/verify`（由默认分支的 `route-a-status.yml` 核验后发布）是**候选 PR 的唯一必需门槛**；
+  发布形态为 **Check Run（`checks: write`，返回对象含 `app.id=15368`）** + commit status 双发：
+  Check Run 的 `app.id` 是唯一可直接证明来源的字段，status 的 `creator=github-actions[bot]` 不足以证明 App 归属。
 * 三个 check-run 继续服务人工 PR（保证人工改动能被完整校验）；
 * 两者都在 `.github/required-checks.json` 登记（`checks[]` + `status_contexts[]`）。
 
