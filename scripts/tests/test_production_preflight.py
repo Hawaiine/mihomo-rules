@@ -138,6 +138,25 @@ class RulesetNegativeTest(ReportBase):
         self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
                       r["checks"]["required_context_contract"]["reason_codes"])
 
+    def test_mixed_is_detected_even_when_check_source_id_is_wrong(self):
+        """混用判定按名称进行：来源 id 异常不得让死锁配置漏检（来源问题另行报错）。"""
+        contexts = (("route-a/verify", 15368), ("general-pr-verify", 9999),
+                    ("workflow-policy-guard", 9999), ("trusted-baseline-guard", 9999))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        r = self.report(w)
+        self.assertBlocked(r)
+        self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
+                      r["checks"]["required_context_contract"]["reason_codes"])
+
+    def test_only_check_runs_without_status_context_is_not_mixed(self):
+        contexts = (("general-pr-verify", 15368), ("workflow-policy-guard", 15368),
+                    ("trusted-baseline-guard", 15368))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        c = self.report(w)["checks"]["required_context_contract"]
+        self.assertTrue(c["ok"], c["reason_codes"])
+        self.assertTrue(c["evidence"]["check_runs_required"])
+        self.assertFalse(c["evidence"]["status_context_required"])
+
     def test_contract_is_skipped_when_manifest_has_no_status_context(self):
         dst = os.path.join(self.tmp, ".github", "required-checks.json")
         with open(dst, encoding="utf-8") as fh:

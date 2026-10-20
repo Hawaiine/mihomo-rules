@@ -223,16 +223,16 @@ def check_required_context_contract(fetched: dict, target_branch: str, root: str
     status_out = prg.evaluate(fetched["docs"], repo="", target_branch=target_branch,
                               required_contexts=[STATUS_CONTEXT],
                               default_branch=fetched.get("default_branch"))
-    checks_out = prg.evaluate(fetched["docs"], repo="", target_branch=target_branch,
-                              required_contexts=list(names),
-                              default_branch=fetched.get("default_branch"))
-    status_required = bool(status_out["ok"])
-    checks_required = bool(checks_out["ok"])
-    evidence = {"applies": True, "status_context_required": status_required,
-                "check_runs_required": checks_required, "checks": names,
+    found = set(status_out["evidence"].get("found_contexts") or [])
+    # 名称级判定：混用死锁与来源绑定是两个独立问题，这里只看"覆盖 main 的 Ruleset 里
+    # 是否同时出现了 check-run 名与 status context 名"，不因 integration_id 异常而漏检。
+    checks_present = bool(names) and set(names) <= found
+    status_present = STATUS_CONTEXT in found
+    evidence = {"applies": True, "status_context_required": status_present,
+                "check_runs_required": checks_present, "checks": names,
                 "status_contexts": contexts,
-                "found_contexts": status_out["evidence"].get("found_contexts")}
-    if status_required and checks_required:
+                "found_contexts": sorted(found)}
+    if status_present and checks_present:
         return _check(False, ["R8_MIXED_REQUIRED_CONTEXT"], evidence)
     return _check(True, [], evidence)
 
