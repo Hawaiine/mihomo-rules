@@ -36,7 +36,8 @@ import gate_state as gs          # noqa: E402
 import platform_rulesets as prg  # noqa: E402
 
 SCHEMA_VERSION = 1
-CHECK_ORDER = ("ruleset_active", "route_a_required_status", "human_pr_required_checks",
+CHECK_ORDER = ("ruleset_active", "route_a_required_status", "required_context_contract",
+               "human_pr_required_checks",
                "actions_permissions", "production_switches", "approval_policy",
                "gate_state", "snapshot_recovery")
 SWITCHES = ("CANDIDATE_SYNC_ENABLED", "GATE_STATE_ENABLED", "CANDIDATE_AUTOMERGE_ENABLED")
@@ -190,6 +191,52 @@ def check_human_pr_required_checks(root: str) -> dict:
                   })
 
 
+def check_required_context_contract(fetched: dict, target_branch: str, root: str) -> dict:
+    """R8：候选 bot PR 不产生 check-run，因此 Ruleset **不得**同时要求
+    ``checks[]`` 的 check-run 与 ``status_contexts[]`` 的 commit status。
+
+    同时要求两者会让候选 PR 永久无法满足门禁（三个 check-run 永远不会出现），
+    而 ``route-a/verify`` 单独要求时，人工 PR 的该 context 已隐含"该 run 三个 job 全 success"
+    （由 ``publish_run_status.py`` 在发布前核验）。
+
+    只读判定；无法读取或清单缺失时按不可验证处理，不返回 READY。
+    """
+    manifest_path = os.path.join(root, ".github", "required-checks.json")
+    try:
+        manifest = json.load(open(manifest_path, encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        return _check(False, ["REQUIRED_CONTEXT_MANIFEST_UNREADABLE"], {"error": str(exc)})
+
+    names = [str(c["name"]) for c in manifest.get("checks") or []
+             if isinstance(c, dict) and c.get("name")]
+    contexts = [str(c["context"]) for c in manifest.get("status_contexts") or []
+                if isinstance(c, dict) and c.get("context")]
+    if not contexts:
+        # 没有声明 status context ⇒ 本契约不适用（由 human_pr_required_checks 判缺项）
+        return _check(True, [], {"applies": False, "checks": names, "status_contexts": []})
+    if not names:
+        return _check(True, [], {"applies": False, "checks": [], "status_contexts": contexts})
+    if fetched.get("status") != "ok":
+        return _check(False, list(fetched.get("reason_codes") or ["RULESET_UNREADABLE"]),
+                      {"applies": True}, unreadable=True)
+
+    status_out = prg.evaluate(fetched["docs"], repo="", target_branch=target_branch,
+                              required_contexts=[STATUS_CONTEXT],
+                              default_branch=fetched.get("default_branch"))
+    checks_out = prg.evaluate(fetched["docs"], repo="", target_branch=target_branch,
+                              required_contexts=list(names),
+                              default_branch=fetched.get("default_branch"))
+    status_required = bool(status_out["ok"])
+    checks_required = bool(checks_out["ok"])
+    evidence = {"applies": True, "status_context_required": status_required,
+                "check_runs_required": checks_required, "checks": names,
+                "status_contexts": contexts,
+                "found_contexts": status_out["evidence"].get("found_contexts")}
+    if status_required and checks_required:
+        return _check(False, ["R8_MIXED_REQUIRED_CONTEXT"], evidence)
+    return _check(True, [], evidence)
+
+
 def check_actions_permissions(repo: str, call) -> dict:
     status, doc = call(f"/repos/{repo}/actions/permissions/workflow")
     if status != 200 or not isinstance(doc, dict):
@@ -326,6 +373,7 @@ def build_report(*, repo: str, target_branch: str, call, root: str = ".") -> dic
     checks: dict[str, dict] = {}
     checks["ruleset_active"] = check_ruleset_active(fetched, target_branch)
     checks["route_a_required_status"] = check_route_a(fetched, target_branch)
+    checks["required_context_contract"] = check_required_context_contract(fetched, target_branch, root)
     checks["human_pr_required_checks"] = check_human_pr_required_checks(root)
     checks["actions_permissions"] = check_actions_permissions(repo, call)
     checks["production_switches"] = check_production_switches(repo, call)

@@ -121,6 +121,43 @@ class ReadyTest(ReportBase):
 
 
 class RulesetNegativeTest(ReportBase):
+    def test_single_status_context_contract_is_ok(self):
+        r = self.report(World())
+        c = r["checks"]["required_context_contract"]
+        self.assertTrue(c["ok"], c["reason_codes"])
+        self.assertTrue(c["evidence"]["status_context_required"])
+        self.assertFalse(c["evidence"]["check_runs_required"])
+
+    def test_mixed_required_contexts_is_r8_deadlock_and_blocked(self):
+        """三个 check-run 与 route-a/verify 同时必需 ⇒ 候选 bot PR 永久卡死。"""
+        contexts = (("route-a/verify", 15368), ("general-pr-verify", 15368),
+                    ("workflow-policy-guard", 15368), ("trusted-baseline-guard", 15368))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        r = self.report(w)
+        self.assertBlocked(r)
+        self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
+                      r["checks"]["required_context_contract"]["reason_codes"])
+
+    def test_contract_is_skipped_when_manifest_has_no_status_context(self):
+        dst = os.path.join(self.tmp, ".github", "required-checks.json")
+        with open(dst, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        doc.pop("status_contexts", None)
+        with open(dst, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh)
+        c = self.report(World())["checks"]["required_context_contract"]
+        self.assertTrue(c["ok"])
+        self.assertFalse(c["evidence"]["applies"])
+
+    def test_contract_is_unverifiable_when_ruleset_unreadable(self):
+        w = World(**{"/repos/o/r/rulesets/1": (403, "forbidden")})
+        r = self.report(w)
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["decision"], "UNVERIFIABLE")
+        # Ruleset 不可读时不得把契约判成"已满足混用检查"，必须保留不可验证证据
+        c = r["checks"]["required_context_contract"]
+        self.assertEqual(c["evidence"]["found_contexts"], [])
+
     def test_other_branch_only_is_blocked(self):
         w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(include=["refs/heads/dev"]))})
         r = self.report(w)
