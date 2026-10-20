@@ -193,13 +193,15 @@ def check_human_pr_required_checks(root: str) -> dict:
 
 def check_required_context_contract(fetched: dict, target_branch: str, root: str) -> dict:
     """R8：候选 bot PR 不产生 check-run，因此 Ruleset **不得**同时要求
-    ``checks[]`` 的 check-run 与 ``status_contexts[]`` 的 commit status。
+    ``checks[]`` 中的 check-run 与 ``status_contexts[]`` 的 commit status。
 
-    同时要求两者会让候选 PR 永久无法满足门禁（三个 check-run 永远不会出现），
-    而 ``route-a/verify`` 单独要求时，人工 PR 的该 context 已隐含"该 run 三个 job 全 success"
-    （由 ``publish_run_status.py`` 在发布前核验）。
+    判定是**部分集合**语义：只要覆盖默认分支的 Ruleset 里同时出现 ``route-a/verify``
+    与 ``checks[]`` 中**任意一个**已登记 check-run 名称，即判为混用——候选 PR 不会产生
+    任何 ``pull_request`` check-run，哪怕只多要求一个也会永久无法满足门禁。
 
-    只读判定；无法读取或清单缺失时按不可验证处理，不返回 READY。
+    名称级混用判定与 ``integration_id`` 来源可信性判定是两个独立问题：前者不依赖来源，
+    后者由 ``check_route_a()`` 负责，互不掩盖。只读判定；manifest 不可读或 Ruleset
+    不可读时 fail-closed，不产生 READY。
     """
     manifest_path = os.path.join(root, ".github", "required-checks.json")
     try:
@@ -224,15 +226,16 @@ def check_required_context_contract(fetched: dict, target_branch: str, root: str
                               required_contexts=[STATUS_CONTEXT],
                               default_branch=fetched.get("default_branch"))
     found = set(status_out["evidence"].get("found_contexts") or [])
-    # 名称级判定：混用死锁与来源绑定是两个独立问题，这里只看"覆盖 main 的 Ruleset 里
-    # 是否同时出现了 check-run 名与 status context 名"，不因 integration_id 异常而漏检。
-    checks_present = bool(names) and set(names) <= found
+    # 名称级、**部分集合**判定：混用死锁与来源绑定是两个独立问题，这里只看"覆盖 main 的
+    # Ruleset 里是否同时出现 route-a/verify 与 checks[] 中任意一个名称"，不因 integration_id
+    # 异常而漏检；也不要求 checks[] 全部出现——任何一个都足以让候选 PR 永久卡死。
+    overlap = sorted(set(names) & found)
     status_present = STATUS_CONTEXT in found
     evidence = {"applies": True, "status_context_required": status_present,
-                "check_runs_required": checks_present, "checks": names,
-                "status_contexts": contexts,
+                "check_runs_required": bool(overlap), "required_check_run_contexts": overlap,
+                "checks": names, "status_contexts": contexts,
                 "found_contexts": sorted(found)}
-    if status_present and checks_present:
+    if status_present and overlap:
         return _check(False, ["R8_MIXED_REQUIRED_CONTEXT"], evidence)
     return _check(True, [], evidence)
 

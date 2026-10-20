@@ -148,14 +148,58 @@ class RulesetNegativeTest(ReportBase):
         self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
                       r["checks"]["required_context_contract"]["reason_codes"])
 
+    def test_partial_set_single_check_run_plus_status_is_mixed(self):
+        """只要求 route-a/verify + general-pr-verify：候选 PR 仍会永久卡死。"""
+        contexts = (("route-a/verify", 15368), ("general-pr-verify", 15368))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        r = self.report(w)
+        self.assertBlocked(r)
+        self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
+                      r["checks"]["required_context_contract"]["reason_codes"])
+        self.assertEqual(r["checks"]["required_context_contract"]["evidence"]
+                         ["required_check_run_contexts"], ["general-pr-verify"])
+
+    def test_partial_set_two_check_runs_plus_status_is_mixed(self):
+        """只要求 route-a/verify + 两个 check-run 名称：同样必须判混用。"""
+        contexts = (("route-a/verify", 15368), ("general-pr-verify", 15368),
+                    ("workflow-policy-guard", 15368))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        r = self.report(w)
+        self.assertBlocked(r)
+        self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
+                      r["checks"]["required_context_contract"]["reason_codes"])
+        self.assertEqual(r["checks"]["required_context_contract"]["evidence"]
+                         ["required_check_run_contexts"],
+                         ["general-pr-verify", "workflow-policy-guard"])
+
+    def test_partial_set_with_wrong_source_keeps_both_findings(self):
+        """部分集合 + 来源 id 错误：混用与来源问题各自独立，互不掩盖。"""
+        contexts = (("route-a/verify", 15368), ("general-pr-verify", 9999))
+        w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
+        r = self.report(w)
+        self.assertBlocked(r)
+        self.assertIn("R8_MIXED_REQUIRED_CONTEXT",
+                      r["checks"]["required_context_contract"]["reason_codes"])
+        self.assertEqual(r["checks"]["required_context_contract"]["evidence"]
+                         ["required_check_run_contexts"], ["general-pr-verify"])
+        # route-a/verify 自身来源正确 ⇒ 来源检查单独通过，证明两类判定没有互相污染
+        self.assertTrue(r["checks"]["route_a_required_status"]["ok"],
+                        r["checks"]["route_a_required_status"]["reason_codes"])
+
     def test_only_check_runs_without_status_context_is_not_mixed(self):
         contexts = (("general-pr-verify", 15368), ("workflow-policy-guard", 15368),
                     ("trusted-baseline-guard", 15368))
         w = World(**{"/repos/o/r/rulesets/1": (200, ruleset_body(contexts=contexts))})
-        c = self.report(w)["checks"]["required_context_contract"]
+        r = self.report(w)
+        c = r["checks"]["required_context_contract"]
         self.assertTrue(c["ok"], c["reason_codes"])
         self.assertTrue(c["evidence"]["check_runs_required"])
         self.assertFalse(c["evidence"]["status_context_required"])
+        self.assertNotIn("R8_MIXED_REQUIRED_CONTEXT", c["reason_codes"])
+        # 整体仍必须 BLOCKED：缺 route-a/verify 由既有门禁判，而不是被本检查误报成混用
+        self.assertBlocked(r)
+        self.assertTrue(any("REQUIRED_STATUS_CONTEXT_MISSING:route-a/verify" in x
+                            for x in r["checks"]["route_a_required_status"]["reason_codes"]))
 
     def test_contract_is_skipped_when_manifest_has_no_status_context(self):
         dst = os.path.join(self.tmp, ".github", "required-checks.json")
