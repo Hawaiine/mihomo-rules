@@ -36,7 +36,8 @@ import gate_state as gs          # noqa: E402
 import platform_rulesets as prg  # noqa: E402
 
 SCHEMA_VERSION = 1
-CHECK_ORDER = ("ruleset_active", "route_a_required_status", "human_pr_required_checks",
+CHECK_ORDER = ("ruleset_active", "route_a_required_status", "required_context_contract",
+               "human_pr_required_checks",
                "actions_permissions", "production_switches", "approval_policy",
                "gate_state", "snapshot_recovery")
 SWITCHES = ("CANDIDATE_SYNC_ENABLED", "GATE_STATE_ENABLED", "CANDIDATE_AUTOMERGE_ENABLED")
@@ -190,6 +191,55 @@ def check_human_pr_required_checks(root: str) -> dict:
                   })
 
 
+def check_required_context_contract(fetched: dict, target_branch: str, root: str) -> dict:
+    """R8：候选 bot PR 不产生 check-run，因此 Ruleset **不得**同时要求
+    ``checks[]`` 中的 check-run 与 ``status_contexts[]`` 的 commit status。
+
+    判定是**部分集合**语义：只要覆盖默认分支的 Ruleset 里同时出现 ``route-a/verify``
+    与 ``checks[]`` 中**任意一个**已登记 check-run 名称，即判为混用——候选 PR 不会产生
+    任何 ``pull_request`` check-run，哪怕只多要求一个也会永久无法满足门禁。
+
+    名称级混用判定与 ``integration_id`` 来源可信性判定是两个独立问题：前者不依赖来源，
+    后者由 ``check_route_a()`` 负责，互不掩盖。只读判定；manifest 不可读或 Ruleset
+    不可读时 fail-closed，不产生 READY。
+    """
+    manifest_path = os.path.join(root, ".github", "required-checks.json")
+    try:
+        manifest = json.load(open(manifest_path, encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        return _check(False, ["REQUIRED_CONTEXT_MANIFEST_UNREADABLE"], {"error": str(exc)})
+
+    names = [str(c["name"]) for c in manifest.get("checks") or []
+             if isinstance(c, dict) and c.get("name")]
+    contexts = [str(c["context"]) for c in manifest.get("status_contexts") or []
+                if isinstance(c, dict) and c.get("context")]
+    if not contexts:
+        # 没有声明 status context ⇒ 本契约不适用（由 human_pr_required_checks 判缺项）
+        return _check(True, [], {"applies": False, "checks": names, "status_contexts": []})
+    if not names:
+        return _check(True, [], {"applies": False, "checks": [], "status_contexts": contexts})
+    if fetched.get("status") != "ok":
+        return _check(False, list(fetched.get("reason_codes") or ["RULESET_UNREADABLE"]),
+                      {"applies": True}, unreadable=True)
+
+    status_out = prg.evaluate(fetched["docs"], repo="", target_branch=target_branch,
+                              required_contexts=[STATUS_CONTEXT],
+                              default_branch=fetched.get("default_branch"))
+    found = set(status_out["evidence"].get("found_contexts") or [])
+    # 名称级、**部分集合**判定：混用死锁与来源绑定是两个独立问题，这里只看"覆盖 main 的
+    # Ruleset 里是否同时出现 route-a/verify 与 checks[] 中任意一个名称"，不因 integration_id
+    # 异常而漏检；也不要求 checks[] 全部出现——任何一个都足以让候选 PR 永久卡死。
+    overlap = sorted(set(names) & found)
+    status_present = STATUS_CONTEXT in found
+    evidence = {"applies": True, "status_context_required": status_present,
+                "check_runs_required": bool(overlap), "required_check_run_contexts": overlap,
+                "checks": names, "status_contexts": contexts,
+                "found_contexts": sorted(found)}
+    if status_present and overlap:
+        return _check(False, ["R8_MIXED_REQUIRED_CONTEXT"], evidence)
+    return _check(True, [], evidence)
+
+
 def check_actions_permissions(repo: str, call) -> dict:
     status, doc = call(f"/repos/{repo}/actions/permissions/workflow")
     if status != 200 or not isinstance(doc, dict):
@@ -326,6 +376,7 @@ def build_report(*, repo: str, target_branch: str, call, root: str = ".") -> dic
     checks: dict[str, dict] = {}
     checks["ruleset_active"] = check_ruleset_active(fetched, target_branch)
     checks["route_a_required_status"] = check_route_a(fetched, target_branch)
+    checks["required_context_contract"] = check_required_context_contract(fetched, target_branch, root)
     checks["human_pr_required_checks"] = check_human_pr_required_checks(root)
     checks["actions_permissions"] = check_actions_permissions(repo, call)
     checks["production_switches"] = check_production_switches(repo, call)
