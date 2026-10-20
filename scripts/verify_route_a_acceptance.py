@@ -29,6 +29,9 @@ CONTEXT = "route-a/verify"
 EXPECTED_APP_ID = 15368
 BASE_BRANCH = "main"
 DEFAULT_REQUIRED_PATH = ".github/required-checks.json"
+MERGE_BOX_QUERY = """query($owner:String!,$name:String!,$pr:Int!){
+  repository(owner:$owner,name:$name){pullRequest(number:$pr){
+    mergeStateStatus mergeable headRefOid baseRefOid}}}"""
 
 # 判定分类（互斥，按优先级求值）
 PASS = "FUNCTIONAL_ACCEPTANCE_PASS"
@@ -55,6 +58,22 @@ class Client:
         if not token:
             raise ApiError("缺少 GITHUB_TOKEN（只读 token 即可）")
         self.token, self.api = token, api.rstrip("/")
+
+    def graphql(self, query: str, variables: dict):
+        req = urllib.request.Request(
+            f"{self.api}/graphql", data=json.dumps({"query": query, "variables": variables}).encode(),
+            headers={"Authorization": f"Bearer {self.token}", "User-Agent": "route-a-acceptance",
+                     "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                doc = json.loads(resp.read() or b"null")
+        except urllib.error.HTTPError as exc:
+            raise ApiError(f"POST /graphql → HTTP {exc.code}") from exc
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise ApiError(f"GraphQL 失败: {exc}") from exc
+        if doc.get("errors"):
+            raise ApiError(f"GraphQL errors: {str(doc['errors'])[:200]}")
+        return doc.get("data") or {}
 
     def get(self, path: str):
         req = urllib.request.Request(
@@ -101,6 +120,17 @@ def collect(client: Client, repo: str, pr: int, head_sha: str) -> dict:
     ev["check_runs"] = client.get(f"/repos/{repo}/commits/{head_sha}/check-runs?per_page=100")
     ev["statuses"] = client.get(f"/repos/{repo}/commits/{head_sha}/statuses?per_page=100")
     ev["combined"] = client.get(f"/repos/{repo}/commits/{head_sha}/status")
+    # merge box 只在 GraphQL 暴露；失败不掩盖其它证据，但会被记成"不可读"
+    owner, name = repo.split("/", 1)
+    try:
+        data = client.graphql(MERGE_BOX_QUERY, {"owner": owner, "name": name, "pr": pr})
+        pr_node = ((data.get("repository") or {}).get("pullRequest") or {})
+        ev["merge_state_status"] = pr_node.get("mergeStateStatus")
+        ev["graphql_head_oid"] = pr_node.get("headRefOid")
+        ev["graphql_base_oid"] = pr_node.get("baseRefOid")
+    except (ApiError, ValueError) as exc:
+        ev["merge_state_status"] = None
+        ev["merge_box_error"] = str(exc)
     return ev
 
 
@@ -130,6 +160,8 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
         "pr_head_sha": head, "pr_base_ref": base_ref, "pr_base_sha": base_sha,
         "main_tip": main_tip, "expected_head_sha": ev.get("expected_head_sha"),
         "mergeable": pull.get("mergeable"), "mergeable_state": pull.get("mergeable_state"),
+        "merge_state_status": ev.get("merge_state_status"),
+        "merge_box_error": ev.get("merge_box_error"),
     }
     if not isinstance(main_tip, str) or not main_tip:
         return {"verdict": EVIDENCE_INSUFFICIENT,
@@ -213,6 +245,7 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                     "reasons": [{"code": "CHECK_RUN_NOT_SUCCESS",
                                  "detail": f"{ra_cr.get('status')}/{ra_cr.get('conclusion')}"}],
                     "facts": facts}
+        facts["app_identity_proof"] = "check_run.app.id"
         run_id = parse_run_id(ra_cr.get("details_url") or "")
         facts["publisher_run_id"] = run_id
         if not run_id:
@@ -221,48 +254,51 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                                  "detail": "check run details_url 无法解析出 run id，"
                                            "无法证明它由哪次 PR verify 发布"}], "facts": facts}
     elif ra_status is not None and ra_status.get("state") == "success":
-        # 只有 status：creator=github-actions[bot] 不能证明 App 归属（status 无 app 字段）
-        return {"verdict": EVIDENCE_INSUFFICIENT,
-                "reasons": [{"code": "STATUS_ONLY_NO_APP_ID",
-                             "detail": (f"仅见 commit status（creator={facts['route_a_status_creator']}）；"
-                                        f"status 对象没有 app.id，无法证明来源=15368。"
-                                        f"需 check run 证据或 GitHub merge box 页面证据。")}],
-                "facts": facts}
+        # 只有 status：对象本身没有 app.id。唯一能证明"平台接受了该来源"的证据是 merge box。
+        if ev.get("merge_state_status") != "CLEAN":
+            return {"verdict": EVIDENCE_INSUFFICIENT,
+                    "reasons": [{"code": "STATUS_ONLY_NO_APP_ID",
+                                 "detail": (f"仅见 commit status（creator={facts['route_a_status_creator']}）；"
+                                            f"status 对象无 app.id，且 mergeStateStatus="
+                                            f"{ev.get('merge_state_status')!r} 不能证明平台接受该来源。"
+                                            f"需 check run 证据或 merge box=CLEAN。")}],
+                    "facts": facts}
+        facts["app_identity_proof"] = "platform_merge_box_clean (status 对象无 app.id)"
     else:
         return {"verdict": PUBLISHER_NOT_RUN,
                 "reasons": [{"code": "NO_ROUTE_A_CONTEXT",
                              "detail": f"{CONTEXT} 既无 check run 也无 success status"}],
                 "facts": facts}
 
-    # 7) merge box / 可合并状态
-    ms = pull.get("mergeable_state")
+    # 7) merge box / 可合并状态（GraphQL 优先，REST 兜底）
+    ms = (ev.get("merge_state_status") or pull.get("mergeable_state") or "").upper() or None
     facts["combined_state"] = (ev.get("combined") or {}).get("state")
-    if ms in CLEAN_MERGE_STATES:
+    if ms in ("CLEAN", "UNSTABLE"):
         pass
-    elif ms == "behind":
+    elif ms == "BEHIND":
         return {"verdict": BASELINE_DRIFT,
                 "reasons": [{"code": "MERGE_STATE_BEHIND",
-                             "detail": "mergeable_state=behind：需先同步最新 main"}], "facts": facts}
-    elif ms == "blocked":
+                             "detail": "merge state=BEHIND：需先同步最新 main"}], "facts": facts}
+    elif ms == "BLOCKED":
         return {"verdict": EVIDENCE_INSUFFICIENT,
                 "reasons": [{"code": "MERGE_STATE_BLOCKED_OTHER_RULES",
-                             "detail": ("mergeable_state=blocked，而 route-a/verify 已 success；"
+                             "detail": ("merge state=BLOCKED 而 route-a/verify 已 success；"
                                         "阻断来自其它规则或待审批，不是发布器失败。"
                                         "需 GitHub 页面 merge box 明细以定性。")}], "facts": facts}
-    elif ms == "dirty":
+    elif ms == "DIRTY":
         return {"verdict": EVIDENCE_INSUFFICIENT,
-                "reasons": [{"code": "MERGE_CONFLICT", "detail": "mergeable_state=dirty"}],
+                "reasons": [{"code": "MERGE_CONFLICT", "detail": "merge state=DIRTY"}],
                 "facts": facts}
     else:
         return {"verdict": EVIDENCE_INSUFFICIENT,
                 "reasons": [{"code": "MERGEABLE_UNKNOWN",
-                             "detail": f"mergeable_state={ms!r}；GitHub 尚未算完，重试或看页面"}],
-                "facts": facts}
+                             "detail": f"merge state={ms!r}；GitHub 尚未算完或 GraphQL 不可读，"
+                                       f"需页面证据"}], "facts": facts}
 
     return {"verdict": PASS,
             "reasons": [{"code": "REQUIRED_CONTEXT_ACCEPTED",
-                         "detail": (f"{CONTEXT} 由 app {expect_app_id} 发布于 {head}，"
-                                    f"三必需 check 均 success，mergeable_state={ms}")}],
+                         "detail": (f"{CONTEXT} 在 {head} 上满足必需项，三必需 check 均 success，"
+                                    f"merge state={ms}（平台接受该 context）")}],
             "facts": facts}
 
 

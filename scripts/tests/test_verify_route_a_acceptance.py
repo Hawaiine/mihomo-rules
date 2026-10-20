@@ -123,6 +123,26 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
         self.assertIn("PUBLISHER_RUN_UNBOUND", [r["code"] for r in out["reasons"]])
 
+    def test_status_only_accepted_when_merge_box_clean(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]
+        out = acc.classify(ev(check_runs=runs, merge_state_status="CLEAN"), REQUIRED)
+        self.assertEqual(out["verdict"], acc.PASS)
+        self.assertIn("platform_merge_box_clean", out["facts"]["app_identity_proof"])
+
+    def test_status_only_insufficient_when_merge_box_blocked(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]
+        out = acc.classify(ev(check_runs=runs, merge_state_status="BLOCKED"), REQUIRED)
+        self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
+
+    def test_check_run_path_marks_app_id_proof(self):
+        out = acc.classify(ev(), REQUIRED)
+        self.assertEqual(out["facts"]["app_identity_proof"], "check_run.app.id")
+
+    def test_graphql_behind_wins_over_rest(self):
+        d = ev(pull={"mergeable_state": "clean"})
+        d["merge_state_status"] = "BEHIND"
+        self.assertEqual(self.verdict(d), acc.BASELINE_DRIFT)
+
     def test_merge_state_blocked_with_rule_satisfied(self):
         out = acc.classify(ev(pull={"mergeable_state": "blocked"}), REQUIRED)
         self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
