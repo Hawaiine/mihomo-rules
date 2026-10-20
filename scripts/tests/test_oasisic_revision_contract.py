@@ -31,7 +31,7 @@ import verify_general_pr as guard  # noqa: E402
 MANIFEST = ROOT / 'scripts' / 'config_contract' / 'oasisic_revision.json'
 CONTRACT = ROOT / 'scripts' / 'config_contract' / 'contract.json'
 MATCHER = ROOT / 'scripts' / 'match_icons.py'
-DAILY_SYNC = ROOT / '.github' / 'workflows' / 'daily-sync.yml'
+DAILY_SYNC = ROOT / '.github' / 'workflows' / 'candidate-pr-sync.yml'   # Route A：实际 checkout 在候选流程
 PR_WORKFLOW = ROOT / '.github' / 'workflows' / 'pr-verify.yml'
 PINNED = guard.PINNED_OASIC
 

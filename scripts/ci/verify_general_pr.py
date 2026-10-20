@@ -88,6 +88,22 @@ WORKFLOW_REQUIRED_SCRIPTS = (
     "scripts/readme_stats.py --check",
     "python3 -m unittest discover -s scripts/tests",
 )
+# 第六轮：守卫必须由**核验过的绝对路径解释器**调用（`"$PY_BIN"`），因此必需步骤文本
+# 允许「裸解释器」与「核验后解释器」两种写法；两种都算该步骤存在。
+VERIFIED_PY = '"$PY_BIN"'
+VERIFIED_PY_BARE = "$PY_BIN"
+
+
+def required_step_variants(required: str) -> tuple[str, ...]:
+    """该必需步骤在 workflow 文本里的可接受写法（用于存在性判定与测试定位）。"""
+    if required.startswith("python3 "):
+        tail = required[len("python3 "):]
+        return (required, f"{VERIFIED_PY} {tail}", f"{VERIFIED_PY_BARE} {tail}")
+    return (required,)
+
+
+def required_step_present(text: str, required: str) -> bool:
+    return any(variant in text for variant in required_step_variants(required))
 # Only the bare environment variable is forbidden; `_OASIC_REVISION` is the manifest-backed name.
 ENV_REVISION_FALLBACK = re.compile(r"(?<![A-Za-z0-9_])OASIC_REVISION(?![A-Za-z0-9_])")
 
@@ -440,6 +456,20 @@ def oasisic_checkout_steps(workflow_text: str) -> list | None:
     return steps
 
 
+def _is_delegating(workflow_text: str) -> bool:
+    """workflow 是否只做 workflow_call 委派（没有任何 step）。"""
+    try:
+        doc = yaml.safe_load(workflow_text)
+    except Exception:  # noqa: BLE001
+        return False
+    jobs = (doc or {}).get("jobs") or {}
+    if not isinstance(jobs, dict) or not jobs:
+        return False
+    has_steps = any((job or {}).get("steps") for job in jobs.values() if isinstance(job, dict))
+    has_uses = any(isinstance(job, dict) and job.get("uses") for job in jobs.values())
+    return has_uses and not has_steps
+
+
 def checkout_problems(workflow_text: str, path: str, manifest: dict) -> list[str]:
     """每个 Oasisic checkout 的 repository 与 ref 都必须与批准身份 / manifest 一致。
 
@@ -450,6 +480,10 @@ def checkout_problems(workflow_text: str, path: str, manifest: dict) -> list[str
     if steps is None:
         return [f"{path}: cannot parse workflow YAML to verify the Oasisic checkout"]
     if not steps:
+        # 纯委派 workflow（job 只有 uses:，没有任何 steps）不执行 checkout，
+        # 其身份契约由被调用的 workflow 承担；其余无 checkout 的 workflow 仍失败。
+        if _is_delegating(workflow_text):
+            return []
         return [f"{path}: no Oasisic-Icons checkout step found"]
     manifest_repository = manifest.get("repository")
     revision = manifest.get("revision")
@@ -770,7 +804,7 @@ def workflow_problems(text: str) -> list[str]:
         if command in text:
             problems.append(f"{PR_WORKFLOW_PATH}: forbidden write command {command!r}")
     for required in WORKFLOW_REQUIRED_SCRIPTS:
-        if required not in text:
+        if not required_step_present(text, required):
             problems.append(f"{PR_WORKFLOW_PATH}: missing required verification step {required!r}")
     # Oasisic 检出必须使用已批准 pin（与 daily-sync 同一权威来源，禁止浮动 ref）
     if f"ref: {PINNED_OASIC}" not in text:

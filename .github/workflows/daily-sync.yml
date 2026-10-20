@@ -1,195 +1,37 @@
-name: 每日规则同步
+name: 每日规则同步（PR-first 唯一入口）
+
+# 本文件是仓库**唯一**的定时自动同步入口（Route A）。
+#
+# 设计要点：
+#   * 这里不含任何 `git push` / 任何 ref 写入：所有写操作都在被调用的
+#     `candidate-pr-sync.yml` 里，且只写候选分支与 PR，绝不推送 main。
+#   * 历史版本曾直接推送默认分支（HEAD:<默认分支>）；该路径已彻底删除（守卫逐行扫描本文件，
+#     出现 push / 动态 ref / refs 写入即失败）。
+#   * 认证只用内置 GITHUB_TOKEN，不使用 GitHub App / PAT。
+#   * `CANDIDATE_SYNC_ENABLED` 未设为 "true" 时整体跳过（安全默认关闭）。
+#   * 手动触发同样走本入口，因而无法绕过 PR-first。
 
 on:
   schedule:
-    - cron: '0 22 * * *'   # 06:00 Beijing = 22:00 UTC
+    - cron: '0 22 * * *'   # 06:00 北京 = 22:00 UTC
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write        # 候选分支推送
+  pull-requests: write   # 候选 PR 创建/更新（需仓库允许 Actions 创建 PR）
+  statuses: write        # route-a/verify 状态发布
 
 concurrency:
-  group: mihomo-daily-sync-${{ github.ref }}
+  group: daily-sync
   cancel-in-progress: false
-
-env:
-  TZ: Asia/Shanghai
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    # 图标仓库显式化：本 job 所有步骤统一使用检出的 Oasisic-Icons，
-    # 不再依赖 match_icons 的隐式相对解析（<repo>/Oasisic-Icons）。
-    env:
-      MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
-
-    steps:
-      - name: 📥 拉取 mihomo-rules 仓库
-        uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: 🎨 拉取 Oasisic-Icons 仓库
-        uses: actions/checkout@v7
-        with:
-          repository: Hawaiine/Oasisic-Icons
-          path: Oasisic-Icons
-          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🐍 配置 Python 环境
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.11'
-
-      - name: 📦 安装依赖
-        run: pip install pyyaml
-
-      - name: 🛡️ 预检图标仓库固定 revision
-        run: |
-          set -euo pipefail
-          REV=$(python3 -c "import json;print(json.load(open('scripts/config_contract/oasisic_revision.json'))['revision'])")
-          echo "固定 revision (清单) = $REV"
-          echo "MIHOMO_ICON_REPO     = $MIHOMO_ICON_REPO"
-          if [ ! -d "$MIHOMO_ICON_REPO/.git" ]; then
-            echo "❌ 图标仓库缺少 .git 元数据：$MIHOMO_ICON_REPO"
-            echo "   match_icons.scan_icons() 需要 git ls-tree <固定 revision>；无 .git 会让 generate_config 直接 RuntimeError 退出"
-            exit 1
-          fi
-          HEAD_REV=$(git -C "$MIHOMO_ICON_REPO" rev-parse HEAD)
-          echo "图标仓库 HEAD        = $HEAD_REV"
-          if ! git -C "$MIHOMO_ICON_REPO" cat-file -e "${REV}^{commit}" 2>/dev/null; then
-            echo "❌ 固定 revision 在图标仓库中不可读：$REV"
-            exit 1
-          fi
-          if [ "$HEAD_REV" != "$REV" ]; then
-            echo "❌ 图标仓库 HEAD 与清单固定 revision 不一致（checkout ref 与 config_contract 未同步）"
-            exit 1
-          fi
-          echo "✅ 图标仓库与固定 revision 一致且可读"
-
-      - name: 🔄 执行同步（8 步串联）
-        id: sync
-        run: python3 scripts/batch_update.py --no-commit
-        env:
-          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          GITHUB_SHA: ${{ github.sha }}
-
-      - name: 📊 刷新 README 统计口径
-        run: python3 scripts/readme_stats.py --update
-
-      - name: 🔍 verify_configs
-        run: python3 scripts/verify_configs.py
-
-      - name: 🔍 verify_rulesets
-        run: python3 scripts/verify_rulesets.py
-
-      - name: 🔍 校验 README 统计口径
-        run: python3 scripts/readme_stats.py --check
-
-      - name: 🧪 单元测试 (scripts/tests 全量)
-        run: python3 -m unittest discover -s scripts/tests -q
-
-      - name: 🧹 过滤仅 Updated 噪音
-        id: filter
-        run: |
-          set -euo pipefail
-          noise_count=0
-          # 安全遍历每个变更的 ruleset yaml（while IFS= 防空格路径）
-          while IFS= read -r f; do
-            [ -n "$f" ] || continue
-            # 规范化 HEAD 版本和工作区版本（去 CR、去行尾空白、去 Updated 行）
-            head_norm=$(git show HEAD:"$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | sed '/Updated:/d' | md5sum | cut -d' ' -f1)
-            work_norm=$(cat "$f" 2>/dev/null | sed 's/\r//g' | sed 's/[[:space:]]*$//' | sed '/Updated:/d' | md5sum | cut -d' ' -f1)
-            if [ "$head_norm" = "$work_norm" ]; then
-              echo "🧹 噪音: $f（仅 Updated）"
-              noise_count=$((noise_count + 1))
-              git restore --worktree -- "$f"
-            else
-              echo "📝 实质变更: $f"
-            fi
-          done < <(git diff --name-only -- 'ruleset/**/*.yaml' || true)
-          echo "noise_count=$noise_count" >> "$GITHUB_OUTPUT"
-          # 过滤后重新检查用白名单 porcelain（后续 check 步会执行）
-
-      - name: 🔍 检查变更
-        id: check
-        run: |
-          set -euo pipefail
-          # 白名单 porcelain：检查 ruleset/ configs/ scripts/ README.md
-          if [ -n "$(git status --porcelain -- ruleset/ configs/ scripts/ README.md)" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "🔄 检测到变更"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "⏸️ 无变更，跳过提交"
-          fi
-
-      - name: 📤 提交并推送
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          set -euo pipefail
-          git config user.name "mihomo-bot"
-          git config user.email "bot@mihomo-rules"
-          git add ruleset/ configs/ scripts/ README.md
-          # 暂存区为空则跳过 commit/push（防御性：防止 commit 失败后仍 rebase+push）
-          if [ -z "$(git diff --cached --name-only)" ]; then
-            echo "⏸️ 暂存区为空，跳过 commit/push"
-            exit 0
-          fi
-          git commit -m "🔄 每日自动同步 $(date +'%Y-%m-%d %H:%M:%S')"
-          git pull --rebase origin ${{ github.ref_name }}
-          git push origin HEAD:${{ github.ref_name }}
-          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: 🔔 通知 — 已推送
-        if: steps.check.outputs.changed == 'true' && env.MIHOMO_DISCORD_WEBHOOK != ''
-        env:
-          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
-        run: |
-          python3 scripts/batch_update.py --notify pushed \
-            --noise-restored ${{ steps.filter.outputs.noise_count }} \
-            --commit-sha $(git rev-parse HEAD) \
-            2>&1 || echo "⚠️ 通知发送失败（非致命）"
-
-      - name: 🔔 通知 — 跳过提交
-        if: steps.check.outputs.changed == 'false' && env.MIHOMO_DISCORD_WEBHOOK != ''
-        env:
-          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
-        run: |
-          python3 scripts/batch_update.py --notify skip \
-            --noise-restored ${{ steps.filter.outputs.noise_count }} \
-            2>&1 || echo "⚠️ 通知发送失败（非致命）"
-
-      - name: ⚠️ 工作流异常通知
-        if: failure() && steps.sync.outcome != 'failure' && env.MIHOMO_DISCORD_WEBHOOK != ''
-        env:
-          MIHOMO_DISCORD_WEBHOOK: ${{ secrets.MIHOMO_DISCORD_WEBHOOK }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          python3 -c "
-          import urllib.request, json, os
-          wh = os.environ['MIHOMO_DISCORD_WEBHOOK']
-          url = os.environ['RUN_URL']
-          payload = {
-            'embeds': [{
-              'title': '⚠️ 同步工作流异常',
-              'color': 15844367,
-              'fields': [
-                {'name': '💥 状态', 'value': '工作流提前终止，请查看日志'},
-                {'name': '🔗 Actions', 'value': f'[查看日志]({url})'},
-              ],
-              'footer': {'text': 'mihomo-rules 自动同步'}
-            }]
-          }
-          data = json.dumps(payload).encode('utf-8')
-          req = urllib.request.Request(wh, data=data, headers={
-            'Content-Type': 'application/json',
-            'User-Agent': 'mihomo-bot/1.0',
-          })
-          urllib.request.urlopen(req, timeout=10)
-          " 2>/dev/null || true
+    name: sync
+    uses: ./.github/workflows/candidate-pr-sync.yml
+    with:
+      reason: daily-sync
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: write

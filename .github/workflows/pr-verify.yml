@@ -1,5 +1,25 @@
 name: General PR verification
 
+# 必需检查（ruleset 精确引用，见 .github/required-checks.json）：
+#   general-pr-verify / workflow-policy-guard / trusted-baseline-guard
+# job id 与 job name 必须一致，否则 check 名漂移、ruleset 引用失效。
+#
+# 触发（**只有 pull_request**）：
+#   * 官方文档明确保证：workflow_dispatch 触发的 workflow 产生的检查不会出现在 PR 的
+#     checks 中，也不满足 ruleset 必需检查（见 github/docs 的
+#     troubleshooting-required-status-checks）。因此本 workflow 不声明 workflow_dispatch，
+#     必需检查一律由 pull_request 事件产生。
+#   * Route A（固定约束，无 GitHub App、无 PAT）：候选 PR 由内置 GITHUB_TOKEN 创建，
+#     因此**不会**触发本 workflow 的 pull_request；候选 PR 的门禁由
+#     candidate-pr-sync.yml 的 verify job 在同一受信运行内完成，并发布
+#     `route-a/verify` commit status。
+#
+# 安全姿态（由 scripts/ci/verify_general_pr.py 的 workflow-security-guard 与
+# scripts/ci/verify_workflow_policy.py 共同强制）：
+#   permissions 恰为 contents: read；无任何写命令；不使用指向分支名的浮动 ref；
+#   所有脚本来自被检提交自身；Oasisic-Icons 检出使用已批准 pin；必需检查 job 不带
+#   job-level if（不可能被跳过）。
+
 on:
   pull_request:
     branches:
@@ -14,20 +34,36 @@ concurrency:
 
 env:
   TZ: Asia/Shanghai
-  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
   general-pr-verify:
     name: general-pr-verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
+        id: pr
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          NUM="${{ github.event.pull_request.number }}"
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          printf '%s' "$NUM"  | grep -Eq '^[0-9]+$'     || { echo "❌ PR 编号非法"; exit 1; }
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "number=${NUM}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=${NUM}" >> "$GITHUB_ENV"
+          echo "PR #${NUM} base=${BASE:0:12} head=${HEAD:0:12}"
+
       - name: 📥 检出 PR head（完整历史，用于 head 树自洽校验）
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr.outputs.head }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -36,8 +72,37 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: 🧷 核验可执行文件身份（消除 shell 函数 / PATH / 启动环境遮蔽）
+        # 文本合同看不到运行时的名字解析：同 step 里 `python3() { … }`、经 $BASH_ENV 注入的
+        # 导出函数、PATH 前缀里的同名伪造可执行文件，都能让「看起来合规」的调用 exit=0 却
+        # 什么都没执行。因此这里先清除遮蔽面，再只接受**系统根目录下的绝对路径**并通过
+        # 真实运行核验的可执行文件，后续步骤一律用 "$PY_BIN" / "$GIT_BIN" 调用。
+        run: |
+          set -euo pipefail
+          unset -f python3 python pip pip3 git grep cat test printf readlink cp mv ln install chmod 2>/dev/null || true
+          unset BASH_ENV ENV || true
+          _resolve() {
+            local name="$1" path
+            path="$(command -v -- "$name" 2>/dev/null || true)"
+            case "$path" in
+              /usr/*|/bin/*|/opt/*) ;;
+              *) echo "❌ $name 未解析为系统根目录下的绝对路径（实际 '${path}'）；拒绝执行" >&2; exit 1 ;;
+            esac
+            test -x "$path" || { echo "❌ $name 不可执行：$path" >&2; exit 1; }
+            readlink -f -- "$path"
+          }
+          PY_BIN="$(_resolve python3)"
+          GIT_BIN="$(_resolve git)"
+          test -n "$("$PY_BIN" -c 'import sys; print(sys.version_info[0])')" || { echo "❌ python3 身份核验失败"; exit 1; }
+          test -n "$("$GIT_BIN" --version)" || { echo "❌ git 身份核验失败"; exit 1; }
+          {
+            echo "PY_BIN=$PY_BIN"
+            echo "GIT_BIN=$GIT_BIN"
+          } >> "$GITHUB_ENV"
+          echo "✅ 可执行文件身份已核验：python3=${PY_BIN} git=${GIT_BIN}"
+
       - name: 📦 安装依赖
-        run: python3 -m pip install pyyaml
+        run: '"$PY_BIN" -m pip install pyyaml'
 
       - name: 🎨 拉取固定版本 Oasisic-Icons
         uses: actions/checkout@v7
@@ -50,27 +115,213 @@ jobs:
       - name: 🛡️ 通用只读 guard（config/ruleset 树自洽 / pin / Oracle / 图标基线 / workflow 安全）
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
-        run: python3 scripts/ci/verify_general_pr.py
+        run: '"$PY_BIN" scripts/ci/verify_general_pr.py'
 
       - name: 🔍 verify_configs
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
-        run: python3 scripts/verify_configs.py
+        run: '"$PY_BIN" scripts/verify_configs.py'
 
       - name: 🔍 verify_rulesets
-        run: python3 scripts/verify_rulesets.py
+        run: '"$PY_BIN" scripts/verify_rulesets.py'
 
       - name: 🌐 生产图标 URL 当前可达性（阻断；无法判定即失败，不假绿）
         # 只检查生产配置实际引用的 URL（去重），HEAD → ranged GET 兜底，有限重试退避。
         # 明确不存在（可信 404）与无法判定（403/429/5xx/超时/连接失败）都判失败。
         # 注意：这是「检查时刻」的可达性，不是未来可用性保证——生产 URL 指向 main，
         # 该分支在检查后仍可能移动/删除文件，生产 URL 仍可能随后 404。
-        run: python3 scripts/icon_urls.py
+        run: '"$PY_BIN" scripts/icon_urls.py'
 
       - name: 🔍 校验 README 统计口径
-        run: python3 scripts/readme_stats.py --check
+        run: '"$PY_BIN" scripts/readme_stats.py --check'
 
       - name: 🧪 单元测试 (scripts/tests 全量)
         env:
           MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
-        run: python3 -m unittest discover -s scripts/tests
+        run: '"$PY_BIN" -m unittest discover -s scripts/tests'
+
+  workflow-policy-guard:
+    name: workflow-policy-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
+        id: pr
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+
+      - name: 📥 检出 PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 🧷 核验可执行文件身份（消除 shell 函数 / PATH / 启动环境遮蔽）
+        # 文本合同看不到运行时的名字解析：同 step 里 `python3() { … }`、经 $BASH_ENV 注入的
+        # 导出函数、PATH 前缀里的同名伪造可执行文件，都能让「看起来合规」的调用 exit=0 却
+        # 什么都没执行。因此这里先清除遮蔽面，再只接受**系统根目录下的绝对路径**并通过
+        # 真实运行核验的可执行文件，后续步骤一律用 "$PY_BIN" / "$GIT_BIN" 调用。
+        run: |
+          set -euo pipefail
+          unset -f python3 python pip pip3 git grep cat test printf readlink cp mv ln install chmod 2>/dev/null || true
+          unset BASH_ENV ENV || true
+          _resolve() {
+            local name="$1" path
+            path="$(command -v -- "$name" 2>/dev/null || true)"
+            case "$path" in
+              /usr/*|/bin/*|/opt/*) ;;
+              *) echo "❌ $name 未解析为系统根目录下的绝对路径（实际 '${path}'）；拒绝执行" >&2; exit 1 ;;
+            esac
+            test -x "$path" || { echo "❌ $name 不可执行：$path" >&2; exit 1; }
+            readlink -f -- "$path"
+          }
+          PY_BIN="$(_resolve python3)"
+          GIT_BIN="$(_resolve git)"
+          test -n "$("$PY_BIN" -c 'import sys; print(sys.version_info[0])')" || { echo "❌ python3 身份核验失败"; exit 1; }
+          test -n "$("$GIT_BIN" --version)" || { echo "❌ git 身份核验失败"; exit 1; }
+          {
+            echo "PY_BIN=$PY_BIN"
+            echo "GIT_BIN=$GIT_BIN"
+          } >> "$GITHUB_ENV"
+          echo "✅ 可执行文件身份已核验：python3=${PY_BIN} git=${GIT_BIN}"
+
+      - name: 📦 安装依赖
+        run: '"$PY_BIN" -m pip install pyyaml'
+
+      - name: 🔐 workflow 策略 guard（结构化：权限 / 触发 / 门控表达式 / 必需检查 / 来源绑定 / 防绕过）
+        run: |
+          set -euo pipefail
+          "$PY_BIN" scripts/ci/verify_workflow_policy.py --json "$RUNNER_TEMP/workflow-policy.json"
+          test -s "$RUNNER_TEMP/workflow-policy.json"
+          "$PY_BIN" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["ok"] is True, d' "$RUNNER_TEMP/workflow-policy.json"
+          echo "✅ 策略 guard 已真实执行并产出可解析报告"
+
+      - name: ⬆️ 上传策略检查结果
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: workflow-policy-result
+          path: ${{ runner.temp }}/workflow-policy.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  trusted-baseline-guard:
+    name: trusted-baseline-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🧭 解析 PR base/head SHA（pull_request 事件）
+        id: pr
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ base SHA 非法"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法"; exit 1; }
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
+
+      - name: 📥 检出 PR head（完整历史；可信 guard 逻辑来自 base 提交，不检出浮动 ref）
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 🧷 核验可执行文件身份（消除 shell 函数 / PATH / 启动环境遮蔽）
+        # 同 workflow-policy-guard：伪造 `git()` 函数会让下面的 `git show/cat-file` 全部
+        # 「成功」却写出空文件，因此这里只接受核验过的绝对路径并导出 $PY_BIN/$GIT_BIN。
+        run: |
+          set -euo pipefail
+          unset -f python3 python pip pip3 git grep cat test printf readlink cp mv ln install chmod 2>/dev/null || true
+          unset BASH_ENV ENV || true
+          _resolve() {
+            local name="$1" path
+            path="$(command -v -- "$name" 2>/dev/null || true)"
+            case "$path" in
+              /usr/*|/bin/*|/opt/*) ;;
+              *) echo "❌ $name 未解析为系统根目录下的绝对路径（实际 '${path}'）；拒绝执行" >&2; exit 1 ;;
+            esac
+            test -x "$path" || { echo "❌ $name 不可执行：$path" >&2; exit 1; }
+            readlink -f -- "$path"
+          }
+          PY_BIN="$(_resolve python3)"
+          GIT_BIN="$(_resolve git)"
+          test -n "$("$PY_BIN" -c 'import sys; print(sys.version_info[0])')" || { echo "❌ python3 身份核验失败"; exit 1; }
+          test -n "$("$GIT_BIN" --version)" || { echo "❌ git 身份核验失败"; exit 1; }
+          {
+            echo "PY_BIN=$PY_BIN"
+            echo "GIT_BIN=$GIT_BIN"
+          } >> "$GITHUB_ENV"
+          echo "✅ 可执行文件身份已核验：python3=${PY_BIN} git=${GIT_BIN}"
+
+      - name: 📦 安装依赖
+        run: '"$PY_BIN" -m pip install pyyaml'
+
+      - name: 📥 确认 base 提交可用（可信逻辑的来源）
+        run: |
+          set -euo pipefail
+          if ! "$GIT_BIN" cat-file -e "${PR_BASE_SHA}^{commit}" 2>/dev/null; then
+            "$GIT_BIN" fetch --no-tags --quiet origin "+refs/heads/*:refs/remotes/origin/*" || true
+          fi
+          "$GIT_BIN" cat-file -e "${PR_BASE_SHA}^{commit}"
+          "$GIT_BIN" cat-file -e "${PR_HEAD_SHA}^{commit}"
+          echo "✅ base/head 提交已就位"
+
+      - name: 🔐 可信基线 guard（用 **base 提交** 的 guard 逻辑校验候选树 + 削弱硬失败断言）
+        run: |
+          set -euo pipefail
+          if "$GIT_BIN" cat-file -e "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" 2>/dev/null; then
+            echo "使用 PR base 提交上的可信基线 guard（已合并、可信）"
+            "$GIT_BIN" show "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+            WANT="$("$GIT_BIN" rev-parse "${PR_BASE_SHA}:scripts/ci/verify_policy_baseline.py")"
+          else
+            echo "⚠️ base 提交尚无该 guard（本 PR 首次引入）：临时改用 PR head 版本运行，"
+            echo "   并在 PR 中声明该一次性限制；合并后即由 base/main 版本接管。"
+            "$GIT_BIN" show "${PR_HEAD_SHA}:scripts/ci/verify_policy_baseline.py" > "$RUNNER_TEMP/verify_policy_baseline.py"
+            WANT="$("$GIT_BIN" rev-parse "${PR_HEAD_SHA}:scripts/ci/verify_policy_baseline.py")"
+          fi
+          # 获取到的 guard 文件必须真实存在、非空、与来源 blob 逐字节一致、且是完整实现
+          test -s "$RUNNER_TEMP/verify_policy_baseline.py"
+          test "$("$GIT_BIN" hash-object "$RUNNER_TEMP/verify_policy_baseline.py")" = "$WANT"
+          grep -q -- "--base-sha" "$RUNNER_TEMP/verify_policy_baseline.py"
+          grep -q -- "def main(" "$RUNNER_TEMP/verify_policy_baseline.py"
+          test -n "$WANT"
+          "$PY_BIN" "$RUNNER_TEMP/verify_policy_baseline.py" \
+            --base-sha "${PR_BASE_SHA}" --head-sha "${PR_HEAD_SHA}" --repo-root . \
+            --json "$RUNNER_TEMP/trusted-baseline.json"
+          # 报告必须真实生成、非空、可解析且含预期字段（不得由空壳过程冒充）
+          test -s "$RUNNER_TEMP/trusted-baseline.json"
+          "$PY_BIN" -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["ok"] is True, d; assert d["base_sha"] and d["head_sha"], d' "$RUNNER_TEMP/trusted-baseline.json"
+          echo "✅ 可信基线 guard 完成（来源与内容已核验；报告已核验）"
+
+      - name: ⬆️ 上传基线检查结果
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: trusted-baseline-result
+          path: ${{ runner.temp }}/trusted-baseline.json
+          retention-days: 7
+          if-no-files-found: ignore

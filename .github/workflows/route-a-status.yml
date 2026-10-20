@@ -1,0 +1,80 @@
+name: Route A status
+
+# P0-1 受信状态发布器（人工 PR 路径）。
+#
+# 触发方式：
+#   * workflow_run：`General PR verification` 完成后由**默认分支**的此文件执行
+#     （执行逻辑来自 main，不来自 PR），不检出候选内容、不执行候选脚本。
+#   * workflow_dispatch：人工重发（需给出 run-id 与 head-sha）。
+#
+# 不做什么：不创建分支、不建 PR、不改任何设置；发布失败即失败，绝不降级。
+
+on:
+  workflow_run:
+    workflows: ["General PR verification"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: General PR verification 的 run id
+        required: true
+      head-sha:
+        description: 该 run 的 head SHA（40 位）
+        required: true
+      pr:
+        description: PR 编号（0 = 由 head SHA 反查）
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: route-a-status-${{ github.event.workflow_run.head_sha || inputs.head-sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish-status
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 检出默认分支（受信脚本）
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 🚦 核验 run → 发布 route-a/verify → 回读
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run-id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || inputs.head-sha }}
+          PR_NUM: ${{ inputs.pr || '0' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/publish_run_status.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --run-id "${RUN_ID}" \
+            --pr "${PR_NUM}" \
+            --head-sha "${HEAD_SHA}" \
+            --target-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
+            --json "$RUNNER_TEMP/status-publish.json"
+
+      - name: ⬆️ 上传证据
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: route-a-run-status
+          path: ${{ runner.temp }}/status-publish.json
+          retention-days: 14
+          if-no-files-found: ignore

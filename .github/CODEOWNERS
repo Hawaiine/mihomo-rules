@@ -1,0 +1,22 @@
+# CODEOWNERS（M4）
+#
+# 用户已确认责任人为 GitHub 账户 @Hawaiine（已核实：GET /users/Hawaiine → type=User）。
+# 注意：CODEOWNERS 只有在**默认分支**上存在时才生效；本文件随 PR 合并后开始生效。
+# 仅当默认分支 Ruleset 配置了 required_pull_request_reviews 时，owner 才成为**强制**审查人。
+# 当前 Ruleset 未开启 required_pull_request_reviews（详见 docs/audits/pr29-p1-report.md §11）。
+
+# 兜底：仓库全部内容
+*                       @Hawaiine
+
+# 自动化与门禁（最高风险面）
+/.github/               @Hawaiine
+/.github/workflows/     @Hawaiine
+/.github/required-checks.json @Hawaiine
+/scripts/ci/            @Hawaiine
+/scripts/tests/         @Hawaiine
+/scripts/config_contract/ @Hawaiine
+
+# 规则与配置（会影响分流结果）
+/configs/               @Hawaiine
+/ruleset/               @Hawaiine
+/scripts/generate_config.py @Hawaiine
