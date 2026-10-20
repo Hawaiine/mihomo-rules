@@ -24,6 +24,7 @@ import dataclasses
 import hashlib
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -35,6 +36,19 @@ SCHEMA_VERSION = 1
 STATE_REF = "refs/heads/state/gate"
 STATE_PATH = "state.json"
 SNAPSHOT_TAG_PREFIX = "state/gate/gen-"
+# 唯一规范形态：GitHub Actions run ID + "run attempt"（`<id>-<attempt>`）。
+# 生产者证据：`.github/workflows/candidate-pr-sync.yml` 全部 gate_lock 调用都传
+# `--run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"`，因此 GateState.run_id 恒为该形态；
+# 通知确认请求必须使用同一形态，纯裸 run ID 一律拒绝。
+NOTICE_RUN_ID_PATTERN = r"[1-9][0-9]*-[1-9][0-9]*"
+NOTICE_RUN_ID_RE = re.compile(rf"^{NOTICE_RUN_ID_PATTERN}$")
+
+
+def valid_notice_run_id(value: Any) -> bool:
+    """通知绑定用的 run 标识：必须是 ``<run_id>-<attempt>`` 且各段为正整数。"""
+    return isinstance(value, str) and NOTICE_RUN_ID_RE.fullmatch(value) is not None
+
+
 LEGAL_PHASES = {"candidate", "validation", "pr", "trusted-gate", "gate", "final-review",
                 "paused", "recovery-required", "failed"}
 BLOCKING_PHASES = {"paused", "recovery-required"}

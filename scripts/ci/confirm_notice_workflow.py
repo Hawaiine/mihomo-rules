@@ -53,6 +53,9 @@ def obtain_request(token: str, run_id: str) -> tuple[dict, dict]:
     run = api(token, f"/repos/{REPO}/actions/runs/{run_id}")
     if run.get("repository", {}).get("full_name") != REPO:
         raise ValueError("wrong repository")
+    # 事件里的源 run ID 必须就是这批数据所属的 run（防止拿 A 的制品冒充 B）
+    if str(run.get("id")) != str(run_id):
+        raise ValueError("source run id mismatch between event and API")
     if run.get("event") != "workflow_dispatch" or run.get("head_branch") != "main":
         raise ValueError("request must be a workflow_dispatch on main")
     if run.get("run_attempt") != 1 or run.get("run_number", 0) < 1:
@@ -89,8 +92,8 @@ def obtain_request(token: str, run_id: str) -> tuple[dict, dict]:
         request = json.loads(zf.read("notice-request.json"), object_pairs_hook=unique_object)
     if set(request) != {"notice_run_id", "notice_digest", "expected_generation"}:
         raise ValueError("unexpected request fields")
-    if not isinstance(request["notice_run_id"], str) or not re.fullmatch(r"[1-9][0-9]*", request["notice_run_id"]):
-        raise ValueError("invalid notice_run_id")
+    if not gs.valid_notice_run_id(request["notice_run_id"]):
+        raise ValueError("invalid notice_run_id (expected <run_id>-<attempt>)")
     if not isinstance(request["notice_digest"], str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", request["notice_digest"]):
         raise ValueError("invalid notice_digest")
     if not isinstance(request["expected_generation"], str) or not re.fullmatch(r"[1-9][0-9]*", request["expected_generation"]):

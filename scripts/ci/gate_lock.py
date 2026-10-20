@@ -293,7 +293,7 @@ def confirm_notice(store, *, notice_run_id: str, notice_digest: str, expected_ge
     if current is None:
         return reject("STATE_MISSING")
     evidence["generation_before"] = current.generation
-    if (not isinstance(notice_run_id, str) or not re.fullmatch(r"[1-9][0-9]*(?:-[1-9][0-9]*)?", notice_run_id)
+    if (not gs.valid_notice_run_id(notice_run_id)
             or not isinstance(notice_digest, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", notice_digest)
             or not isinstance(expected_generation, int)
             or isinstance(expected_generation, bool) or expected_generation < 1):

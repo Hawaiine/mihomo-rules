@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       notice_run_id:
-        description: Run ID embedded in the pending notice
+        description: 待确认通知绑定的运行标识，必须是 <run_id>-<attempt>（与候选流程写入的 GateState.run_id 同形）
         required: true
         type: string
       notice_digest:
@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           test "$REPOSITORY" = Hawaiine/mihomo-rules
           test "$REF" = refs/heads/main
-          [[ "$NOTICE_RUN_ID" =~ ^[1-9][0-9]*(-[1-9][0-9]*)?$ ]]
+          [[ "$NOTICE_RUN_ID" =~ ^[1-9][0-9]*-[1-9][0-9]*$ ]]
           [[ "$NOTICE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
           [[ "$EXPECTED_GENERATION" =~ ^[1-9][0-9]*$ ]]
       - name: Save structured request artifact

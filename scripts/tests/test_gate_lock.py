@@ -117,7 +117,7 @@ class GateLockCliTest(unittest.TestCase):
         ]:
             out = io.StringIO()
             with redirect_stdout(out):
-                rc = gl.confirm_notice(store, notice_run_id="123", notice_digest="sha256:" + "a" * 64,
+                rc = gl.confirm_notice(store, notice_run_id="123-1", notice_digest="sha256:" + "a" * 64,
                                        expected_generation=2, **fields)
             self.assertNotEqual(rc, gl.EXIT_OK)
             self.assertEqual(json.loads(out.getvalue())["reason"], expected)
@@ -135,7 +135,7 @@ class GateLockCliTest(unittest.TestCase):
         out = io.StringIO()
         from contextlib import redirect_stdout
         with redirect_stdout(out):
-            rc = gl.confirm_notice(store, notice_run_id="123", notice_digest="sha256:" + "a" * 64,
+            rc = gl.confirm_notice(store, notice_run_id="123-1", notice_digest="sha256:" + "a" * 64,
                 expected_generation=1, actor_id=152380613, actor_login="Hawaiine", actor_type="User", strict_write=True)
         self.assertNotEqual(rc, gl.EXIT_OK)
         self.assertEqual(json.loads(out.getvalue())["reason"], "GENERATION_MISMATCH")

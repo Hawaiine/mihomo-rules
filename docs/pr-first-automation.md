@@ -129,6 +129,10 @@ GitHub 的两条硬事实：
   创建/更新 PR 后再对「PR 真实 head / 候选分支 ref / 预期 SHA」做一致性校验。
 * **有界等待**：`request-auto-merge` 仅只读轮询（递增间隔、总超时 900s）；超时、漂移、
   403/429/5xx、响应不明一律禁止合并，并保留 PR 与诊断证据。
+* **U-09 通知确认（B4）**：确认请求只接受 `<run_id>-<attempt>` 形态的 `notice_run_id`（与
+  `candidate-pr-sync.yml` 写入 `GateState.run_id` 的生产者一致）；纯 run ID 一律拒绝。身份只来自
+  GitHub API 的 `run.actor` + `/users/{id}`（不可变 ID、login、`type=User` 三者交叉校验），
+  不接受 CLI/输入/制品中的身份声明；`confirm-notice` CLI 固定 fail-closed。
 * **三态区分**：`graphql_request_ok` / `auto_merge_enabled` / `merged` 分开报告。
 
 ## 4. 门禁与防自证循环
