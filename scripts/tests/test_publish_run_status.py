@@ -242,10 +242,8 @@ class Case(unittest.TestCase):
             "GET /repos/o/r/pulls/29": (200, self.pr_doc()),
             "GET /repos/o/r/git/ref/heads/main": (200, {"object": {"sha": "m" * 40}}),
             f"POST /repos/o/r/statuses/{HEAD}": (201, {"state": "success"}),
-            f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
-                {"context": "route-a/verify", "state": "success",
-                 "target_url": "https://github.com/o/r/actions/runs/9",
-                 "creator": {"login": "github-actions[bot]", "type": "Bot"}}]),
+            # 默认：同 SHA 上没有历史 status（历史 success 由具体用例显式植入）
+            f"GET /repos/o/r/commits/{HEAD}/statuses": (200, []),
         }
         routes.update(over.get("routes", {}))
         Stub.routes = routes
@@ -399,21 +397,27 @@ class Case(unittest.TestCase):
 
     # ── success status 发布后的失败补偿（本轮新增） ──
 
+    def _publish_expect_refused_keep_flow(self, **inject):
+        return self._publish_expect_refused(**inject)
+
     def _publish_expect_refused(self, **inject):
+        seed = inject.pop("seed_history", None)
         self.flow(**inject)
+        if seed is not None:
+            self.seed_historical_success(run_id=seed)
         with self.assertRaises(prs.Refused) as ctx:
             self.publish(mode="dual")
         return getattr(ctx.exception, "report", {})
 
     def test_status_readback_403_after_success_marks_possible_remains(self):
-        rep = self._publish_expect_refused(status_read_fail_after=0, status_read_fail_mode=403)
+        rep = self._publish_expect_refused(status_read_fail_after=1, status_read_fail_mode=403)
         self.assertEqual(Stub.remote_statuses[0]["state"], "failure")   # 尽力撤销已写入
         self.assertTrue(rep["possible_success_evidence_remains"], "回读失败不得算补偿成功")
         self.assertFalse(rep["status_compensation"]["ok"])
         self.assertIn("需要人工只读核验", rep["operator_action"])
 
     def test_status_readback_500_after_success_marks_possible_remains(self):
-        rep = self._publish_expect_refused(status_read_fail_after=0, status_read_fail_mode=500)
+        rep = self._publish_expect_refused(status_read_fail_after=1, status_read_fail_mode=500)
         self.assertTrue(rep["possible_success_evidence_remains"])
         self.assertIn("HTTP 500", rep["status_compensation"]["error"])
 
@@ -445,7 +449,7 @@ class Case(unittest.TestCase):
         self.assertIn("HTTP 403", rep["status_compensation"]["error"])
 
     def test_compensation_write_ok_but_readback_fails_marks_remains(self):
-        rep = self._publish_expect_refused(drift_after_status_post=True, status_read_fail_after=1,
+        rep = self._publish_expect_refused(drift_after_status_post=True, status_read_fail_after=2,
                                            status_read_fail_mode=500)
         self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
         self.assertFalse(rep["status_compensation"]["ok"])
@@ -531,7 +535,7 @@ class Case(unittest.TestCase):
 
     def test_status_compensation_readback_disconnect_is_unconfirmed(self):
         rep = self._publish_expect_refused(drift_after_status_post=True,
-                                           status_read_disconnect_after=1)
+                                           status_read_disconnect_after=2)
         self.assertFalse(rep["status_compensation"]["ok"])
         self.assertTrue(rep["possible_success_evidence_remains"])
 
@@ -546,11 +550,13 @@ class Case(unittest.TestCase):
         self.assertEqual(rep["status_compensation"]["readback"]["context"], "route-a/verify")
 
     def test_newer_same_context_success_is_not_confirmed(self):
-        rep = self._publish_expect_refused(drift_after_status_post=True,
-                                           status_read="newer_same_context_success")
-        self.assertFalse(rep["status_compensation"]["ok"])
-        self.assertIn("非 failure", rep["status_compensation"]["error"])
+        """同 context 存在更新 success 时，启动前的撤销无法确认 → 事务停止。"""
+        rep = self._publish_expect_refused(status_read="newer_same_context_success")
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertIn("非 failure", rep["historical_success_revocation"]["error"])
         self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertFalse(rep["status_publish_attempted"])
 
     def test_same_context_failure_with_wrong_id_is_not_accepted(self):
         """同 context、同为 failure、run 绑定正确，但 id 不是本次补偿对象 → 不得确认。"""
@@ -630,19 +636,118 @@ class Case(unittest.TestCase):
         self.assertFalse(rep["possible_success_evidence_remains"])
         self.assertTrue(rep["check_run_compensation_unconfirmed_without_success_observed"])
 
+    # ── 第六轮：同 SHA 历史 success status 残留 ──
+
+    def seed_historical_success(self, run_id: str = "8", state: str = "success"):
+        Stub.remote_statuses.append({"id": 8000, "context": "route-a/verify", "state": state,
+                                     "target_url": f"https://github.com/o/r/actions/runs/{run_id}",
+                                     "creator": {"login": "github-actions[bot]", "type": "Bot"}})
+
+    def test_historical_success_revoked_then_prestep_failure(self):
+        rep = self._publish_expect_refused_keep_flow(check_post=403, seed_history="8")
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")   # 旧 success 已撤销
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertFalse(rep["status_publish_attempted"])
+
+    def test_historical_success_revocation_403_stops_transaction(self):
+        rep = self._publish_expect_refused_keep_flow(comp_post=403, seed_history="8")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")   # 仍残留
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("人工只读核验", rep["operator_action"])
+        self.assertIsNone(self.remote_check())                          # 未创建 Check Run
+
+    def test_historical_revocation_disconnect_without_write(self):
+        rep = self._publish_expect_refused_keep_flow(comp_post_disconnect_no_write=True,
+                                                     seed_history="8")
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_historical_revocation_disconnect_after_write_unconfirmed(self):
+        rep = self._publish_expect_refused_keep_flow(comp_post_disconnect_after_write=True,
+                                                     seed_history="8")
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertFalse(rep["historical_success_revoked"], "断连未确认不得算撤销")
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_historical_revocation_readback_disconnect_unconfirmed(self):
+        rep = self._publish_expect_refused_keep_flow(status_read_disconnect_after=1,
+                                                     seed_history="8")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_historical_revocation_overwritten_by_newer_success(self):
+        rep = self._publish_expect_refused_keep_flow(status_read="newer_same_context_success",
+                                                     seed_history="8")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_other_context_newer_does_not_affect_historical_revocation(self):
+        rep = self._publish_expect_refused_keep_flow(status_read="other_context_first",
+                                                     check_post=403, seed_history="8")
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+
+    def test_historical_success_from_other_run_still_revoked(self):
+        rep = self._publish_expect_refused_keep_flow(check_post=403, seed_history="1")
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+
+    def test_no_history_prestep_failure_does_not_claim_observed_success(self):
+        rep = self._publish_expect_refused_keep_flow(check_get=403)
+        self.assertFalse(rep["historical_success_observed"])
+        self.assertIsNone(rep["historical_success_revoked"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertTrue(rep["check_run_compensation_unconfirmed_without_success_observed"])
+
+    def test_rerun_same_sha_revokes_previous_success_then_republishes(self):
+        self.flow()
+        first = self.publish(mode="dual")
+        self.assertTrue(first["ok"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
+        second = self.publish(mode="dual")            # 第二次运行：探查到上次 success
+        self.assertTrue(second["ok"])
+        self.assertTrue(second["historical_success_observed"])
+        self.assertTrue(second["historical_success_revoked"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
+        self.assertEqual(Stub.remote_statuses[0]["target_url"],
+                         "https://github.com/o/r/actions/runs/9")
+
+    def test_confirmed_revocation_not_recompensated_on_later_failure(self):
+        rep = self._publish_expect_refused_keep_flow(drift_after_status_post=True,
+                                                     seed_history="8")
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertEqual([e["channel"] for e in rep["compensation_log"]], ["check_run", "status"])
+        self.assertEqual(rep["historical_success_revocation"]["http"], 201)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+
+    def test_success_status_published_only_after_check_run_readback(self):
+        self.flow()
+        self.publish(mode="dual")
+        order = [f"{m} {p}" for m, p, _ in Stub.log if m in ("POST", "PATCH")]
+        self.assertLess(order.index("PATCH /repos/o/r/check-runs/77"),
+                        order.index(f"POST /repos/o/r/statuses/{HEAD}"))
+
     def test_unknown_publish_mode_refused(self):
         self.base_routes()
         with self.assertRaises(prs.Refused):
             self.publish(mode="bogus")
 
     def test_happy_path(self):
-        self.base_routes()
+        self.flow()                                  # 同 SHA 无历史 status
         out = self.publish()
         self.assertTrue(out["ok"])
+        self.assertFalse(out["historical_success_observed"])
         self.assertEqual(out["verify"]["creator"], "github-actions[bot]")
-        post = [r for r in Stub.log if r[0] == "POST"][0]
+        post = [r for r in Stub.log if r[0] == "POST"
+                and r[1].startswith("/repos/o/r/statuses")][0]
         self.assertEqual(post[2]["state"], "success")
         self.assertEqual(post[2]["context"], "route-a/verify")
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
 
     def test_wrong_event_refused(self):
         self.base_routes(run={"event": "push"})
@@ -700,7 +805,10 @@ class Case(unittest.TestCase):
             self.publish()
 
     def test_head_changes_after_publish_refused(self):
-        self.base_routes()
+        self.base_routes(routes={f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [
+            {"id": 77, "context": "route-a/verify", "state": "success",
+             "target_url": "https://github.com/o/r/actions/runs/9",
+             "creator": {"login": "github-actions[bot]", "type": "Bot"}}])})
         prs.verify_run(self.client, "9", HEAD, REQUIRED)
         prs.verify_pr(self.client, 29, HEAD)
         prs.publish(self.client, HEAD, "9", "ok", "")

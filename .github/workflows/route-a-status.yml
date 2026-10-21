@@ -7,12 +7,15 @@ name: Route A status
 #     （执行逻辑来自 main，不来自 PR），不检出候选内容、不执行候选脚本。
 #   * workflow_dispatch：人工重发（需给出 run-id 与 head-sha）。
 #
-# 发布事务（路线 A）：先建 in_progress check run → 回读绑定 → 复核 PR/head/base →
+# 发布事务（路线 A）：先只读探查同 SHA 是否已有 route-a/verify=success（有则先撤销并回读确认，
+# 确认不了就停止、不发布新的成功证据）→ 建 in_progress check run → 回读绑定 → 复核 PR/head/base →
 # 完成 success → 回读确认 → 才发 commit status。任何失败都会**尽力补偿两条通道**
 # （Check Run 降级为 failure 并做对象级回读证明；status 发 failure 并按 context 过滤回读），
 # 但 GitHub API 写入**没有原子事务语义**：补偿本身可能失败或不可读。只有回读确认的通道
 # 才算撤销；任一路未确认时事务仍失败，并置 possible_success_evidence_remains=true
 # 要求人工只读核验——不得据此宣称任何网络/API 故障下都 fail-closed。
+# 注意：in_progress 自身不是 success 结论，但同 SHA 上可能仍有此前发布的 success status；
+# 「本轮未尝试发布 success」不等于「远端没有 success 证据」。
 #
 # 不做什么：不创建分支、不建 PR、不改任何设置；发布失败即失败，绝不降级。
 

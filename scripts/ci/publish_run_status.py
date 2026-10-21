@@ -187,8 +187,9 @@ def _creator_problem(obj: dict) -> str:
 def create_check_run(client: Client, sha: str, run_id: str, target_url: str = "") -> dict:
     """创建 **in_progress** Check Run（``checks: write``）。
 
-    关键：创建时**不带 conclusion**。``in_progress`` 不满足 required status check，
-    因此这一阶段无论失败还是中断，都不会留下可被 Ruleset 采信的成功证据。
+    关键：创建时**不带 conclusion**。``in_progress`` 自身不是 success 结论，不会被
+    Ruleset 采信——但**这不等于同 SHA 上不存在此前发布的 success status**（历史 success
+    由事务步骤 0 单独探查并撤销，见 ``_run_transaction``）。
     """
     body = {
         "name": CONTEXT,
@@ -220,7 +221,7 @@ def finalize_check_run(client: Client, check_run_id: int, conclusion: str,
                                  else "Route A 受信校验未完成（已降级）"),
                        "summary": summary or ("run 级核验与发布后复核全部通过。"
                                               if conclusion == "success"
-                                              else "发布事务未完成，成功证据已被撤销。")}}
+                                              else "发布事务未完成；本通道的撤销以回读确认为准。")}}
     status, payload = client.patch(f"/repos/{client.repo}/check-runs/{check_run_id}", body)
     if status not in (200, 201) or not isinstance(payload, dict):
         raise Refused(f"更新 check run 失败: HTTP {status} {str(payload)[:200]}")
@@ -328,7 +329,8 @@ def _downgrade(client: Client, check_run_id: int, reason: str, *, head_sha: str 
         code, obj = client.patch(f"/repos/{client.repo}/check-runs/{check_run_id}",
                                  {"status": "completed", "conclusion": "failure",
                                   "output": {"title": "Route A 受信校验未完成（已降级）",
-                                             "summary": reason or "发布事务未完成，成功证据已被撤销。"}})
+                                             "summary": reason or
+                                             "发布事务未完成；本通道的撤销以回读确认为准。"}})
         out["http"] = code
         if code not in (200, 201) or not isinstance(obj, dict):
             out["error"] = f"补偿 PATCH 失败或响应畸形：HTTP {code} {str(obj)[:120]}"
@@ -431,6 +433,29 @@ def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str
     return out
 
 
+def inspect_route_a_status(client: Client, sha: str) -> dict:
+    """只读探查同 SHA 上 ``route-a/verify`` 的**当前有效状态**（同 context 最新一条）。
+
+    用于回答一个关键问题：**本轮之前是否已经存在可满足门禁的 success 证据**。
+    读不到就返回 ``readable=False``（证据不确定），绝不推断为"没有"。
+    """
+    try:
+        code, items = client.call(f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
+    except Exception as exc:                      # noqa: BLE001 — 读不到 = 不确定
+        return {"readable": False, "error": f"{type(exc).__name__}: {exc}"}
+    if code != 200 or not isinstance(items, list):
+        return {"readable": False, "error": f"HTTP {code}"}
+    matching = [i for i in items if isinstance(i, dict) and i.get("context") == CONTEXT]
+    latest = matching[0] if matching else None
+    if latest is None:
+        return {"readable": True, "observed": False, "latest": None}
+    creator = latest.get("creator") or {}
+    return {"readable": True, "observed": latest.get("state") == "success",
+            "latest": {"id": latest.get("id"), "state": latest.get("state"),
+                       "target_url": latest.get("target_url"),
+                       "creator": creator.get("login"), "creator_type": creator.get("type")}}
+
+
 def _compensate_all(client: Client, report: dict, reason: str, target_url: str = "") -> dict:
     """统一失败补偿：status（若已尝试发布 success）+ Check Run（若已创建/完成）。
 
@@ -477,7 +502,12 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
     report["check_run_may_have_succeeded"] = check_may_have_succeeded
     report["check_run_compensation_unconfirmed_without_success_observed"] = bool(
         cr_evidence and not check_may_have_succeeded and not (check_comp or {}).get("ok"))
-    report["possible_success_evidence_remains"] = bool(status_risky or check_risky)
+    # 同 SHA 历史 success：只有被本次操作**确认撤销**才不算风险
+    hist_risky = (bool(report.get("historical_success_observed"))
+                  and report.get("historical_success_revoked") is not True)
+    if hist_risky and not (report.get("historical_success_revocation") or {}).get("ok"):
+        report["historical_success_risk"] = True
+    report["possible_success_evidence_remains"] = bool(status_risky or check_risky or hist_risky)
     report["compensation_is_best_effort_not_atomic"] = True
     report["operator_action"] = ("需要人工只读核验远端是否仍有 route-a/verify=success"
                                  if report["possible_success_evidence_remains"] else "无需人工核验")
@@ -506,8 +536,17 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
         8. publish(status) + verify_published() ← 兼容回退，且**仅在 7 成功之后**
         9. verify_pr()   收尾复核
 
-    任一步失败：若 6/7 已发生，先补偿降级（并如实报告是否成功），再 ``Refused``；
-    1–5 失败时不会存在任何可被采信的成功证据。**status 绝不在 check run 证明之前发布**。
+    步骤 0 先只读探查同 SHA 上 ``route-a/verify`` 的当前有效状态：
+      * 读不到 ⇒ ``status_evidence_unknown=True``，直接停止（证据不确定，不发布任何成功证据）；
+      * 观察到历史 success ⇒ 先用同一套严格机制撤销并**回读确认**；确认不了就停止事务，
+        绝不发布新的成功证据；确认成功才继续，并记录 ``historical_success_revoked=True``。
+
+    任一步失败：若 6/7 已发生，先补偿降级（并如实报告是否成功），再 ``Refused``。
+    **status 绝不在 check run 证明之前发布**。
+
+    注意（有界表述）：本函数只在**相应通道完成严格对象级回读确认**后才宣称该通道的
+    success 已撤销；"本轮未尝试发布 success"**不等于**"远端没有 success 证据"——
+    同 SHA 的历史 success 由步骤 0 单独处理并在 ``historical_*`` 字段中如实报告。
 
     status 一旦**开始**发布（``status_publish_attempted=True``，含 POST 超时/连接中断），
     其后任何异常都会进入统一补偿：① 同 SHA、同 context 发 failure status 并回读确认；
@@ -527,6 +566,10 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
     report: dict = {"ok": True, "run": run_info, "pr": pr_info, "publish_mode": publish_mode,
                     "steps": [], "compensation": None, "status_compensation": None,
                     "status_publish_attempted": False,
+                    "status_may_have_been_published": False,
+                    "historical_success_observed": False,
+                    "historical_success_revoked": None,
+                    "status_evidence_unknown": False,
                     "possible_success_evidence_remains": False}
 
     try:
@@ -537,7 +580,9 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
         report["failure"] = {"type": type(exc).__name__, "reason": str(exc)}
         # 已创建 Check Run 或已尝试发布 success status ⇒ 必须确认补偿是否已执行/完成；
         # 局部已确认撤销的通道不会被重复覆盖（见 _compensate_all）。
-        if report.get("check_run") or report.get("status_publish_attempted"):
+        if (report.get("check_run") or report.get("check_run_created")
+                or report.get("status_publish_attempted")
+                or report.get("historical_success_observed")):
             _compensate_all(client, report, f"事务异常 {type(exc).__name__}: {exc}", target_url)
         if isinstance(exc, Refused):
             exc.report = report
@@ -551,6 +596,28 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
 def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head_sha: str,
                      target_url: str, attempts: int, publish_mode: str) -> None:
     """路线 A 事务主体。任何失败都抛 ``Refused``；调用方负责把 ``report`` 附到异常上。"""
+    # ── 步骤 0：同 SHA 历史 success 探查与撤销（在写入任何成功证据之前） ──
+    hist = inspect_route_a_status(client, head_sha)
+    report["historical_status_probe"] = hist
+    if not hist.get("readable"):
+        report["status_evidence_unknown"] = True
+        report["possible_success_evidence_remains"] = True
+        report["operator_action"] = "状态不可读：需要人工只读核验远端 route-a/verify 状态"
+        raise Refused(f"无法读取同 SHA 的 route-a/verify 状态（证据不确定）：{hist.get('error')}")
+    report["historical_success_observed"] = bool(hist.get("observed"))
+    report["historical_success_revoked"] = None
+    if report["historical_success_observed"]:
+        rev = compensate_status_failure(client, head_sha, run_id,
+                                        "启动前撤销同 SHA 历史 success", target_url)
+        report["historical_success_revocation"] = rev
+        report["historical_success_revoked"] = bool(rev.get("ok"))
+        if not rev.get("ok"):
+            report["possible_success_evidence_remains"] = True
+            report["operator_action"] = "需要人工只读核验远端是否仍有 route-a/verify=success"
+            raise Refused(f"未能确认撤销同 SHA 历史 success（不发布任何新的成功证据）："
+                          f"{rev.get('error')}")
+        report["steps"].append("revoke_historical_success")
+
     if publish_mode in ("check-run", "dual"):
         created = create_check_run(client, head_sha, run_id, target_url)
         cr_id = created.get("id")
@@ -599,6 +666,7 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
             raise
         # 标记：此后任何异常都必须假设远端**可能已接受** success 写入
         report["status_publish_attempted"] = True
+        report["status_may_have_been_published"] = True
         try:
             posted = publish(client, head_sha, run_id, "受信校验通过（run 级核验）", target_url)
             verified_status = verify_published(client, head_sha, attempts=attempts,
