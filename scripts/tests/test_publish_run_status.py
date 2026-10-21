@@ -22,9 +22,10 @@ class Stub(BaseHTTPRequestHandler):
     routes: dict = {}
     log: list = []
     stateful: bool = False
-    remote_statuses: list = []
+    remote_statuses: list = []          # 索引 0 = 当前有效状态（GitHub 语义：最新在前）
     remote_checks: list = []
     inject: dict = {}
+    counters: dict = {}
 
     def log_message(self, *a):
         pass
@@ -44,11 +45,23 @@ class Stub(BaseHTTPRequestHandler):
         key = f"{method} {self.path.split('?')[0]}"
         if Stub.stateful:
             if key.startswith("POST /repos/o/r/statuses/"):
-                if Stub.inject.get("status_post"):
+                Stub.counters["status_post"] = Stub.counters.get("status_post", 0) + 1
+                is_comp = body.get("state") == "failure"
+                if is_comp and Stub.inject.get("comp_post"):
+                    self._send(Stub.inject["comp_post"], {"message": "injected comp failure"}); return
+                if not is_comp and Stub.inject.get("status_post"):
                     self._send(Stub.inject["status_post"], {"message": "injected status failure"}); return
                 status_obj = {**body, "creator": {"login": "github-actions[bot]", "type": "Bot"},
                               "target_url": body.get("target_url")}
                 Stub.remote_statuses.insert(0, status_obj)
+                if not is_comp and Stub.inject.get("status_post_timeout"):
+                    # 远端已写入，客户端收到连接中断（模拟超时/半开连接）
+                    self.close_connection = True
+                    return
+                if not is_comp and Stub.inject.get("drift_after_status_post"):
+                    Stub.routes["GET /repos/o/r/pulls/29"] = (200, {
+                        "state": "open", "head": {"sha": "z" * 40},
+                        "base": {"ref": "main", "sha": "m" * 40}, "user": {"login": "Hawaiine"}})
                 self._send(201, status_obj); return
             if key == "POST /repos/o/r/check-runs":
                 if Stub.inject.get("check_post"):
@@ -58,8 +71,12 @@ class Stub(BaseHTTPRequestHandler):
                 Stub.remote_checks.insert(0, obj)
                 self._send(201, obj); return
             if key.startswith("PATCH /repos/o/r/check-runs/"):
+                Stub.counters["check_patch"] = Stub.counters.get("check_patch", 0) + 1
                 if Stub.inject.get("check_patch"):
                     self._send(Stub.inject["check_patch"], {"message": "injected patch failure"}); return
+                fa = Stub.inject.get("check_patch_fail_after")
+                if fa is not None and Stub.counters["check_patch"] > fa:
+                    self._send(403, {"message": "injected patch failure"}); return
                 cid = int(key.rsplit("/", 1)[1])
                 for obj in Stub.remote_checks:
                     if obj["id"] == cid:
@@ -72,8 +89,22 @@ class Stub(BaseHTTPRequestHandler):
                         self._send(200, obj); return
                 self._send(404, {"message": "not found"}); return
             if key.startswith("GET /repos/o/r/commits/") and key.endswith("/statuses"):
+                Stub.counters["status_get"] = Stub.counters.get("status_get", 0) + 1
                 if Stub.inject.get("status_get"):
                     self._send(Stub.inject["status_get"], {"message": "injected status read failure"}); return
+                after = Stub.inject.get("status_read_fail_after")
+                if after is not None and Stub.counters["status_get"] > after:
+                    mode = Stub.inject.get("status_read_fail_mode", "hide")
+                    if isinstance(mode, int):
+                        self._send(mode, {"message": "injected readback failure"}); return
+                    self._send(200, []); return
+                if Stub.inject.get("status_read") == "hide":
+                    self._send(200, []); return
+                if Stub.inject.get("status_read") == "stale":
+                    self._send(200, [{"context": "route-a/verify", "state": "success",
+                                      "target_url": "https://github.com/o/r/actions/runs/1",
+                                      "creator": {"login": "github-actions[bot]", "type": "Bot"}}])
+                    return
                 self._send(200, Stub.remote_statuses); return
             if key.startswith("GET /repos/o/r/commits/") and key.endswith("/check-runs"):
                 if Stub.inject.get("check_get"):
@@ -113,6 +144,7 @@ class Case(unittest.TestCase):
         Stub.remote_statuses = []
         Stub.remote_checks = []
         Stub.inject = {}
+        Stub.counters = {}
         self.client = prs.Client("o/r", "tok", api=self.api)
 
     def run_doc(self, **over):
@@ -295,6 +327,81 @@ class Case(unittest.TestCase):
         self.assertEqual(self.remote_check("8")["conclusion"], "success")
         self.assertIsNone(self.remote_check("9"))
         self.assertFalse(self.remote_success_status())
+
+    # ── success status 发布后的失败补偿（本轮新增） ──
+
+    def _publish_expect_refused(self, **inject):
+        self.flow(**inject)
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="dual")
+        return getattr(ctx.exception, "report", {})
+
+    def test_status_readback_403_after_success_marks_possible_remains(self):
+        rep = self._publish_expect_refused(status_read_fail_after=0, status_read_fail_mode=403)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")   # 尽力撤销已写入
+        self.assertTrue(rep["possible_success_evidence_remains"], "回读失败不得算补偿成功")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertIn("需要人工只读核验", rep["operator_action"])
+
+    def test_status_readback_500_after_success_marks_possible_remains(self):
+        rep = self._publish_expect_refused(status_read_fail_after=0, status_read_fail_mode=500)
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("HTTP 500", rep["status_compensation"]["error"])
+
+    def test_status_invisible_after_success_marks_possible_remains(self):
+        rep = self._publish_expect_refused(status_read="hide")
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("回读为空", rep["status_compensation"]["error"])
+
+    def test_final_verify_pr_failure_triggers_full_compensation(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertEqual(Stub.remote_checks[0]["conclusion"], "failure")
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertTrue(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["compensation"]["ok"])
+        self.assertEqual(rep["status_compensation"]["http"], 201)
+        self.assertEqual(rep["status_compensation"]["readback"]["state"], "failure")
+
+    def test_status_post_timeout_assumes_write_happened_and_compensates(self):
+        rep = self._publish_expect_refused(status_post_timeout=True)
+        self.assertTrue(rep["status_publish_attempted"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertFalse(rep["possible_success_evidence_remains"])
+
+    def test_compensation_write_failure_marks_remains(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, comp_post=403)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")   # 未能撤销
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("HTTP 403", rep["status_compensation"]["error"])
+
+    def test_compensation_write_ok_but_readback_fails_marks_remains(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, status_read_fail_after=1,
+                                           status_read_fail_mode=500)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_status_compensation_ok_but_check_run_compensation_fails(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, check_patch_fail_after=1)
+        self.assertTrue(rep["status_compensation"]["ok"])
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertEqual(Stub.remote_checks[0]["conclusion"], "success")
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_both_compensations_succeed(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True)
+        self.assertTrue(rep["compensations"]["status"]["ok"])
+        self.assertTrue(rep["compensations"]["check_run"]["ok"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertTrue(rep["compensation_is_best_effort_not_atomic"])
+
+    def test_stale_foreign_failure_is_not_counted_as_compensation(self):
+        """补偿回读只认"当前有效状态"，不得拿历史 failure 冒充撤销成功。"""
+        rep = self._publish_expect_refused(status_read="stale")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
 
     def test_unknown_publish_mode_refused(self):
         self.base_routes()
