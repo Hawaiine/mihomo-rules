@@ -6,6 +6,7 @@ import json
 import sys
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -14,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 
 import publish_run_status as prs  # noqa: E402
 
+OTHER_TMPL = '''{"id": %s, "context": "other/check", "state": "success", "target_url": "https://github.com/o/r/actions/runs/9", "creator": {"login": "github-actions[bot]", "type": "Bot"}}'''
 HEAD = "h" * 40
 REQUIRED = {"general-pr-verify", "workflow-policy-guard", "trusted-baseline-guard"}
 
@@ -26,6 +28,9 @@ class Stub(BaseHTTPRequestHandler):
     remote_checks: list = []
     inject: dict = {}
     counters: dict = {}
+    pages: dict | None = None           # 分页模式：{page_no: [status,...]}
+    run_doc_over: dict = {}
+    pr_doc_over: dict = {}
 
     def log_message(self, *a):
         pass
@@ -125,6 +130,27 @@ class Stub(BaseHTTPRequestHandler):
                 self._send(404, {"message": "not found"}); return
             if key.startswith("GET /repos/o/r/commits/") and key.endswith("/statuses"):
                 Stub.counters["status_get"] = Stub.counters.get("status_get", 0) + 1
+                if Stub.pages is not None:
+                    page = 1
+                    for part in self.path.split("?", 1)[-1].split("&"):
+                        if part.startswith("page="):
+                            page = int(part.split("=", 1)[1])
+                    if Stub.inject.get("page_http") and page in Stub.inject["page_http"]:
+                        self._send(Stub.inject["page_http"][page], {"message": "page failed"}); return
+                    if page in (Stub.inject.get("page_disconnect") or ()):
+                        self.close_connection = True
+                        return
+                    if Stub.inject.get("page_malformed") == page:
+                        self._send(200, {"not": "a list"}); return
+                    payload = Stub.pages.get(page, [])
+                    if page == 1:
+                        payload = Stub.remote_statuses + payload
+                    self._send(200, payload); return
+                if Stub.inject.get("statuses_disconnect"):
+                    self.close_connection = True
+                    return
+                if Stub.inject.get("statuses_http"):
+                    self._send(Stub.inject["statuses_http"], {"message": "status read failed"}); return
                 if Stub.inject.get("status_get"):
                     self._send(Stub.inject["status_get"], {"message": "injected status read failure"}); return
                 srd = Stub.inject.get("status_read_disconnect_after")
@@ -216,6 +242,9 @@ class Case(unittest.TestCase):
         Stub.remote_checks = []
         Stub.inject = {}
         Stub.counters = {}
+        Stub.pages = None
+        Stub.run_doc_over = {}
+        Stub.pr_doc_over = {}
         self.client = prs.Client("o/r", "tok", api=self.api)
 
     def run_doc(self, **over):
@@ -236,10 +265,14 @@ class Case(unittest.TestCase):
                 "user": {"login": "Hawaiine"}}
 
     def base_routes(self, **over):
+        run_doc = self.run_doc(**over.get("run", {}))
+        run_doc.update(Stub.run_doc_over)
+        pr_doc = self.pr_doc()
+        pr_doc.update(Stub.pr_doc_over)
         routes = {
-            f"GET /repos/o/r/actions/runs/9": (200, self.run_doc(**over.get("run", {}))),
+            f"GET /repos/o/r/actions/runs/9": (200, run_doc),
             "GET /repos/o/r/actions/runs/9/jobs": (200, self.jobs_doc()),
-            "GET /repos/o/r/pulls/29": (200, self.pr_doc()),
+            "GET /repos/o/r/pulls/29": (200, pr_doc),
             "GET /repos/o/r/git/ref/heads/main": (200, {"object": {"sha": "m" * 40}}),
             f"POST /repos/o/r/statuses/{HEAD}": (201, {"state": "success"}),
             # 默认：同 SHA 上没有历史 status（历史 success 由具体用例显式植入）
@@ -860,6 +893,298 @@ class Case(unittest.TestCase):
     def test_missing_token_refused(self):
         with self.assertRaises(prs.Refused):
             prs.Client("o/r", "")
+
+
+    # ── 第七轮：前置失败不得绕过历史状态探查；探查必须分页 ──
+
+    def test_A1_verify_run_refused_still_probes_history(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(seed_history="8")
+        self.assertFalse(rep["ok"])
+        self.assertEqual(rep["failure"]["type"], "Refused")
+        self.assertIn("pull_request", rep["failure"]["reason"])
+        self.assertTrue(rep["historical_status_probe"]["readable"])
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertIsNone(rep["historical_success_revoked"])
+        self.assertEqual(rep["historical_success_disposition"],
+                         "not_processed_pre_verification_failure")
+        self.assertFalse(rep["status_publish_attempted"])
+        self.assertFalse(rep["status_may_have_been_published"])
+        self.assertFalse(rep["status_evidence_unknown"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("人工只读核验", rep["operator_action"])
+        self.assertEqual([x["id"] for x in Stub.remote_statuses], [8000],
+                         "前置失败不得产生任何远端写入（不得撤销旧 success）")
+        self.assertIsNone(self.remote_check())
+
+    def test_A2_verify_run_non_refused_exception_is_wrapped(self):
+        with mock.patch.object(prs, "verify_run", side_effect=ValueError("boom")):
+            rep = self._publish_expect_refused(seed_history="8")
+        self.assertEqual(rep["failure"]["type"], "ValueError")
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_A3_first_verify_pr_refused_still_probes_history(self):
+        Stub.pr_doc_over = {"head": {"sha": "z" * 40}}
+        rep = self._publish_expect_refused(seed_history="8")
+        self.assertFalse(rep["ok"])
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertIsNone(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual([x["id"] for x in Stub.remote_statuses], [8000])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
+
+    def test_A4_first_verify_pr_non_refused_exception_is_wrapped(self):
+        with mock.patch.object(prs, "verify_pr", side_effect=RuntimeError("nope")):
+            rep = self._publish_expect_refused(seed_history="8")
+        self.assertEqual(rep["failure"]["type"], "RuntimeError")
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_A5_pre_verification_read_failure_is_unknown_not_absent(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(statuses_http=403)
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertFalse(rep["historical_success_observed"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_A6_control_no_history_pre_verification_failure(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused()
+        self.assertFalse(rep["historical_success_observed"])
+        self.assertIsNone(rep["historical_success_revoked"])
+        self.assertFalse(rep["status_evidence_unknown"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertFalse(rep["status_publish_attempted"])
+
+    def test_B1_target_only_on_page_two_is_detected_and_revoked(self):
+        self.flow()
+        Stub.pages = {1: [{"id": 9001 + i, "context": "other/check", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                          for i in range(100)],
+                      2: [{"id": 9100, "context": "route-a/verify", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/1",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        out = self.publish(mode="dual")
+        self.assertTrue(out["ok"])
+        self.assertTrue(out["historical_success_observed"])
+        self.assertTrue(out["historical_success_revoked"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")  # 本次发布的最新
+        self.assertTrue(out["historical_status_probe"]["pages_read"] >= 3)
+
+    def test_B2_page_two_unreadable_is_unknown(self):
+        self.flow()
+        Stub.pages = {1: [{"id": 9001 + i, "context": "other/check", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                          for i in range(100)]}
+        Stub.inject["page_http"] = {2: 403}
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="dual")
+        rep = getattr(ctx.exception, "report", {})
+        self.assertFalse(rep["historical_success_observed"])
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_B3_latest_target_across_pages_wins(self):
+        Stub.stateful = True
+        Stub.pages = {1: [{"id": 9500, "context": "route-a/verify", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}],
+                      2: [{"id": 9001, "context": "route-a/verify", "state": "failure",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe["readable"])
+        self.assertTrue(probe["observed"])
+        self.assertEqual(probe["latest"]["id"], 9500)
+
+    def test_B4_concurrent_update_across_pages_is_unknown(self):
+        Stub.stateful = True
+        Stub.pages = {1: [{"id": 9001 + i, "context": "other/check", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                          for i in range(100)],
+                      2: [{"id": 9002, "context": "route-a/verify", "state": "failure",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        seq = {"n": 0}
+
+        class Flaky(prs.Client):
+            def call(self, path):
+                if "/statuses" in path:
+                    seq["n"] += 1
+                    if seq["n"] >= 3:
+                        return 200, [{"id": 9600, "context": "route-a/verify", "state": "success",
+                                      "target_url": "https://github.com/o/r/actions/runs/9",
+                                      "creator": {"login": "github-actions[bot]", "type": "Bot"}}]
+                return super().call(path)
+
+        probe = prs.inspect_route_a_status(Flaky("o/r", "tok", api=self.api), HEAD)
+        self.assertFalse(probe["readable"])
+        self.assertIn("并发", probe.get("error", ""))
+
+    def test_B5_malformed_and_full_empty_scan(self):
+        Stub.stateful = True
+        Stub.pages = {1: [{"id": 9001, "context": "other/check", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        Stub.inject["page_malformed"] = 1
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertFalse(probe["readable"])
+        Stub.inject = {}
+        probe2 = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe2["readable"])
+        self.assertFalse(probe2["observed"])
+        self.assertTrue(probe2.get("complete"))
+
+    def test_B6_page_bound_without_target_is_unknown(self):
+        Stub.stateful = True
+        Stub.pages = {p: [{"id": 9000 + p + i, "context": "other/check", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/9",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                          for i in range(100)]
+                      for p in range(1, 12)}
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertFalse(probe["readable"])
+        self.assertIn("上限", probe.get("error", ""))
+
+    # ── 第七轮实施：其余前置失败入口 ──
+
+    def test_A7_resolve_pr_failure_has_report_and_probe(self):
+        self.flow()
+        self.seed_historical_success("8")
+        Stub.routes["GET /repos/o/r/commits/" + HEAD + "/pulls"] = (200, [])
+        with self.assertRaises(prs.Refused) as ctx:
+            prs.publish_for_run(repo="o/r", run_id="9", pr=0, head_sha=HEAD, required=REQUIRED,
+                                token="tok", api=self.api, attempts=1, publish_mode="dual",
+                                target_url="https://github.com/o/r/actions/runs/9")
+        rep = ctx.exception.report
+        self.assertFalse(rep["ok"])
+        self.assertIn("open PR", rep["failure"]["reason"])
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertIsNone(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")   # 未撤销
+
+    def test_A8_missing_token_has_report_without_fabricated_probe(self):
+        with self.assertRaises(prs.Refused) as ctx:
+            prs.publish_for_run(repo="o/r", run_id="9", pr=29, head_sha=HEAD, required=REQUIRED,
+                                token="", api=self.api, attempts=1, publish_mode="dual")
+        rep = ctx.exception.report
+        self.assertIn("GITHUB_TOKEN", rep["failure"]["reason"])
+        self.assertNotIn("historical_status_probe", rep, "无客户端时不得伪造只读探查结果")
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("人工只读核验", rep["operator_action"])
+
+    def test_A9_invalid_publish_mode_has_report(self):
+        with self.assertRaises(prs.Refused) as ctx:
+            prs.publish_for_run(repo="o/r", run_id="9", pr=29, head_sha=HEAD, required=REQUIRED,
+                                token="tok", api=self.api, attempts=1, publish_mode="bogus")
+        rep = ctx.exception.report
+        self.assertIn("publish_mode", rep["failure"]["reason"])
+        self.assertEqual(rep["publish_mode"], "bogus")
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertNotIn("historical_status_probe", rep)
+
+    def test_A10_pre_verification_history_disconnect_is_unknown(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(statuses_disconnect=True)
+        self.assertFalse(rep["historical_status_probe"]["readable"])
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertFalse(rep["historical_success_observed"])
+
+    def test_A11_non_refused_keeps_exception_chain(self):
+        with mock.patch.object(prs, "verify_run", side_effect=ValueError("boom")):
+            self.flow()
+            with self.assertRaises(prs.Refused) as ctx:
+                self.publish(mode="dual")
+        self.assertIsInstance(ctx.exception.__cause__, ValueError)
+        self.assertEqual(ctx.exception.report["failure"]["type"], "ValueError")
+
+    def test_A12_no_current_success_is_scoped_current_state_claim(self):
+        Stub.run_doc_over = {"event": "push"}
+        self.flow()
+        self.seed_historical_success("8", state="failure")   # 当前有效状态是 failure
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="dual")
+        rep = ctx.exception.report
+        self.assertFalse(rep["historical_success_observed"])
+        self.assertTrue(rep["historical_status_probe"]["complete"])
+        self.assertIn("当前有效状态", rep["historical_probe_scope"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+
+    # ── 第七轮实施：分页边界补充 ──
+
+    def _hundred(self, base):
+        return [json.loads(OTHER_TMPL % (base + i)) for i in range(100)]
+
+    def test_B7_page_two_5xx_and_disconnect_are_unknown(self):
+        Stub.stateful = True
+        for inj in ({"page_http": {2: 502}}, {"page_disconnect": (2,)}):
+            Stub.pages = {1: self._hundred(9001)}
+            Stub.inject = dict(inj)
+            probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+            self.assertFalse(probe["readable"], inj)
+            self.assertEqual(probe["pages_read"], 1)
+
+    def test_B8_exact_hundred_boundary_requires_next_page(self):
+        Stub.stateful = True
+        Stub.pages = {1: self._hundred(9001)}          # 第 2 页为空
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe["readable"])
+        self.assertFalse(probe["observed"])
+        self.assertEqual(probe["pages_read"], 2, "恰好 100 条时必须继续读下一页才能证明完整")
+        Stub.pages = {1: self._hundred(9001)}
+        Stub.inject = {"page_http": {2: 403}}
+        probe2 = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertFalse(probe2["readable"])
+
+    def test_B9_empty_first_page_is_complete_absence(self):
+        Stub.stateful = True
+        Stub.pages = {}
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe["readable"])
+        self.assertFalse(probe["observed"])
+        self.assertTrue(probe["complete"])
+
+    # ── 第七轮实施：C —— context 大小写不敏感 ──
+
+    def test_C1_context_helper_semantics(self):
+        for v in ("route-a/verify", "Route-A/Verify", "ROUTE-A/VERIFY"):
+            self.assertTrue(prs.is_route_a_context(v), v)
+        for v in ("route-a/verify-x", "route-a/verif", " route-a/verify", "route_a/verify",
+                  "route-a", None, 1, b"route-a/verify"):
+            self.assertFalse(prs.is_route_a_context(v), v)
+
+    def test_C2_case_variant_history_success_is_observed(self):
+        Stub.stateful = True
+        Stub.pages = {1: [{"id": 8100, "context": "Route-A/Verify", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/1",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe["observed"])
+        self.assertEqual(probe["latest"]["id"], 8100)
+
+    def test_C3_similar_context_is_not_target(self):
+        Stub.stateful = True
+        Stub.pages = {1: [{"id": 8200, "context": "route-a/verify-legacy", "state": "success",
+                           "target_url": "https://github.com/o/r/actions/runs/1",
+                           "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        probe = prs.inspect_route_a_status(prs.Client("o/r", "tok", api=self.api), HEAD)
+        self.assertTrue(probe["readable"])
+        self.assertFalse(probe["observed"])
+
+    def test_C4_case_variant_history_success_revoked_before_publish(self):
+        self.flow()
+        Stub.remote_statuses.append({"id": 8300, "context": "ROUTE-A/VERIFY", "state": "success",
+                                     "target_url": "https://github.com/o/r/actions/runs/8",
+                                     "creator": {"login": "github-actions[bot]", "type": "Bot"}})
+        out = self.publish(mode="dual")
+        self.assertTrue(out["historical_success_observed"])
+        self.assertTrue(out["historical_success_revoked"])
 
 
 if __name__ == "__main__":

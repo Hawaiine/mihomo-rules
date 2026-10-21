@@ -47,6 +47,8 @@ VERDICTS = (PASS, PUBLISHER_NOT_RUN, BASELINE_DRIFT, SHA_MISMATCH, SOURCE_MISMAT
             REQUIRED_CONTEXT_UNSATISFIED, EVIDENCE_INSUFFICIENT, API_OR_PERMISSION_ERROR)
 
 CLEAN_MERGE_STATES = {"clean", "unstable"}
+STATUSES_PER_PAGE = 100
+STATUSES_MAX_PAGES = 10
 
 
 class ApiError(RuntimeError):
@@ -87,8 +89,9 @@ class Client:
                 return json.loads(resp.read() or b"null")
         except urllib.error.HTTPError as exc:
             raise ApiError(f"GET {path} → HTTP {exc.code}") from exc
-        except (urllib.error.URLError, TimeoutError) as exc:
-            raise ApiError(f"GET {path} 失败: {exc}") from exc
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            # OSError 覆盖 RemoteDisconnected / ConnectionReset；ValueError 覆盖畸形 JSON
+            raise ApiError(f"GET {path} 失败: {type(exc).__name__}: {exc}") from exc
 
 
 def load_required(path: str) -> list[str]:
@@ -113,12 +116,67 @@ def parse_run_id(url: str) -> str | None:
     return tail
 
 
+def fetch_statuses(client: Client, repo: str, sha: str, *, per_page: int = STATUSES_PER_PAGE,
+                   max_pages: int = STATUSES_MAX_PAGES) -> dict:
+    """按页读取 commit statuses（文档：reverse chronological，第一页最新）并返回目标 context。
+
+    ``complete=False`` 表示分页未读全（不可读/畸形/超上限）——调用方必须按**证据不足**处理，
+    不得把未读到的 ``route-a/verify`` 当作"不存在"。
+    """
+    items: list = []
+    pages_read = 0
+    for page in range(1, max_pages + 1):
+        try:
+            got = client.get(f"/repos/{repo}/commits/{sha}/statuses?per_page={per_page}&page={page}")
+        except ApiError as exc:
+            return {"items": items, "complete": False, "pages_read": pages_read,
+                    "latest_target": None, "error": f"第 {page} 页读取失败：{exc}"}
+        if not isinstance(got, list) or any(not isinstance(i, dict) for i in got):
+            return {"items": items, "complete": False, "pages_read": pages_read,
+                    "latest_target": None, "error": f"第 {page} 页响应畸形"}
+        pages_read += 1
+        items.extend(got)
+        target = next((i for i in got if isinstance(i, dict)
+                       and is_route_a_context(i.get("context"))), None)
+        if target is not None:
+            if page > 1:                          # 跨页命中 ⇒ 复读第 1 页检测并发更新
+                try:
+                    first = client.get(
+                        f"/repos/{repo}/commits/{sha}/statuses?per_page={per_page}&page=1")
+                except ApiError as exc:
+                    return {"items": items, "complete": False, "pages_read": pages_read,
+                            "latest_target": None, "error": f"跨页一致性复读失败：{exc}"}
+                if not isinstance(first, list):
+                    return {"items": items, "complete": False, "pages_read": pages_read,
+                            "latest_target": None, "error": "跨页一致性复读响应畸形"}
+                newer = next((i for i in first if isinstance(i, dict)
+                              and is_route_a_context(i.get("context"))), None)
+                if newer is not None and newer.get("id") != target.get("id"):
+                    return {"items": items, "complete": False, "pages_read": pages_read,
+                            "latest_target": None,
+                            "error": "并发更新：复读第 1 页发现更新的 route-a/verify 状态"}
+            return {"items": items, "complete": True, "pages_read": pages_read,
+                    "latest_target": target, "error": ""}
+        if len(got) < per_page:
+            return {"items": items, "complete": True, "pages_read": pages_read,
+                    "latest_target": None, "error": ""}
+    return {"items": items, "complete": False, "pages_read": pages_read, "latest_target": None,
+            "error": f"达到分页上限 {max_pages} 页仍未找到 {CONTEXT}"}
+
+
 def collect(client: Client, repo: str, pr: int, head_sha: str) -> dict:
     ev: dict = {"repo": repo, "pr": pr, "expected_head_sha": head_sha}
     ev["pull"] = client.get(f"/repos/{repo}/pulls/{pr}")
     ev["main"] = client.get(f"/repos/{repo}/git/ref/heads/{BASE_BRANCH}")
     ev["check_runs"] = client.get(f"/repos/{repo}/commits/{head_sha}/check-runs?per_page=100")
-    ev["statuses"] = client.get(f"/repos/{repo}/commits/{head_sha}/statuses?per_page=100")
+    paged = fetch_statuses(client, repo, head_sha)
+    ev["statuses"] = paged["items"]
+    ev["statuses_complete"] = paged["complete"]
+    ev["statuses_pages_read"] = paged["pages_read"]
+    if not paged["complete"]:
+        ev["statuses_error"] = paged["error"]
+    if paged["latest_target"] is not None:
+        ev["route_a_status_latest"] = paged["latest_target"]
     ev["combined"] = client.get(f"/repos/{repo}/commits/{head_sha}/status")
     # 若存在 route-a/verify check run，按其 details_url 取回发布它的 run（只读）
     crs = (ev.get("check_runs") or {}).get("check_runs") or []
@@ -152,8 +210,14 @@ def _pick(items, name: str) -> dict | None:
     return None
 
 
-def _pick_status(items, context: str) -> dict | None:
-    hits = [it for it in items or [] if isinstance(it, dict) and it.get("context") == context]
+def is_route_a_context(value) -> bool:
+    """GitHub commit status context 不区分大小写，比较必须 casefold。"""
+    return isinstance(value, str) and value.casefold() == CONTEXT.casefold()
+
+
+def _pick_status(items) -> dict | None:
+    """status 选择与发布器同一语义：先按 context（大小写不敏感）过滤，再取最新（第一项）。"""
+    hits = [it for it in items or [] if isinstance(it, dict) and is_route_a_context(it.get("context"))]
     return hits[0] if hits else None
 
 
@@ -226,9 +290,16 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                              "detail": f"missing={missing} failed={failed} wrong_app={wrong_app}"}],
                 "facts": facts}
 
+    if ev.get("statuses_complete") is False:
+        return {"verdict": EVIDENCE_INSUFFICIENT,
+                "reasons": [{"code": "STATUS_PAGINATION_INCOMPLETE",
+                             "detail": (f"commit statuses 分页未读全（已读 {ev.get('statuses_pages_read')} 页）："
+                                        f"{ev.get('statuses_error')}；未读到的 {CONTEXT} 不得当作不存在")}],
+                "facts": facts}
+
     # 6) route-a/verify 的来源与状态
     ra_cr = _pick(cr_items, CONTEXT)
-    ra_status = _pick_status((ev.get("statuses") or []), CONTEXT)
+    ra_status = _pick_status(ev.get("statuses") or [])
     facts["route_a_check_run"] = ({k: ra_cr.get(k) for k in
                                    ("id", "name", "head_sha", "status", "conclusion",
                                     "external_id", "details_url")} if ra_cr else None)

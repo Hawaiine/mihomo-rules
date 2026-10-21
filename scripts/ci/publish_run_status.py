@@ -40,6 +40,11 @@ EXTERNAL_ID_PREFIX = "route-a-run:"
 PUBLISH_MODES = ("status", "check-run", "dual")
 
 
+def is_route_a_context(value: object) -> bool:
+    """context 比较必须大小写不敏感（GitHub commit status context 不区分大小写）。"""
+    return isinstance(value, str) and value.casefold() == CONTEXT.casefold()
+
+
 class Refused(RuntimeError):
     pass
 
@@ -285,7 +290,7 @@ def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: floa
     for i in range(attempts):
         status, items = client.call(f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
         if status == 200 and isinstance(items, list):
-            ours = [s for s in items if s.get("context") == CONTEXT]
+            ours = [s for s in items if is_route_a_context(s.get("context"))]
             if ours:
                 last = ours[0]
                 problem = _creator_problem(last)
@@ -406,7 +411,7 @@ def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str
             out["error"] = f"补偿回读 HTTP {code}"
             return out
         # 关键：先按 context 过滤——items[0] 可能是其它 context 的更新状态
-        matching = [i for i in items if isinstance(i, dict) and i.get("context") == CONTEXT]
+        matching = [i for i in items if isinstance(i, dict) and is_route_a_context(i.get("context"))]
         newest = matching[0] if matching else None
         if newest is None:
             out["error"] = "回读没有找到 route-a/verify 的有效状态"
@@ -433,27 +438,78 @@ def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str
     return out
 
 
-def inspect_route_a_status(client: Client, sha: str) -> dict:
+STATUSES_PER_PAGE = 100
+STATUSES_MAX_PAGES = 10          # 上限 1000 条状态；超出即证据未知
+
+
+def inspect_route_a_status(client: Client, sha: str, *, per_page: int = STATUSES_PER_PAGE,
+                           max_pages: int = STATUSES_MAX_PAGES) -> dict:
     """只读探查同 SHA 上 ``route-a/verify`` 的**当前有效状态**（同 context 最新一条）。
 
-    用于回答一个关键问题：**本轮之前是否已经存在可满足门禁的 success 证据**。
-    读不到就返回 ``readable=False``（证据不确定），绝不推断为"没有"。
+    契约依据（GitHub REST 文档，已在本轮独立抓取确认）：
+    "Statuses are returned in reverse chronological order. The first status in the list will
+    be the latest one."；端点支持 ``per_page``（最大 100）与 ``page``。
+    因此**必须按页顺序扫描**：目标 context 可能只出现在第 2 页及以后；只读第 1 页会
+    把"存在于后续页的历史 success"误判为"不存在"。
+
+    保守语义：
+      * 任一必需页面不可读 / 响应畸形 ⇒ ``readable=False``（证据未知），绝不当作"不存在"；
+      * 达到 ``max_pages`` 仍未找到目标 context ⇒ ``readable=False``（无法证明不存在）；
+      * 只有在**完整扫完**（某页条目数 < ``per_page``）且始终未见目标 context 时，
+        才返回 ``observed=False``；
+      * 若目标 context 出现在第 2 页及以后，则重读第 1 页检测**跨页并发更新**；
+        第 1 页出现不同的目标状态 ⇒ ``readable=False``（跨页无原子快照，保守失败关闭）。
     """
-    try:
-        code, items = client.call(f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
-    except Exception as exc:                      # noqa: BLE001 — 读不到 = 不确定
-        return {"readable": False, "error": f"{type(exc).__name__}: {exc}"}
-    if code != 200 or not isinstance(items, list):
-        return {"readable": False, "error": f"HTTP {code}"}
-    matching = [i for i in items if isinstance(i, dict) and i.get("context") == CONTEXT]
-    latest = matching[0] if matching else None
-    if latest is None:
-        return {"readable": True, "observed": False, "latest": None}
-    creator = latest.get("creator") or {}
-    return {"readable": True, "observed": latest.get("state") == "success",
-            "latest": {"id": latest.get("id"), "state": latest.get("state"),
-                       "target_url": latest.get("target_url"),
-                       "creator": creator.get("login"), "creator_type": creator.get("type")}}
+    pages_read = 0
+    target = None
+    for page in range(1, max_pages + 1):
+        try:
+            code, items = client.call(
+                f"/repos/{client.repo}/commits/{sha}/statuses?per_page={per_page}&page={page}")
+        except Exception as exc:                  # noqa: BLE001 — 读不到 = 不确定
+            return {"readable": False, "pages_read": pages_read,
+                    "error": f"第 {page} 页读取异常：{type(exc).__name__}: {exc}"}
+        if code != 200 or not isinstance(items, list):
+            return {"readable": False, "pages_read": pages_read,
+                    "error": f"第 {page} 页响应不可用：HTTP {code}"}
+        if any(not isinstance(i, dict) for i in items):
+            return {"readable": False, "pages_read": pages_read,
+                    "error": f"第 {page} 页存在畸形条目"}
+        pages_read += 1
+        found = next((i for i in items if is_route_a_context(i.get("context"))), None)
+        if found is not None:
+            target = found
+            if page > 1:                          # 跨页读取过 ⇒ 检测并发更新
+                try:
+                    code1, first = client.call(
+                        f"/repos/{client.repo}/commits/{sha}/statuses?per_page={per_page}&page=1")
+                except Exception as exc:          # noqa: BLE001
+                    return {"readable": False, "pages_read": pages_read,
+                            "error": f"跨页一致性重读失败：{type(exc).__name__}: {exc}"}
+                if code1 != 200 or not isinstance(first, list):
+                    return {"readable": False, "pages_read": pages_read,
+                            "error": f"跨页一致性重读不可用：HTTP {code1}"}
+                pages_read += 1
+                newer = next((i for i in first if isinstance(i, dict)
+                              and is_route_a_context(i.get("context"))), None)
+                if newer is not None and newer.get("id") != target.get("id"):
+                    return {"readable": False, "pages_read": pages_read,
+                            "error": "并发更新：重读第 1 页发现更新的 route-a/verify 状态，"
+                                     "跨页无原子快照，无法确认当前有效状态"}
+            break
+        if len(items) < per_page:                 # 已是最后一页且无目标 context
+            return {"readable": True, "observed": False, "latest": None,
+                    "pages_read": pages_read, "complete": True}
+    else:
+        return {"readable": False, "pages_read": pages_read,
+                "error": f"达到分页上限 {max_pages} 页仍未找到 {CONTEXT}，无法证明其不存在"}
+
+    creator = target.get("creator") or {}
+    return {"readable": True, "observed": target.get("state") == "success",
+            "latest": {"id": target.get("id"), "state": target.get("state"),
+                       "target_url": target.get("target_url"),
+                       "creator": creator.get("login"), "creator_type": creator.get("type")},
+            "pages_read": pages_read, "complete": True}
 
 
 def _compensate_all(client: Client, report: dict, reason: str, target_url: str = "") -> dict:
@@ -473,9 +529,10 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
     cr_evidence = report.get("check_run") or report.get("check_run_created")
     if cr_evidence and not (check_comp or {}).get("ok"):
         try:
+            run_info = report.get("run") or {}
             check_comp = _downgrade(client, cr_evidence["id"], reason,
-                                    head_sha=report["run"]["head_sha"],
-                                    run_id=report["run"]["run_id"])
+                                    head_sha=run_info.get("head_sha", ""),
+                                    run_id=run_info.get("run_id", ""))
         except Exception as exc:                       # noqa: BLE001 — 补偿失败必须如实记录
             check_comp = {"attempted": True, "ok": False, "id": cr_evidence.get("id"),
                           "error": f"{type(exc).__name__}: {exc}"}
@@ -484,8 +541,9 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
 
     if report.get("status_publish_attempted") and not (status_comp or {}).get("ok"):
         try:
-            status_comp = compensate_status_failure(client, report["run"]["head_sha"],
-                                                    report["run"]["run_id"], reason, target_url)
+            run_info = report.get("run") or {}
+            status_comp = compensate_status_failure(client, run_info.get("head_sha", ""),
+                                                    run_info.get("run_id", ""), reason, target_url)
         except Exception as exc:                       # noqa: BLE001
             status_comp = {"attempted": True, "ok": False,
                            "error": f"{type(exc).__name__}: {exc}"}
@@ -556,14 +614,7 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
     任一路未确认撤销 ⇒ ``possible_success_evidence_remains=True``，需要人工只读核验；
     本函数**不保证**在任何网络/API 故障下都 fail-closed。
     """
-    if publish_mode not in PUBLISH_MODES:
-        raise Refused(f"未知 publish_mode={publish_mode!r}（可选 {PUBLISH_MODES}）")
-    client = Client(repo, token, api)
-    if not pr:
-        pr = resolve_pr(client, head_sha)
-    run_info = verify_run(client, run_id, head_sha, required, pr=pr)
-    pr_info = verify_pr(client, pr, head_sha)
-    report: dict = {"ok": True, "run": run_info, "pr": pr_info, "publish_mode": publish_mode,
+    report: dict = {"ok": True, "run": None, "pr": None, "publish_mode": publish_mode,
                     "steps": [], "compensation": None, "status_compensation": None,
                     "status_publish_attempted": False,
                     "status_may_have_been_published": False,
@@ -571,19 +622,53 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
                     "historical_success_revoked": None,
                     "status_evidence_unknown": False,
                     "possible_success_evidence_remains": False}
-
     try:
+        if publish_mode not in PUBLISH_MODES:
+            raise Refused(f"未知 publish_mode={publish_mode!r}（可选 {PUBLISH_MODES}）")
+        client = Client(repo, token, api)
+        if not pr:
+            pr = resolve_pr(client, head_sha)
+            report["pr_resolved"] = pr
+        report["run"] = verify_run(client, run_id, head_sha, required, pr=pr)
+        report["pr"] = verify_pr(client, pr, head_sha)
         _run_transaction(client, report, run_id=run_id, pr=pr, head_sha=head_sha,
                          target_url=target_url, attempts=attempts, publish_mode=publish_mode)
     except Exception as exc:                     # noqa: BLE001 — 统一收敛，任何异常都不得绕过补偿
         report["ok"] = False
         report["failure"] = {"type": type(exc).__name__, "reason": str(exc)}
-        # 已创建 Check Run 或已尝试发布 success status ⇒ 必须确认补偿是否已执行/完成；
-        # 局部已确认撤销的通道不会被重复覆盖（见 _compensate_all）。
+        # 前置核验失败时事务未进入步骤 0：只读探查一次历史状态并**如实报告**。
+        # 语义（第七轮评估方案 A）：不撤销——旧 success 可能来自此前有效的一次运行，
+        # 本轮无权因自身核验失败就把它判为无效；但也绝不声称"远端不存在 success"。
+        client = client if "client" in locals() else None
+        if client is not None and "historical_status_probe" not in report:
+            hist = inspect_route_a_status(client, head_sha)
+            report["historical_status_probe"] = hist
+            report["historical_probe_after_failure"] = True
+            if hist.get("readable"):
+                report["historical_probe_scope"] = (
+                    "完整读取下同 SHA route-a/verify 的当前有效状态；未观察到 success 只说明当前"
+                    "有效状态不是 success，不代表历史上从未存在 success")
+                report["historical_success_observed"] = bool(hist.get("observed"))
+                if report["historical_success_observed"]:
+                    report["historical_success_disposition"] = \
+                        "not_processed_pre_verification_failure"
+                    report["operator_action"] = ("同 SHA 存在历史 route-a/verify=success，本轮前置核验"
+                                                 "失败且未处置；需人工只读核验后再决定是否合并")
+            else:
+                report["status_evidence_unknown"] = True
+                report["possible_success_evidence_remains"] = True
+                report["operator_action"] = ("历史状态不可读：需人工只读核验远端 route-a/verify 状态")
+        elif client is None:
+            # 缺少 token / Client 构造失败：无可用客户端，不伪造探查结果
+            report["status_evidence_unknown"] = True
+            report["possible_success_evidence_remains"] = True
+            report["operator_action"] = ("无法建立 GitHub 客户端：需人工只读核验远端 "
+                                         "route-a/verify 状态")
         if (report.get("check_run") or report.get("check_run_created")
                 or report.get("status_publish_attempted")
                 or report.get("historical_success_observed")):
-            _compensate_all(client, report, f"事务异常 {type(exc).__name__}: {exc}", target_url)
+            _compensate_all(client, report, f"事务异常 {type(exc).__name__}: {exc}", target_url) \
+                if client is not None else None
         if isinstance(exc, Refused):
             exc.report = report
             raise

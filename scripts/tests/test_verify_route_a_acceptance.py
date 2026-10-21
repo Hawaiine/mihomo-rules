@@ -222,12 +222,40 @@ class ParseRunIdTest(unittest.TestCase):
 
 class Stub(BaseHTTPRequestHandler):
     routes: dict = {}
+    pages: dict | None = None        # 分页模式：{page_no: [status,...]}
+    page_fail: dict = {}             # {page_no: http_code | "disconnect" | "malformed"}
+    calls: list = []
 
     def log_message(self, *a):
         pass
 
     def do_GET(self):
         key = f"GET {self.path.split('?')[0]}"
+        Stub.calls.append(self.path)
+        if Stub.pages is not None and key.endswith("/statuses"):
+            page = 1
+            for part in self.path.split("?", 1)[-1].split("&"):
+                if part.startswith("page="):
+                    page = int(part.split("=", 1)[1])
+            fail = Stub.page_fail.get(page)
+            if fail == "disconnect":
+                self.close_connection = True
+                return
+            if fail == "malformed":
+                code, payload = 200, {"not": "a list"}
+            elif isinstance(fail, int):
+                code, payload = fail, {"message": "injected"}
+            elif callable(fail):
+                code, payload = 200, fail()
+            else:
+                code, payload = 200, Stub.pages.get(page, [])
+            raw = json.dumps(payload).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
         code, payload = Stub.routes.get(key, (404, {"message": "Not Found"}))
         raw = json.dumps(payload).encode()
         self.send_response(code)
@@ -271,6 +299,122 @@ class ApiTest(unittest.TestCase):
                       required_path=str(self.req), expect_app_id=15368)
         self.assertEqual(out["verdict"], acc.PASS)
         self.assertEqual(out["facts"]["publisher_run_id"], "500")
+
+
+def st(i, context="other/check", state="success"):
+    return {"id": i, "context": context, "state": state,
+            "target_url": "https://github.com/o/r/actions/runs/500",
+            "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+
+
+class PaginationTest(unittest.TestCase):
+    """第七轮：验收工具 statuses 分页、完整性与 context 语义。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        cls.api = f"http://127.0.0.1:{cls.server.server_address[1]}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        Stub.pages, Stub.page_fail = None, {}
+
+    def setUp(self):
+        Stub.pages, Stub.page_fail, Stub.calls, Stub.routes = {}, {}, [], {}
+        self.client = acc.Client("t", self.api)
+
+    def fetch(self):
+        return acc.fetch_statuses(self.client, "o/r", HEAD)
+
+    def hundred(self, base):
+        return [st(base + i) for i in range(100)]
+
+    def test_P1_target_on_page_two(self):
+        Stub.pages = {1: self.hundred(1000), 2: [st(2000, "route-a/verify")]}
+        out = self.fetch()
+        self.assertTrue(out["complete"])
+        self.assertEqual(out["latest_target"]["id"], 2000)
+        self.assertEqual(out["pages_read"], 2)
+
+    def test_P2_page_two_403_5xx_disconnect_incomplete(self):
+        for fail in (403, 502, "disconnect"):
+            Stub.pages, Stub.page_fail = {1: self.hundred(1000)}, {2: fail}
+            out = self.fetch()
+            self.assertFalse(out["complete"], fail)
+            self.assertIsNone(out["latest_target"])
+
+    def test_P3_empty_malformed_and_exact_hundred(self):
+        Stub.pages = {}
+        self.assertTrue(self.fetch()["complete"])
+        Stub.pages, Stub.page_fail = {1: [st(1)]}, {1: "malformed"}
+        self.assertFalse(self.fetch()["complete"])
+        Stub.pages, Stub.page_fail = {1: self.hundred(1000)}, {}
+        out = self.fetch()
+        self.assertTrue(out["complete"])
+        self.assertEqual(out["pages_read"], 2, "恰好 100 条必须继续读下一页")
+
+    def test_P4_concurrent_change_during_pagination(self):
+        Stub.pages = {1: self.hundred(1000), 2: [st(2000, "route-a/verify", "failure")]}
+        seen = {"n": 0}
+
+        def page1():
+            seen["n"] += 1
+            return self.hundred(1000) if seen["n"] == 1 else [st(3000, "route-a/verify")]
+        Stub.page_fail = {1: page1}
+        out = self.fetch()
+        self.assertFalse(out["complete"])
+        self.assertIn("并发", out["error"])
+
+    def test_P5_ten_page_cap_incomplete(self):
+        Stub.pages = {p: self.hundred(p * 1000) for p in range(1, 12)}
+        out = self.fetch()
+        self.assertFalse(out["complete"])
+        self.assertEqual(out["pages_read"], 10)
+        self.assertIn("上限", out["error"])
+
+    def test_P6_incomplete_never_pass_or_publisher_not_run(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]
+        for statuses in ([], ev()["statuses"]):
+            d = ev(check_runs=runs, statuses=statuses, merge_state_status="CLEAN")
+            d.update(statuses_complete=False, statuses_pages_read=1, statuses_error="第 2 页 403")
+            out = acc.classify(d, REQUIRED)
+            self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
+            self.assertEqual([r["code"] for r in out["reasons"]], ["STATUS_PAGINATION_INCOMPLETE"])
+
+    def test_P7_end_to_end_incomplete_pagination_over_http(self):
+        Stub.routes = {
+            "GET /repos/o/r/pulls/31": (200, ev()["pull"]),
+            "GET /repos/o/r/git/ref/heads/main": (200, {"object": {"sha": MAIN}}),
+            f"GET /repos/o/r/commits/{HEAD}/check-runs": (200, {"check_runs": [
+                cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]}),
+            f"GET /repos/o/r/commits/{HEAD}/status": (200, {"state": "success"}),
+        }
+        Stub.pages, Stub.page_fail = {1: self.hundred(1000)}, {2: 403}
+        out = acc.run(repo="o/r", pr=31, head_sha=HEAD, token="t", api=self.api,
+                      required_path=str(ROOT / ".github" / "required-checks.json"),
+                      expect_app_id=15368)
+        self.assertNotIn(out["verdict"], (acc.PASS, acc.PUBLISHER_NOT_RUN))
+        self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
+        self.assertIn("STATUS_PAGINATION_INCOMPLETE", [r["code"] for r in out["reasons"]])
+
+    def test_P8_context_case_insensitive_selection(self):
+        self.assertTrue(acc.is_route_a_context("Route-A/Verify"))
+        for v in ("route-a/verify-x", "route-a", " route-a/verify", None, 3):
+            self.assertFalse(acc.is_route_a_context(v), v)
+        items = [st(1, "route-a/verify-legacy"), st(2, "ROUTE-A/VERIFY", "failure"),
+                 st(3, "route-a/verify")]
+        self.assertEqual(acc._pick_status(items)["id"], 2)
+        Stub.pages = {1: [st(5, "Route-A/Verify")]}
+        self.assertEqual(self.fetch()["latest_target"]["id"], 5)
+
+    def test_P9_case_variant_status_is_seen_by_classify(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]
+        variant = [dict(ev()["statuses"][0], context="Route-A/Verify")]
+        out = acc.classify(ev(check_runs=runs, statuses=variant, merge_state_status="CLEAN"), REQUIRED)
+        self.assertNotEqual(out["verdict"], acc.PUBLISHER_NOT_RUN)
+        self.assertEqual(out["verdict"], acc.PASS)
 
 
 if __name__ == "__main__":
