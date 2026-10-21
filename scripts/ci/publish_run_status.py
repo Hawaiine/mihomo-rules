@@ -51,38 +51,24 @@ class Client:
         self.repo, self.token, self.api = repo, token, api.rstrip("/")
 
     def call(self, path: str) -> tuple[int, object]:
-        req = urllib.request.Request(
-            f"{self.api}{path}",
-            headers={"Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
-                     "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "route-a-run-status"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return resp.status, json.loads(resp.read() or b"null")
-        except urllib.error.HTTPError as exc:
-            return exc.code, exc.read().decode("utf-8", "replace")[:200]
-        except (urllib.error.URLError, TimeoutError) as exc:
-            raise Refused(f"GitHub API 不可用: {exc}") from exc
+        return _request(self, "GET", path)
 
     def patch(self, path: str, body: dict) -> tuple[int, object]:
         return _request(self, "PATCH", path, body)
 
     def post(self, path: str, body: dict) -> tuple[int, object]:
-        req = urllib.request.Request(
-            f"{self.api}{path}", data=json.dumps(body).encode(), method="POST",
-            headers={"Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
-                     "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json",
-                     "User-Agent": "route-a-run-status"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return resp.status, json.loads(resp.read() or b"null")
-        except urllib.error.HTTPError as exc:
-            return exc.code, exc.read().decode("utf-8", "replace")[:200]
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            # 连接中断/超时：远端**可能已经接受**写入，调用方必须按"已尝试发布"处理
-            raise Refused(f"状态发布请求失败（可能已写入远端）: {exc}") from exc
+        return _request(self, "POST", path, body)
 
 
 def _request(client: Client, method: str, path: str, body: dict | None = None):
+    """统一 HTTP 传输：HTTP 状态码与**传输异常**分别处理。
+
+    * ``HTTPError`` → 返回真实状态码（4xx/5xx 仍由调用方按业务语义判定）；
+    * ``URLError`` / ``TimeoutError`` / ``OSError``（含 ``RemoteDisconnected``、
+      ``ConnectionResetError``、``BrokenPipeError``）→ 规范化为 ``Refused``。
+      写操作（POST/PATCH/PUT/DELETE）的连接中断**不能**被当作"远端没有写入"：
+      远端可能已经接受 mutation，调用方必须按"可能已写入"处理。
+    """
     req = urllib.request.Request(
         f"{client.api}{path}", data=json.dumps(body).encode() if body is not None else None,
         method=method,
@@ -94,8 +80,11 @@ def _request(client: Client, method: str, path: str, body: dict | None = None):
             return resp.status, json.loads(resp.read() or b"null")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", "replace")[:200]
-    except (urllib.error.URLError, TimeoutError) as exc:
-        raise Refused(f"GitHub API 不可用: {exc}") from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        hint = ("；该请求为写操作，远端可能已经接受写入" if method in ("POST", "PATCH", "PUT", "DELETE")
+                else "")
+        raise Refused(f"GitHub API {method} {path} 传输失败{hint}: "
+                      f"{type(exc).__name__}: {exc}") from exc
 
 
 def verify_run(client: Client, run_id: str, head_sha: str, required: set[str],
@@ -326,8 +315,8 @@ def _downgrade(client: Client, check_run_id: int, reason: str) -> dict:
     try:
         obj = finalize_check_run(client, check_run_id, "failure", summary=reason)
         return {"ok": True, "id": obj.get("id"), "conclusion": obj.get("conclusion")}
-    except Refused as exc:
-        return {"ok": False, "id": check_run_id, "error": str(exc)}
+    except Exception as exc:                      # noqa: BLE001 — 补偿失败必须如实记录
+        return {"ok": False, "id": check_run_id, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str,
@@ -336,73 +325,101 @@ def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str
 
     语义边界（不得夸大）：
       * 只在 context ``route-a/verify`` 上发 ``failure``；
-      * 回读必须确认**当前有效状态**（GitHub 返回的最新一条）就是 failure，
-        且 target_url 绑定到同一个 run —— 不能拿任意历史 failure 当补偿成功；
-      * 回读失败/状态不符/绑定不符 ⇒ ``ok=False``，**不吞掉**，由调用方标记
-        ``possible_success_evidence_remains``；
+      * 回读必须**先按 context 过滤**（同一 SHA 上可能有其它 context 的更新状态），
+        再确认同 context 的**最新**一条是 failure，且其 ``id`` 就是本次补偿 POST
+        返回的对象（防止并发/后续覆盖或拿历史 failure 冒充）；
+      * 回读失败/状态不符/绑定不符/对象不符 ⇒ ``ok=False``，**不吞掉**；
       * 这是尽力恢复，**不是原子回滚**。
     """
-    out: dict = {"attempted": True, "http": None, "readback": None, "ok": False, "error": ""}
+    out: dict = {"attempted": True, "http": None, "posted_id": None, "readback": None,
+                 "ok": False, "error": ""}
     url = target_url or f"https://github.com/{client.repo}/actions/runs/{run_id}"
     try:
-        code, body = client.post(f"/repos/{client.repo}/statuses/{sha}", {
+        code, posted = client.post(f"/repos/{client.repo}/statuses/{sha}", {
             "state": "failure", "context": CONTEXT,
-            "description": f"Route A 发布事务失败，已撤销：{reason}"[:140], "target_url": url})
+            "description": f"Route A 发布事务失败，已尝试撤销：{reason}"[:140], "target_url": url})
         out["http"] = code
-        if code not in (200, 201):
-            out["error"] = f"补偿 POST HTTP {code} {str(body)[:120]}"
+        if code not in (200, 201) or not isinstance(posted, dict):
+            out["error"] = f"补偿 POST 失败或响应畸形：HTTP {code} {str(posted)[:120]}"
             return out
+        posted_id = posted.get("id")
+        if not posted_id:
+            out["error"] = "补偿 POST 响应缺少 status id（无法与回读对象绑定）"
+            return out
+        out["posted_id"] = posted_id
     except Refused as exc:
-        out["error"] = f"补偿 POST 异常：{exc}"
+        out["error"] = f"补偿 POST 传输异常（远端可能已写入）：{exc}"
         return out
     try:
         code, items = client.call(f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
         if code != 200 or not isinstance(items, list):
             out["error"] = f"补偿回读 HTTP {code}"
             return out
-        newest = items[0] if items else None
-        if not isinstance(newest, dict):
-            out["error"] = "补偿回读为空（当前有效状态未知）"
+        # 关键：先按 context 过滤——items[0] 可能是其它 context 的更新状态
+        matching = [i for i in items if isinstance(i, dict) and i.get("context") == CONTEXT]
+        newest = matching[0] if matching else None
+        if newest is None:
+            out["error"] = "回读没有找到 route-a/verify 的有效状态"
             return out
-        out["readback"] = {"state": newest.get("state"), "context": newest.get("context"),
-                           "target_url": newest.get("target_url"),
+        out["readback"] = {"id": newest.get("id"), "state": newest.get("state"),
+                           "context": newest.get("context"), "target_url": newest.get("target_url"),
                            "created_at": newest.get("created_at")}
         problem = _creator_problem(newest)
-        if not problem and newest.get("context") != CONTEXT:
-            problem = f"回读最新 context={newest.get('context')!r}"
         if not problem and newest.get("state") != "failure":
-            problem = f"回读当前有效 state={newest.get('state')!r}，非 failure"
+            problem = f"同 context 最新 state={newest.get('state')!r}，非 failure"
         if not problem:
             parsed = parse_run_url(str(newest.get("target_url") or ""))
             if parsed is None or parsed.get("run_id") != str(run_id):
                 problem = f"回读 target_url 未绑定 run {run_id}（{(newest.get('target_url') or '')!r}）"
+        if not problem and newest.get("id") != posted_id:
+            problem = (f"同 context 最新状态的 id={newest.get('id')!r} 并非本次补偿 POST 对象"
+                       f"（{posted_id!r}）；可能被并发/后续状态覆盖")
         if problem:
             out["error"] = problem
             return out
         out["ok"] = True
     except Refused as exc:
-        out["error"] = f"补偿回读异常：{exc}"
+        out["error"] = f"补偿回读传输异常：{exc}"
     return out
 
 
 def _compensate_all(client: Client, report: dict, reason: str, target_url: str = "") -> dict:
     """统一失败补偿：status（若已尝试发布 success）+ Check Run（若已创建/完成）。
 
-    两路各自记录 ``attempted/http/readback/ok/error``；任一路未确认撤销，就把
-    ``possible_success_evidence_remains`` 置为 True，并提示需人工只读核验。
+    设计要点：
+      * **逐路独立**：一路失败不影响另一路（两条都尽力尝试）；
+      * **不重复覆盖更好结果**：某一路已确认撤销（``ok=True``）则跳过，其余路径的
+        尝试与结果记入 ``compensation_log``，不丢失原始更准确的信息；
+      * **异常安全**：补偿自身抛出任何异常（含 ``OSError``/``Refused``）都被记录为
+        ``ok=False`` + ``error``，绝不冒泡覆盖原始失败原因，也绝不返回成功。
     """
-    status_comp = None
-    if report.get("status_publish_attempted"):
-        status_comp = compensate_status_failure(client, report["run"]["head_sha"],
-                                                report["run"]["run_id"], reason, target_url)
-        report["status_compensation"] = status_comp
+    log = report.setdefault("compensation_log", [])
     check_comp = report.get("compensation")
-    if report.get("check_run") and not (check_comp or {}).get("ok"):
-        check_comp = _downgrade(client, report["check_run"]["id"], reason)
+    status_comp = report.get("status_compensation")
+
+    cr_evidence = report.get("check_run") or report.get("check_run_created")
+    if cr_evidence and not (check_comp or {}).get("ok"):
+        try:
+            check_comp = _downgrade(client, cr_evidence["id"], reason)
+        except Exception as exc:                       # noqa: BLE001 — 补偿失败必须如实记录
+            check_comp = {"ok": False, "id": cr_evidence.get("id"),
+                          "error": f"{type(exc).__name__}: {exc}"}
         report["compensation"] = check_comp
+        log.append({"channel": "check_run", "reason": reason, "result": check_comp})
+
+    if report.get("status_publish_attempted") and not (status_comp or {}).get("ok"):
+        try:
+            status_comp = compensate_status_failure(client, report["run"]["head_sha"],
+                                                    report["run"]["run_id"], reason, target_url)
+        except Exception as exc:                       # noqa: BLE001
+            status_comp = {"attempted": True, "ok": False,
+                           "error": f"{type(exc).__name__}: {exc}"}
+        report["status_compensation"] = status_comp
+        log.append({"channel": "status", "reason": reason, "result": status_comp})
+
     report["compensations"] = {"status": status_comp, "check_run": check_comp}
     status_risky = bool(report.get("status_publish_attempted")) and not (status_comp or {}).get("ok")
-    check_risky = bool(report.get("check_run")) and not (check_comp or {}).get("ok")
+    check_risky = bool(cr_evidence) and not (check_comp or {}).get("ok")
     report["possible_success_evidence_remains"] = bool(status_risky or check_risky)
     report["compensation_is_best_effort_not_atomic"] = True
     report["operator_action"] = ("需要人工只读核验远端是否仍有 route-a/verify=success"
@@ -458,9 +475,19 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
     try:
         _run_transaction(client, report, run_id=run_id, pr=pr, head_sha=head_sha,
                          target_url=target_url, attempts=attempts, publish_mode=publish_mode)
-    except Refused as exc:
-        exc.report = report                      # 失败时仍暴露远端证据与补偿结果
-        raise
+    except Exception as exc:                     # noqa: BLE001 — 统一收敛，任何异常都不得绕过补偿
+        report["ok"] = False
+        report["failure"] = {"type": type(exc).__name__, "reason": str(exc)}
+        # 已创建 Check Run 或已尝试发布 success status ⇒ 必须确认补偿是否已执行/完成；
+        # 局部已确认撤销的通道不会被重复覆盖（见 _compensate_all）。
+        if report.get("check_run") or report.get("status_publish_attempted"):
+            _compensate_all(client, report, f"事务异常 {type(exc).__name__}: {exc}", target_url)
+        if isinstance(exc, Refused):
+            exc.report = report
+            raise
+        refused = Refused(f"Route A 事务失败：{type(exc).__name__}: {exc}")
+        refused.report = report
+        raise refused from exc
     return report
 
 
@@ -470,16 +497,18 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
     if publish_mode in ("check-run", "dual"):
         created = create_check_run(client, head_sha, run_id, target_url)
         cr_id = created.get("id")
+        # 立刻记录 ID 与"是否可能已进入 success"，供任何后续异常的统一补偿使用
+        report["check_run_created"] = {"id": cr_id, "may_have_succeeded": False}
         report["steps"].append("create_check_run:in_progress")
         app = created.get("app") or {}
         if app.get("id") != EXPECTED_APP_ID:
-            report["compensation"] = _downgrade(client, cr_id, "创建返回 app.id 不符")
+            _compensate_all(client, report, f"创建返回 app.id 不符：{app.get('id')!r}", target_url)
             raise Refused(f"创建返回 app.id={app.get('id')!r}，非 {EXPECTED_APP_ID}")
         try:
             verify_check_run(client, head_sha, run_id, attempts=attempts,
                              expect_conclusion="in_progress", check_run_id=cr_id)
         except Refused as exc:
-            report["compensation"] = _downgrade(client, cr_id, f"in_progress 回读失败：{exc}")
+            _compensate_all(client, report, f"in_progress 回读失败：{exc}", target_url)
             raise Refused(f"check run 回读未确认 in_progress：{exc}") from exc
         report["steps"].append("verify_check_run:in_progress")
         pr_info = verify_pr(client, pr, head_sha)          # 创建后复核
@@ -487,14 +516,16 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
         try:
             finalized = finalize_check_run(client, cr_id, "success")
         except Refused as exc:
-            report["compensation"] = _downgrade(client, cr_id, f"完成失败：{exc}")
+            # PATCH 传输异常同样按"远端可能已完成 success"处理
+            _compensate_all(client, report, f"完成失败（远端可能已 success）：{exc}", target_url)
             raise Refused(f"完成 check run 为 success 失败：{exc}") from exc
+        report["check_run_created"]["may_have_succeeded"] = True
         report["steps"].append("finalize_check_run:success")
         try:
             verified = verify_check_run(client, head_sha, run_id, attempts=attempts,
                                         expect_conclusion="success", check_run_id=cr_id)
         except Refused as exc:
-            report["compensation"] = _downgrade(client, cr_id, f"回读失败：{exc}")
+            _compensate_all(client, report, f"回读失败：{exc}", target_url)
             raise Refused(f"check run 回读未确认 success：{exc}") from exc
         report["steps"].append("verify_check_run:success")
         report["check_run"] = {"id": cr_id, "name": finalized.get("name"),

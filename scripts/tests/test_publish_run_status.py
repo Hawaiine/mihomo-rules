@@ -47,11 +47,22 @@ class Stub(BaseHTTPRequestHandler):
             if key.startswith("POST /repos/o/r/statuses/"):
                 Stub.counters["status_post"] = Stub.counters.get("status_post", 0) + 1
                 is_comp = body.get("state") == "failure"
+                if is_comp and Stub.inject.get("comp_post_disconnect_no_write"):
+                    self.close_connection = True
+                    return
+                if is_comp and Stub.inject.get("comp_post_disconnect_after_write"):
+                    Stub.counters["status_id"] = Stub.counters.get("status_id", 9000) + 1
+                    Stub.remote_statuses.insert(0, {**body, "id": Stub.counters["status_id"],
+                        "creator": {"login": "github-actions[bot]", "type": "Bot"}})
+                    self.close_connection = True
+                    return
                 if is_comp and Stub.inject.get("comp_post"):
                     self._send(Stub.inject["comp_post"], {"message": "injected comp failure"}); return
                 if not is_comp and Stub.inject.get("status_post"):
                     self._send(Stub.inject["status_post"], {"message": "injected status failure"}); return
-                status_obj = {**body, "creator": {"login": "github-actions[bot]", "type": "Bot"},
+                Stub.counters["status_id"] = Stub.counters.get("status_id", 9000) + 1
+                status_obj = {**body, "id": Stub.counters["status_id"],
+                              "creator": {"login": "github-actions[bot]", "type": "Bot"},
                               "target_url": body.get("target_url")}
                 Stub.remote_statuses.insert(0, status_obj)
                 if not is_comp and Stub.inject.get("status_post_timeout"):
@@ -72,6 +83,20 @@ class Stub(BaseHTTPRequestHandler):
                 self._send(201, obj); return
             if key.startswith("PATCH /repos/o/r/check-runs/"):
                 Stub.counters["check_patch"] = Stub.counters.get("check_patch", 0) + 1
+                if (Stub.inject.get("check_patch_commit_then_disconnect")
+                        and Stub.counters["check_patch"] == 1):
+                    for obj in Stub.remote_checks:
+                        if obj["id"] == int(key.rsplit("/", 1)[1]):
+                            obj.update(body or {})
+                    self.close_connection = True
+                    return
+                dca = Stub.inject.get("check_patch_disconnect_after")
+                if dca is not None and Stub.counters["check_patch"] > dca:
+                    for obj in Stub.remote_checks:
+                        if obj["id"] == int(key.rsplit("/", 1)[1]):
+                            obj.update(body or {})
+                    self.close_connection = True
+                    return
                 if Stub.inject.get("check_patch"):
                     self._send(Stub.inject["check_patch"], {"message": "injected patch failure"}); return
                 fa = Stub.inject.get("check_patch_fail_after")
@@ -92,6 +117,10 @@ class Stub(BaseHTTPRequestHandler):
                 Stub.counters["status_get"] = Stub.counters.get("status_get", 0) + 1
                 if Stub.inject.get("status_get"):
                     self._send(Stub.inject["status_get"], {"message": "injected status read failure"}); return
+                srd = Stub.inject.get("status_read_disconnect_after")
+                if srd is not None and Stub.counters["status_get"] > srd:
+                    self.close_connection = True
+                    return
                 after = Stub.inject.get("status_read_fail_after")
                 if after is not None and Stub.counters["status_get"] > after:
                     mode = Stub.inject.get("status_read_fail_mode", "hide")
@@ -101,12 +130,35 @@ class Stub(BaseHTTPRequestHandler):
                 if Stub.inject.get("status_read") == "hide":
                     self._send(200, []); return
                 if Stub.inject.get("status_read") == "stale":
-                    self._send(200, [{"context": "route-a/verify", "state": "success",
+                    self._send(200, [{"id": 1, "context": "route-a/verify", "state": "failure",
                                       "target_url": "https://github.com/o/r/actions/runs/1",
                                       "creator": {"login": "github-actions[bot]", "type": "Bot"}}])
                     return
+                if Stub.inject.get("status_read") == "other_context_first":
+                    other = {"id": 9002, "context": "another/check", "state": "success",
+                             "target_url": "https://example.invalid/other",
+                             "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                    self._send(200, [other] + Stub.remote_statuses); return
+                if Stub.inject.get("status_read") == "same_context_failure_wrong_id":
+                    wrong = {"id": 12345, "context": "route-a/verify", "state": "failure",
+                             "target_url": "https://github.com/o/r/actions/runs/9",
+                             "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                    self._send(200, [wrong] + Stub.remote_statuses); return
+                if Stub.inject.get("status_read") == "newer_same_context_success":
+                    newer = {"id": 9100, "context": "route-a/verify", "state": "success",
+                             "target_url": "https://github.com/o/r/actions/runs/9",
+                             "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                    self._send(200, [newer] + Stub.remote_statuses); return
                 self._send(200, Stub.remote_statuses); return
             if key.startswith("GET /repos/o/r/commits/") and key.endswith("/check-runs"):
+                Stub.counters["check_get"] = Stub.counters.get("check_get", 0) + 1
+                cgda = Stub.inject.get("check_get_disconnect_after")
+                if cgda is not None and Stub.counters["check_get"] > cgda:
+                    self.close_connection = True
+                    return
+                if Stub.inject.get("check_get_disconnect"):
+                    self.close_connection = True
+                    return
                 if Stub.inject.get("check_get"):
                     self._send(Stub.inject["check_get"], {"message": "injected check read failure"}); return
                 # optionally return a wrong app/external ID as API readback corruption
@@ -351,7 +403,7 @@ class Case(unittest.TestCase):
     def test_status_invisible_after_success_marks_possible_remains(self):
         rep = self._publish_expect_refused(status_read="hide")
         self.assertTrue(rep["possible_success_evidence_remains"])
-        self.assertIn("回读为空", rep["status_compensation"]["error"])
+        self.assertIn("没有找到 route-a/verify", rep["status_compensation"]["error"])
 
     def test_final_verify_pr_failure_triggers_full_compensation(self):
         rep = self._publish_expect_refused(drift_after_status_post=True)
@@ -402,6 +454,91 @@ class Case(unittest.TestCase):
         self.assertFalse(rep["status_compensation"]["ok"])
         self.assertTrue(rep["possible_success_evidence_remains"])
         self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+
+    # ── 缺陷 A：传输异常不得绕过补偿 ──
+
+    def test_patch_success_commit_then_disconnect_triggers_compensation(self):
+        """远端已写入 completed/success 后客户端断连 → 仍必须进入补偿。"""
+        rep = self._publish_expect_refused(check_patch_commit_then_disconnect=True)
+        self.assertFalse(rep["ok"])
+        self.assertIn("failure", rep)
+        self.assertEqual(self.remote_check()["conclusion"], "failure")
+        self.assertTrue(rep["compensation"]["ok"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertTrue(rep["compensation_log"])
+
+    def test_check_run_readback_disconnect_after_remote_success_compensates(self):
+        rep = self._publish_expect_refused(check_get_disconnect_after=1)
+        self.assertEqual(self.remote_check()["conclusion"], "failure")
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertEqual(rep["failure"]["type"], "Refused")
+
+    def test_status_publish_disconnect_is_treated_as_maybe_written(self):
+        rep = self._publish_expect_refused(status_post_timeout=True)
+        self.assertTrue(rep["status_publish_attempted"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertFalse(rep["possible_success_evidence_remains"])
+
+    def test_compensation_post_disconnect_without_write_marks_remains(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           comp_post_disconnect_no_write=True)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")   # 补偿未写入
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("人工只读核验", rep["operator_action"])
+
+    def test_compensation_post_disconnect_after_write_is_unconfirmed(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           comp_post_disconnect_after_write=True)
+        self.assertEqual(Stub.remote_statuses[0]["state"], "failure")
+        self.assertFalse(rep["status_compensation"]["ok"], "断连未确认不得算补偿成功")
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_check_run_compensation_disconnect_does_not_block_status_compensation(self):
+        """Check Run 补偿断连不能阻止 status 补偿；两路结果都要记录。"""
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           check_patch_disconnect_after=1)
+        self.assertTrue(rep["status_compensation"]["ok"])
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual({e["channel"] for e in rep["compensation_log"]},
+                         {"check_run", "status"})
+
+    def test_status_compensation_readback_disconnect_is_unconfirmed(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           status_read_disconnect_after=1)
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    # ── 缺陷 B：回读必须按 context 过滤并绑定本次 POST 对象 ──
+
+    def test_other_context_newer_does_not_break_compensation(self):
+        """其它 context 更靠前时，补偿仍应被正确确认为成功。"""
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           status_read="other_context_first")
+        self.assertTrue(rep["status_compensation"]["ok"], rep["status_compensation"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertEqual(rep["status_compensation"]["readback"]["context"], "route-a/verify")
+
+    def test_newer_same_context_success_is_not_confirmed(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           status_read="newer_same_context_success")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertIn("非 failure", rep["status_compensation"]["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_same_context_failure_with_wrong_id_is_not_accepted(self):
+        """同 context、同为 failure、run 绑定正确，但 id 不是本次补偿对象 → 不得确认。"""
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           status_read="same_context_failure_wrong_id")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertIn("并非本次补偿 POST 对象", rep["status_compensation"]["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_historical_failure_id_mismatch_not_accepted(self):
+        rep = self._publish_expect_refused(status_read="stale")
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
 
     def test_unknown_publish_mode_refused(self):
         self.base_routes()
