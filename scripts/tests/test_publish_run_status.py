@@ -21,6 +21,10 @@ REQUIRED = {"general-pr-verify", "workflow-policy-guard", "trusted-baseline-guar
 class Stub(BaseHTTPRequestHandler):
     routes: dict = {}
     log: list = []
+    stateful: bool = False
+    remote_statuses: list = []
+    remote_checks: list = []
+    inject: dict = {}
 
     def log_message(self, *a):
         pass
@@ -38,6 +42,48 @@ class Stub(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(length)) if length else None
         Stub.log.append((method, self.path.split("?")[0], body))
         key = f"{method} {self.path.split('?')[0]}"
+        if Stub.stateful:
+            if key.startswith("POST /repos/o/r/statuses/"):
+                if Stub.inject.get("status_post"):
+                    self._send(Stub.inject["status_post"], {"message": "injected status failure"}); return
+                status_obj = {**body, "creator": {"login": "github-actions[bot]", "type": "Bot"},
+                              "target_url": body.get("target_url")}
+                Stub.remote_statuses.insert(0, status_obj)
+                self._send(201, status_obj); return
+            if key == "POST /repos/o/r/check-runs":
+                if Stub.inject.get("check_post"):
+                    self._send(Stub.inject["check_post"], {"message": "injected check failure"}); return
+                obj = {**body, "id": len(Stub.remote_checks) + 77,
+                       "app": {"id": Stub.inject.get("app_id", 15368), "slug": "github-actions"}}
+                Stub.remote_checks.insert(0, obj)
+                self._send(201, obj); return
+            if key.startswith("PATCH /repos/o/r/check-runs/"):
+                if Stub.inject.get("check_patch"):
+                    self._send(Stub.inject["check_patch"], {"message": "injected patch failure"}); return
+                cid = int(key.rsplit("/", 1)[1])
+                for obj in Stub.remote_checks:
+                    if obj["id"] == cid:
+                        obj.update(body or {})
+                        if Stub.inject.get("drift_after_patch"):
+                            Stub.routes["GET /repos/o/r/pulls/29"] = (200, {
+                                "state": "open", "head": {"sha": "z" * 40},
+                                "base": {"ref": "main", "sha": "m" * 40},
+                                "user": {"login": "Hawaiine"}})
+                        self._send(200, obj); return
+                self._send(404, {"message": "not found"}); return
+            if key.startswith("GET /repos/o/r/commits/") and key.endswith("/statuses"):
+                if Stub.inject.get("status_get"):
+                    self._send(Stub.inject["status_get"], {"message": "injected status read failure"}); return
+                self._send(200, Stub.remote_statuses); return
+            if key.startswith("GET /repos/o/r/commits/") and key.endswith("/check-runs"):
+                if Stub.inject.get("check_get"):
+                    self._send(Stub.inject["check_get"], {"message": "injected check read failure"}); return
+                # optionally return a wrong app/external ID as API readback corruption
+                objs = [dict(o, app={"id": Stub.inject.get("read_app_id", o["app"]["id"]), "slug": "github-actions"})
+                        for o in Stub.remote_checks]
+                if Stub.inject.get("read_external_id"):
+                    objs = [dict(o, external_id=Stub.inject["read_external_id"]) for o in objs]
+                self._send(200, {"check_runs": objs}); return
         for pattern, (code, payload) in Stub.routes.items():
             if pattern == key or (pattern.endswith("*") and key.startswith(pattern[:-1])):
                 self._send(code, payload)
@@ -46,6 +92,7 @@ class Stub(BaseHTTPRequestHandler):
 
     def do_GET(self): self._handle("GET")
     def do_POST(self): self._handle("POST")
+    def do_PATCH(self): self._handle("PATCH")
 
 
 class Case(unittest.TestCase):
@@ -62,6 +109,10 @@ class Case(unittest.TestCase):
     def setUp(self):
         Stub.routes = {}
         Stub.log = []
+        Stub.stateful = False
+        Stub.remote_statuses = []
+        Stub.remote_checks = []
+        Stub.inject = {}
         self.client = prs.Client("o/r", "tok", api=self.api)
 
     def run_doc(self, **over):
@@ -98,76 +149,152 @@ class Case(unittest.TestCase):
 
     def publish(self, attempts: int = 1, mode: str = "status"):
         return prs.publish_for_run(repo="o/r", run_id="9", pr=29, head_sha=HEAD, required=REQUIRED,
-                                   token="tok", api=self.api, attempts=attempts, publish_mode=mode)
+                                   token="tok", api=self.api, attempts=attempts, publish_mode=mode,
+                                   target_url="https://github.com/o/r/actions/runs/9")
 
-    def check_routes(self, app_id: int = 15368, external_id: str = "route-a-run:9",
-                     conclusion: str = "success", present: bool = True):
-        cr = {"id": 77, "name": "route-a/verify", "head_sha": HEAD, "status": "completed",
-              "conclusion": conclusion, "external_id": external_id,
-              "details_url": "https://github.com/o/r/actions/runs/9",
-              "app": {"id": app_id, "slug": "github-actions"}}
-        return {
-            "POST /repos/o/r/check-runs": (201, dict(cr)),
-            f"GET /repos/o/r/commits/{HEAD}/check-runs":
-                (200, {"check_runs": [cr] if present else []}),
-        }
-
-    def full_routes(self, **cr):
+    def flow(self, **inject):
+        """有状态远端：POST/PATCH 会真实改变 mock 对象，用于验证"失败后远端残留什么"。"""
         self.base_routes()
-        Stub.routes.update(self.check_routes(**cr))
+        Stub.routes = {k: v for k, v in Stub.routes.items()
+                       if "/statuses" not in k and "/check-runs" not in k}
+        Stub.stateful = True
+        Stub.inject = dict(inject)
 
-    # ── Check Run（可证明 app.id）──
+    def remote_success_status(self) -> bool:
+        return any(x.get("context") == "route-a/verify" and x.get("state") == "success"
+                   for x in Stub.remote_statuses)
 
-    def test_dual_publishes_status_and_check_run(self):
-        self.full_routes()
+    def remote_check(self, run_id: str = "9"):
+        for c in Stub.remote_checks:
+            if c.get("external_id") == f"route-a-run:{run_id}":
+                return c
+        return None
+
+    def seed_foreign_success(self, run_id: str = "8", app_id: int = 15368):
+        Stub.remote_checks.insert(0, {"id": 42, "name": "route-a/verify", "head_sha": HEAD,
+                                      "status": "completed", "conclusion": "success",
+                                      "external_id": f"route-a-run:{run_id}",
+                                      "details_url": f"https://github.com/o/r/actions/runs/{run_id}",
+                                      "app": {"id": app_id, "slug": "github-actions"}})
+
+    # ── 发布事务：成功证据必须最后写 ──
+
+    def test_dual_publishes_check_run_before_status(self):
+        self.flow()
         out = self.publish(mode="dual")
+        order = [f"{m} {p}" for m, p, _ in Stub.log if m in ("POST", "PATCH")]
+        self.assertLess(order.index("POST /repos/o/r/check-runs"),
+                        order.index("PATCH /repos/o/r/check-runs/77"))
+        self.assertLess(order.index("PATCH /repos/o/r/check-runs/77"),
+                        order.index(f"POST /repos/o/r/statuses/{HEAD}"))
+        patch = [b for m, p, b in Stub.log if m == "PATCH"][0]
+        self.assertEqual(patch["conclusion"], "success")
+        self.assertEqual(self.remote_check()["conclusion"], "success")
+        self.assertTrue(self.remote_success_status())
         self.assertEqual(out["check_run"]["verify"]["app_id"], 15368)
-        self.assertEqual(out["check_run"]["external_id"], "route-a-run:9")
-        posts = [path for method, path, _ in Stub.log if method == "POST"]
-        self.assertIn("/repos/o/r/check-runs", posts)
-        self.assertIn(f"/repos/o/r/statuses/{HEAD}", posts)
-        body = [b for m, p, b in Stub.log if m == "POST" and p == "/repos/o/r/check-runs"][0]
-        self.assertEqual(body["name"], "route-a/verify")
-        self.assertEqual(body["head_sha"], HEAD)
-        self.assertEqual(body["status"], "completed")
-        self.assertEqual(body["conclusion"], "success")
 
     def test_check_run_only_skips_status(self):
-        self.full_routes()
+        self.flow()
         out = self.publish(mode="check-run")
         self.assertIn("check_run", out)
         self.assertNotIn("status", out)
-        self.assertNotIn(f"/repos/o/r/statuses/{HEAD}",
-                         [p for m, p, _ in Stub.log if m == "POST"])
+        self.assertFalse(self.remote_success_status())
 
-    def test_check_run_wrong_app_id_refused(self):
-        self.full_routes(app_id=9999)
-        with self.assertRaises(prs.Refused) as ctx:
-            self.publish(mode="check-run")
-        self.assertIn("9999", str(ctx.exception))
-
-    def test_check_run_missing_refused(self):
-        self.full_routes(present=False)
+    def test_creation_returns_wrong_app_id_refused_without_success(self):
+        self.flow(app_id=9999)
         with self.assertRaises(prs.Refused):
-            self.publish(attempts=1, mode="check-run")
+            self.publish(mode="dual")
+        self.assertNotEqual((self.remote_check() or {}).get("conclusion"), "success")
+        self.assertFalse(self.remote_success_status())
 
-    def test_check_run_unbound_external_id_refused(self):
-        self.full_routes(external_id="route-a-run:10")
-        with self.assertRaises(prs.Refused) as ctx:
-            self.publish(mode="check-run")
-        self.assertIn("external_id", str(ctx.exception))
-
-    def test_check_run_failed_conclusion_refused(self):
-        self.full_routes(conclusion="failure")
+    def test_check_run_create_403_publishes_no_status(self):
+        """缺陷复现（原为 RED）：status 先发、check run 后失败 → 远端不得留 success。"""
+        self.flow(check_post=403)
         with self.assertRaises(prs.Refused):
-            self.publish(mode="check-run")
+            self.publish(mode="dual")
+        self.assertFalse(self.remote_success_status())
 
-    def test_check_run_creation_http_error_refused(self):
-        self.base_routes()
-        Stub.routes["POST /repos/o/r/check-runs"] = (403, {"message": "Resource not accessible"})
+    def test_readback_app_id_mismatch_downgrades_and_publishes_no_status(self):
+        self.flow(read_app_id=9999)
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="dual")
+        self.assertNotEqual(self.remote_check()["conclusion"], "success")
+        self.assertFalse(self.remote_success_status())
+        self.assertIn("PATCH /repos/o/r/check-runs/77", [f"{m} {p}" for m, p, _ in Stub.log])
+
+    def test_readback_external_id_mismatch_downgrades(self):
+        self.flow(read_external_id="route-a-run:10")
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="dual")
+        self.assertFalse(self.remote_success_status())
+
+    def test_readback_403_downgrades_and_publishes_no_status(self):
+        self.flow(check_get=403)
+        with self.assertRaises(prs.Refused):
+            self.publish(attempts=1, mode="dual")
+        self.assertFalse(self.remote_success_status())
+
+    def test_readback_500_downgrades_and_publishes_no_status(self):
+        self.flow(check_get=500)
+        with self.assertRaises(prs.Refused):
+            self.publish(attempts=1, mode="dual")
+        self.assertFalse(self.remote_success_status())
+
+    def test_invisible_readback_records_compensation(self):
+        self.flow(check_get=404)
+        with self.assertRaises(prs.Refused):
+            self.publish(attempts=1, mode="dual")
+        self.assertFalse(self.remote_success_status())
+
+    def test_post_finalize_drift_downgrades_and_publishes_no_status(self):
+        self.flow(drift_after_patch=True)
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="dual")
+        self.assertFalse(self.remote_success_status())
+
+    def test_compensation_failure_is_reported_not_swallowed(self):
+        """补偿写入本身失败时，必须如实暴露（不假定撤销成功）。"""
+        self.flow(read_app_id=9999, check_patch=403)
         with self.assertRaises(prs.Refused) as ctx:
-            self.publish(mode="check-run")
-        self.assertIn("403", str(ctx.exception))
+            self.publish(mode="dual")
+        report = getattr(ctx.exception, "report", {})
+        self.assertFalse(report.get("compensation", {}).get("ok", True),
+                         "补偿失败必须如实报告，不得假定已撤销")
+        self.assertFalse(self.remote_success_status())
+
+    def test_compensation_success_is_reported(self):
+        self.flow(read_app_id=9999)
+        with self.assertRaises(prs.Refused) as ctx:
+            self.publish(mode="dual")
+        report = getattr(ctx.exception, "report", {})
+        self.assertTrue(report.get("compensation", {}).get("ok"), "已撤销应报告 ok=True")
+        self.assertEqual(report["compensation"]["conclusion"], "failure")
+
+    def test_rerun_same_run_binds_each_check_run(self):
+        self.flow()
+        first = self.publish(mode="dual")
+        second = self.publish(mode="dual")
+        self.assertEqual(first["check_run"]["external_id"], "route-a-run:9")
+        self.assertEqual(second["check_run"]["external_id"], "route-a-run:9")
+        self.assertEqual(len(Stub.remote_checks), 2)
+        self.assertTrue(self.remote_success_status())
+
+    def test_other_run_success_is_not_adopted(self):
+        self.flow()
+        self.seed_foreign_success(run_id="8")
+        out = self.publish(mode="dual")
+        self.assertEqual(out["check_run"]["external_id"], "route-a-run:9")
+        self.assertNotEqual(out["check_run"]["id"], 42)
+
+    def test_other_run_success_preserved_when_this_run_fails(self):
+        """旧 run 的既有成功证据不得被本次失败删除；本次也不得发布成功。"""
+        self.flow(check_post=403)
+        self.seed_foreign_success(run_id="8")
+        with self.assertRaises(prs.Refused):
+            self.publish(mode="dual")
+        self.assertEqual(self.remote_check("8")["conclusion"], "success")
+        self.assertIsNone(self.remote_check("9"))
+        self.assertFalse(self.remote_success_status())
 
     def test_unknown_publish_mode_refused(self):
         self.base_routes()

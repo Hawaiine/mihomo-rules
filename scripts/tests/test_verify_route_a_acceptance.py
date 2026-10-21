@@ -36,6 +36,9 @@ def ev(**over):
                       "target_url": "https://github.com/o/r/actions/runs/500",
                       "creator": {"login": "github-actions[bot]", "type": "Bot"}}],
         "combined": {"state": "success"},
+        "publisher_run": {"id": 500, "name": "General PR verification",
+                          "path": ".github/workflows/pr-verify.yml", "event": "pull_request",
+                          "head_sha": HEAD, "conclusion": "success"},
         "expected_head_sha": HEAD,
     }
     for k, v in over.items():
@@ -137,6 +140,43 @@ class ClassifyTest(unittest.TestCase):
     def test_check_run_path_marks_app_id_proof(self):
         out = acc.classify(ev(), REQUIRED)
         self.assertEqual(out["facts"]["app_identity_proof"], "check_run.app.id")
+        self.assertEqual(out["facts"]["evidence_level"], "object_app_id")
+
+    def test_publisher_run_head_mismatch_is_source_mismatch(self):
+        d = ev()
+        d["publisher_run"] = dict(d["publisher_run"], head_sha="q" * 40)
+        out = acc.classify(d, REQUIRED)
+        self.assertEqual(out["verdict"], acc.SOURCE_MISMATCH)
+        self.assertIn("PUBLISHER_RUN_MISMATCH", [r["code"] for r in out["reasons"]])
+
+    def test_publisher_run_wrong_event_is_source_mismatch(self):
+        d = ev()
+        d["publisher_run"] = dict(d["publisher_run"], event="push")
+        self.assertEqual(self.verdict(d), acc.SOURCE_MISMATCH)
+
+    def test_publisher_run_unreadable_is_evidence_insufficient(self):
+        d = ev()
+        d["publisher_run"] = None
+        out = acc.classify(d, REQUIRED)
+        self.assertEqual(out["verdict"], acc.EVIDENCE_INSUFFICIENT)
+        self.assertIn("PUBLISHER_RUN_UNREADABLE", [r["code"] for r in out["reasons"]])
+
+    def test_in_progress_check_run_is_not_accepted(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"),
+                cr("trusted-baseline-guard"),
+                {"name": "route-a/verify", "head_sha": HEAD, "status": "in_progress",
+                 "conclusion": None, "app": {"id": 15368},
+                 "details_url": "https://github.com/o/r/actions/runs/500"}]
+        out = acc.classify(ev(check_runs=runs), REQUIRED)
+        self.assertEqual(out["verdict"], acc.REQUIRED_CONTEXT_UNSATISFIED)
+        self.assertIn("CHECK_RUN_NOT_SUCCESS", [r["code"] for r in out["reasons"]])
+
+    def test_status_only_reports_platform_evidence_level(self):
+        runs = [cr("general-pr-verify"), cr("workflow-policy-guard"), cr("trusted-baseline-guard")]
+        out = acc.classify(ev(check_runs=runs, merge_state_status="CLEAN"), REQUIRED)
+        self.assertEqual(out["verdict"], acc.PASS)
+        self.assertEqual(out["facts"]["evidence_level"], "platform_merge_box")
+        self.assertFalse(out["facts"]["object_level_source_proof"])
 
     def test_graphql_behind_wins_over_rest(self):
         d = ev(pull={"mergeable_state": "clean"})
@@ -225,6 +265,7 @@ class ApiTest(unittest.TestCase):
             f"GET /repos/o/r/commits/{HEAD}/check-runs": (200, ev()["check_runs"]),
             f"GET /repos/o/r/commits/{HEAD}/statuses": (200, ev()["statuses"]),
             f"GET /repos/o/r/commits/{HEAD}/status": (200, {"state": "success"}),
+            "GET /repos/o/r/actions/runs/500": (200, ev()["publisher_run"]),
         }
         out = acc.run(repo="o/r", pr=31, head_sha=HEAD, token="t", api=self.api,
                       required_path=str(self.req), expect_app_id=15368)

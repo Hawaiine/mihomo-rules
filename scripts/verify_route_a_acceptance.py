@@ -120,6 +120,17 @@ def collect(client: Client, repo: str, pr: int, head_sha: str) -> dict:
     ev["check_runs"] = client.get(f"/repos/{repo}/commits/{head_sha}/check-runs?per_page=100")
     ev["statuses"] = client.get(f"/repos/{repo}/commits/{head_sha}/statuses?per_page=100")
     ev["combined"] = client.get(f"/repos/{repo}/commits/{head_sha}/status")
+    # 若存在 route-a/verify check run，按其 details_url 取回发布它的 run（只读）
+    crs = (ev.get("check_runs") or {}).get("check_runs") or []
+    ra = next((c for c in crs if isinstance(c, dict) and c.get("name") == CONTEXT), None)
+    if ra is not None:
+        rid = parse_run_id(ra.get("details_url") or "")
+        if rid:
+            try:
+                ev["publisher_run"] = client.get(f"/repos/{repo}/actions/runs/{rid}")
+            except ApiError as exc:
+                ev["publisher_run"] = None
+                ev["publisher_run_error"] = str(exc)
     # merge box 只在 GraphQL 暴露；失败不掩盖其它证据，但会被记成"不可读"
     owner, name = repo.split("/", 1)
     try:
@@ -246,6 +257,7 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                                  "detail": f"{ra_cr.get('status')}/{ra_cr.get('conclusion')}"}],
                     "facts": facts}
         facts["app_identity_proof"] = "check_run.app.id"
+        facts["evidence_level"] = "object_app_id"
         run_id = parse_run_id(ra_cr.get("details_url") or "")
         facts["publisher_run_id"] = run_id
         if not run_id:
@@ -253,6 +265,24 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                     "reasons": [{"code": "PUBLISHER_RUN_UNBOUND",
                                  "detail": "check run details_url 无法解析出 run id，"
                                            "无法证明它由哪次 PR verify 发布"}], "facts": facts}
+        pub_run = ev.get("publisher_run") or {}
+        facts["publisher_run"] = {k: pub_run.get(k) for k in
+                                  ("id", "name", "path", "event", "head_sha", "conclusion")}
+        if not pub_run:
+            return {"verdict": EVIDENCE_INSUFFICIENT,
+                    "reasons": [{"code": "PUBLISHER_RUN_UNREADABLE",
+                                 "detail": f"无法读取 run {run_id}（API/权限/已删除）"}],
+                    "facts": facts}
+        if (pub_run.get("head_sha") != head or pub_run.get("event") != "pull_request"
+                or pub_run.get("conclusion") != "success"):
+            return {"verdict": SOURCE_MISMATCH,
+                    "reasons": [{"code": "PUBLISHER_RUN_MISMATCH",
+                                 "detail": (f"发布该 check run 的 run {run_id} "
+                                            f"head={pub_run.get('head_sha')} "
+                                            f"event={pub_run.get('event')} "
+                                            f"conclusion={pub_run.get('conclusion')}，"
+                                            f"与 PR head/事件/结论不符")}],
+                    "facts": facts}
     elif ra_status is not None and ra_status.get("state") == "success":
         # 只有 status：对象本身没有 app.id。唯一能证明"平台接受了该来源"的证据是 merge box。
         if ev.get("merge_state_status") != "CLEAN":
@@ -264,6 +294,8 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                                             f"需 check run 证据或 merge box=CLEAN。")}],
                     "facts": facts}
         facts["app_identity_proof"] = "platform_merge_box_clean (status 对象无 app.id)"
+        facts["evidence_level"] = "platform_merge_box"
+        facts["object_level_source_proof"] = False
     else:
         return {"verdict": PUBLISHER_NOT_RUN,
                 "reasons": [{"code": "NO_ROUTE_A_CONTEXT",

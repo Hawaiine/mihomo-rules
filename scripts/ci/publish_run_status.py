@@ -63,6 +63,9 @@ class Client:
         except (urllib.error.URLError, TimeoutError) as exc:
             raise Refused(f"GitHub API 不可用: {exc}") from exc
 
+    def patch(self, path: str, body: dict) -> tuple[int, object]:
+        return _request(self, "PATCH", path, body)
+
     def post(self, path: str, body: dict) -> tuple[int, object]:
         req = urllib.request.Request(
             f"{self.api}{path}", data=json.dumps(body).encode(), method="POST",
@@ -76,6 +79,22 @@ class Client:
             return exc.code, exc.read().decode("utf-8", "replace")[:200]
         except (urllib.error.URLError, TimeoutError) as exc:
             raise Refused(f"状态发布请求失败: {exc}") from exc
+
+
+def _request(client: Client, method: str, path: str, body: dict | None = None):
+    req = urllib.request.Request(
+        f"{client.api}{path}", data=json.dumps(body).encode() if body is not None else None,
+        method=method,
+        headers={"Authorization": f"Bearer {client.token}", "Accept": "application/vnd.github+json",
+                 "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json",
+                 "User-Agent": "route-a-run-status"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, json.loads(resp.read() or b"null")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8", "replace")[:200]
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise Refused(f"GitHub API 不可用: {exc}") from exc
 
 
 def verify_run(client: Client, run_id: str, head_sha: str, required: set[str],
@@ -176,19 +195,20 @@ def _creator_problem(obj: dict) -> str:
 # ───────────────────────── Check Run（可证明 App 身份）─────────────────────────
 
 def create_check_run(client: Client, sha: str, run_id: str, target_url: str = "") -> dict:
-    """以 ``GITHUB_TOKEN`` 创建 ``route-a/verify`` Check Run（需 ``checks: write``）。"""
+    """创建 **in_progress** Check Run（``checks: write``）。
+
+    关键：创建时**不带 conclusion**。``in_progress`` 不满足 required status check，
+    因此这一阶段无论失败还是中断，都不会留下可被 Ruleset 采信的成功证据。
+    """
     body = {
         "name": CONTEXT,
         "head_sha": sha,
-        "status": "completed",
-        "conclusion": "success",
+        "status": "in_progress",
         "external_id": f"{EXTERNAL_ID_PREFIX}{run_id}",
         "details_url": target_url or f"https://github.com/{client.repo}/actions/runs/{run_id}",
-        "output": {
-            "title": "受信校验通过（run 级核验）",
-            "summary": (f"workflow run {run_id} 为 completed/success，三个必需 job 全部 success；"
-                        f"PR 仍 open、base=main、head 与 base SHA 均已核验。"),
-        },
+        "output": {"title": "Route A 受信校验进行中",
+                   "summary": (f"workflow run {run_id} 已核验为 pull_request/completed/success，"
+                               f"三个必需 job 全部 success；等待发布后一致性复核。")},
     }
     status, payload = client.post(f"/repos/{client.repo}/check-runs", body)
     if status not in (200, 201) or not isinstance(payload, dict):
@@ -196,42 +216,75 @@ def create_check_run(client: Client, sha: str, run_id: str, target_url: str = ""
     return payload
 
 
+def finalize_check_run(client: Client, check_run_id: int, conclusion: str,
+                       summary: str = "") -> dict:
+    """把 Check Run 更新为 completed/<conclusion>。
+
+    ``conclusion`` 只允许 success 或失败态（failure/cancelled/neutral）——后者用于
+    **补偿写入**（把已完成的成功降级）。补偿写入本身也可能失败，调用方必须处理。
+    """
+    if conclusion not in ("success", "failure", "cancelled", "neutral"):
+        raise Refused(f"非法 conclusion={conclusion!r}")
+    body = {"status": "completed", "conclusion": conclusion,
+            "output": {"title": ("Route A 受信校验通过" if conclusion == "success"
+                                 else "Route A 受信校验未完成（已降级）"),
+                       "summary": summary or ("run 级核验与发布后复核全部通过。"
+                                              if conclusion == "success"
+                                              else "发布事务未完成，成功证据已被撤销。")}}
+    status, payload = client.patch(f"/repos/{client.repo}/check-runs/{check_run_id}", body)
+    if status not in (200, 201) or not isinstance(payload, dict):
+        raise Refused(f"更新 check run 失败: HTTP {status} {str(payload)[:200]}")
+    return payload
+
+
+def list_check_runs(client: Client, sha: str) -> list[dict]:
+    status, doc = client.call(f"/repos/{client.repo}/commits/{sha}/check-runs?per_page=100")
+    if status != 200 or not isinstance(doc, dict):
+        raise Refused(f"读取 check-runs 失败: HTTP {status}")
+    return [c for c in doc.get("check_runs") or []
+            if isinstance(c, dict) and c.get("name") == CONTEXT]
+
+
 def verify_check_run(client: Client, sha: str, run_id: str, *, attempts: int = 5,
-                     delay: float = 1.0) -> dict:
-    """回读并校验 Check Run：名称、``app.id``、head SHA、结论与 run 绑定。
+                     delay: float = 1.0, expect_conclusion: str = "success",
+                     check_run_id: int | None = None) -> dict:
+    """回读并校验 Check Run：``app.id``、head SHA、结论、``external_id`` 与 run 绑定。
 
     这是 R-1 的关键证据：``app.id`` 直接来自 GitHub 返回对象，不是推断。
+    ``check_run_id`` 给定时，只有该 id 的对象被采信（避免旧 run 的证据被冒充）。
     """
     expected_external = f"{EXTERNAL_ID_PREFIX}{run_id}"
-    last = None
+    last, last_problem = None, ""
     for i in range(attempts):
-        status, doc = client.call(f"/repos/{client.repo}/commits/{sha}/check-runs?per_page=100")
-        if status != 200 or not isinstance(doc, dict):
-            raise Refused(f"读取 check-runs 失败: HTTP {status}")
-        ours = [c for c in doc.get("check_runs") or []
-                if isinstance(c, dict) and c.get("name") == CONTEXT]
-        last = ours[0] if ours else None
-        matched = [c for c in ours if c.get("external_id") == expected_external]
-        candidate = matched[0] if matched else last
-        if candidate is None:
+        ours = list_check_runs(client, sha)
+        if check_run_id is not None:
+            ours = [c for c in ours if c.get("id") == check_run_id]
+        if not ours:
+            last_problem = "回读未见该 check run"
             time.sleep(delay * (i + 1))
             continue
+        candidate = ours[0]
+        last = candidate
         app = candidate.get("app") or {}
         if app.get("id") != EXPECTED_APP_ID:
             raise Refused(f"check run 来源 app.id={app.get('id')!r}，非 {EXPECTED_APP_ID}"
                           f"（拒绝仅凭名称采信）")
         if candidate.get("head_sha") != sha:
             raise Refused("check run head_sha 与目标 SHA 不一致")
-        if candidate.get("status") != "completed" or candidate.get("conclusion") != "success":
+        if candidate.get("external_id") != expected_external:
+            raise Refused(f"check run 未绑定到 run {run_id}"
+                          f"（external_id={candidate.get('external_id')!r}）")
+        if expect_conclusion == "in_progress":
+            if candidate.get("status") != "in_progress":
+                raise Refused(f"check run 状态为 {candidate.get('status')!r}，非 in_progress")
+        elif candidate.get("status") != "completed" or candidate.get("conclusion") != expect_conclusion:
             raise Refused(f"check run 状态为 {candidate.get('status')}/{candidate.get('conclusion')}，"
-                          f"非 completed/success")
-        if not matched:
-            raise Refused(f"check run 未绑定到 run {run_id}（external_id 不匹配）")
+                          f"非 completed/{expect_conclusion}")
         return {"verified": True, "app_id": app.get("id"), "app_slug": app.get("slug"),
                 "head_sha": candidate.get("head_sha"), "conclusion": candidate.get("conclusion"),
-                "external_id": candidate.get("external_id"),
+                "status": candidate.get("status"), "external_id": candidate.get("external_id"),
                 "details_url": candidate.get("details_url"), "id": candidate.get("id")}
-    raise Refused(f"回读未看到 {CONTEXT} check run（当前 {last!r}）")
+    raise Refused(f"回读未看到 {CONTEXT} check run（{last_problem}；当前 {last!r}）")
 
 
 def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: float = 1.0,
@@ -263,15 +316,44 @@ def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: floa
     raise Refused(f"发布后回读未看到可信 {CONTEXT}=success（当前 {last!r}；{last_problem}）")
 
 
+def _downgrade(client: Client, check_run_id: int, reason: str) -> dict:
+    """补偿写入：把已创建/已完成的 Check Run 降级为 failure。
+
+    **不假定补偿一定成功**：失败会被如实记录到返回结构里（``compensation.ok=False``），
+    调用方据此区分"已撤销"与"可能残留 success"两种证据状态。
+    """
+    try:
+        obj = finalize_check_run(client, check_run_id, "failure", summary=reason)
+        return {"ok": True, "id": obj.get("id"), "conclusion": obj.get("conclusion")}
+    except Refused as exc:
+        return {"ok": False, "id": check_run_id, "error": str(exc)}
+
+
 def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required: set[str],
                     token: str, api: str = "https://api.github.com", target_url: str = "",
                     attempts: int = 5, publish_mode: str = "status") -> dict:
-    """核验后发布 ``route-a/verify``。
+    """核验后发布 ``route-a/verify``（发布事务，路线 A 为权威）。
 
     ``publish_mode``：
-      * ``status``    —— 仅 commit status（历史行为，creator 可校验但无 app 字段）；
-      * ``check-run`` —— 仅 Check Run（返回对象含 ``app.id``，可证明来源）；
-      * ``dual``      —— 两者都发；任一失败整体失败（fail-loud，绝不静默降级）。
+      * ``check-run`` —— 仅 Check Run（**权威通道**：``app.id`` 对象级来源证明）；
+      * ``dual``      —— Check Run 权威 + commit status 兼容回退；
+      * ``status``    —— 仅 commit status（历史行为；无 ``app.id``，仅供兼容/回归）。
+
+    路线 A 事务顺序（关键：成功证据最后一步才写）::
+
+        1. verify_run()  真实 pull_request run + 仓库/path/event/PR 归属/head/conclusion/三 job
+        2. verify_pr()   PR open、base=main、head 精确、base SHA == main tip
+        3. create_check_run(in_progress)       ← 不可被 required context 采信
+        4. verify_check_run(expect in_progress) ← app.id/head_sha/external_id 绑定
+        5. verify_pr()   **创建后**再复核一次（防 head/base 漂移）
+        6. finalize_check_run(success)          ← 第一个可被采信的成功证据
+        7. verify_check_run(expect success)     ← 回读确认（失败 → 补偿降级）
+        8. publish(status) + verify_published() ← 兼容回退，且**仅在 7 成功之后**
+        9. verify_pr()   收尾复核
+
+    任一步失败：若 6/7 已发生，先补偿降级（并如实报告是否成功），再 ``Refused``；
+    1–5 失败时不会存在任何可被采信的成功证据。**status 绝不在 check run 证明之前发布**，
+    因此不存在"函数报失败但远端仍留 success status"的状态。
     """
     if publish_mode not in PUBLISH_MODES:
         raise Refused(f"未知 publish_mode={publish_mode!r}（可选 {PUBLISH_MODES}）")
@@ -280,26 +362,74 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
         pr = resolve_pr(client, head_sha)
     run_info = verify_run(client, run_id, head_sha, required, pr=pr)
     pr_info = verify_pr(client, pr, head_sha)
-    report: dict = {"ok": True, "run": run_info, "pr": pr_info, "publish_mode": publish_mode}
-    if publish_mode in ("status", "dual"):
-        posted = publish(client, head_sha, run_id, "受信校验通过（run 级核验）", target_url)
-        verified = verify_published(client, head_sha, attempts=attempts, expect_run_id=run_id)
-        report["status"] = {**posted, "verify": verified}
-        if isinstance(posted, dict):        # 保持旧字段（state/context/target_url…）向后兼容
-            report.update(posted)
-        report["verify"] = verified
-    if publish_mode in ("check-run", "dual"):
-        created = create_check_run(client, head_sha, run_id, target_url)
-        report["check_run"] = {"id": created.get("id"), "name": created.get("name"),
-                               "head_sha": created.get("head_sha"),
-                               "external_id": created.get("external_id"),
-                               "verify": verify_check_run(client, head_sha, run_id,
-                                                          attempts=attempts)}
-    after = verify_pr(client, pr, head_sha)          # 发布后再次确认未漂移
-    report["after"] = after
+    report: dict = {"ok": True, "run": run_info, "pr": pr_info, "publish_mode": publish_mode,
+                    "steps": [], "compensation": None}
+
+    try:
+        _run_transaction(client, report, run_id=run_id, pr=pr, head_sha=head_sha,
+                         target_url=target_url, attempts=attempts, publish_mode=publish_mode)
+    except Refused as exc:
+        exc.report = report                      # 失败时仍暴露远端证据与补偿结果
+        raise
     return report
 
 
+def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head_sha: str,
+                     target_url: str, attempts: int, publish_mode: str) -> None:
+    """路线 A 事务主体。任何失败都抛 ``Refused``；调用方负责把 ``report`` 附到异常上。"""
+    if publish_mode in ("check-run", "dual"):
+        created = create_check_run(client, head_sha, run_id, target_url)
+        cr_id = created.get("id")
+        report["steps"].append("create_check_run:in_progress")
+        app = created.get("app") or {}
+        if app.get("id") != EXPECTED_APP_ID:
+            report["compensation"] = _downgrade(client, cr_id, "创建返回 app.id 不符")
+            raise Refused(f"创建返回 app.id={app.get('id')!r}，非 {EXPECTED_APP_ID}")
+        try:
+            verify_check_run(client, head_sha, run_id, attempts=attempts,
+                             expect_conclusion="in_progress", check_run_id=cr_id)
+        except Refused as exc:
+            report["compensation"] = _downgrade(client, cr_id, f"in_progress 回读失败：{exc}")
+            raise Refused(f"check run 回读未确认 in_progress：{exc}") from exc
+        report["steps"].append("verify_check_run:in_progress")
+        pr_info = verify_pr(client, pr, head_sha)          # 创建后复核
+        report["steps"].append("verify_pr:post-create")
+        try:
+            finalized = finalize_check_run(client, cr_id, "success")
+        except Refused as exc:
+            report["compensation"] = _downgrade(client, cr_id, f"完成失败：{exc}")
+            raise Refused(f"完成 check run 为 success 失败：{exc}") from exc
+        report["steps"].append("finalize_check_run:success")
+        try:
+            verified = verify_check_run(client, head_sha, run_id, attempts=attempts,
+                                        expect_conclusion="success", check_run_id=cr_id)
+        except Refused as exc:
+            report["compensation"] = _downgrade(client, cr_id, f"回读失败：{exc}")
+            raise Refused(f"check run 回读未确认 success：{exc}") from exc
+        report["steps"].append("verify_check_run:success")
+        report["check_run"] = {"id": cr_id, "name": finalized.get("name"),
+                               "head_sha": finalized.get("head_sha"),
+                               "external_id": finalized.get("external_id"), "verify": verified}
+
+    if publish_mode in ("status", "dual"):
+        try:
+            pr_info = verify_pr(client, pr, head_sha)      # status 发布前最后一道基线检查
+            report["steps"].append("verify_pr:pre-status")
+        except Refused as exc:
+            if report.get("check_run"):
+                report["compensation"] = _downgrade(client, report["check_run"]["id"],
+                                                    f"status 前置复核失败：{exc}")
+            raise
+        posted = publish(client, head_sha, run_id, "受信校验通过（run 级核验）", target_url)
+        verified_status = verify_published(client, head_sha, attempts=attempts, expect_run_id=run_id)
+        report["status"] = {**posted, "verify": verified_status}
+        if isinstance(posted, dict):
+            report.update(posted)
+        report["verify"] = verified_status
+        report["steps"].append("publish:status+verify")
+
+    report["after"] = verify_pr(client, pr, head_sha)
+    report["steps"].append("verify_pr:final")
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="P0-1 受信状态发布（人工 PR）")
     ap.add_argument("--repo", required=True)
@@ -309,7 +439,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--required-checks", default=".github/required-checks.json")
     ap.add_argument("--target-url", default="")
     ap.add_argument("--publish-mode", choices=PUBLISH_MODES, default="status",
-                    help="status（历史行为）/ check-run（含 app.id 证据）/ dual（两者都发）")
+                    help="check-run（权威，含 app.id 证据）/ dual（权威 + status 兼容回退）/ "
+                         "status（历史行为，无 app.id 证据）")
     ap.add_argument("--json", type=lambda p: open(p, "w", encoding="utf-8"))
     args = ap.parse_args(argv)
     try:
@@ -326,7 +457,9 @@ def main(argv: list[str] | None = None) -> int:
     except Refused as exc:
         print(f"❌ 拒绝发布：{exc}", file=sys.stderr)
         if args.json:
-            json.dump({"ok": False, "reason": str(exc)}, args.json, ensure_ascii=False, indent=1)
+            detail = getattr(exc, "report", None)
+            json.dump({"ok": False, "reason": str(exc), **({"evidence": detail} if detail else {})},
+                      args.json, ensure_ascii=False, indent=1)
         return 1
     print(json.dumps(report, ensure_ascii=False, indent=1))
     if args.json:

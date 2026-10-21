@@ -43,8 +43,11 @@ GitHub 的两条硬事实：
 于是：
 
 * `route-a/verify`（由默认分支的 `route-a-status.yml` 核验后发布）是**候选 PR 的唯一必需门槛**；
-  发布形态为 **Check Run（`checks: write`，返回对象含 `app.id=15368`）** + commit status 双发：
-  Check Run 的 `app.id` 是唯一可直接证明来源的字段，status 的 `creator=github-actions[bot]` 不足以证明 App 归属。
+  发布事务为**路线 A**：先建 `in_progress` Check Run（`checks: write`，返回对象含 `app.id=15368`），
+  回读校验 `app.id`/`head_sha`/`external_id` 绑定并复核 PR/head/base 后，才把该 Check Run 完成为 success；
+  最后才发布 commit status 作为兼容回退。**失败时 Check Run 会被补偿降级为 failure**（补偿失败也如实上报），
+  所以不存在"报失败却留下可满足 required context 的成功证据"。status 的 `creator=github-actions[bot]`
+  只能证明登录身份，**不能**替代 Check Run 的 `app.id` 对象级来源证据。
 * 三个 check-run 继续服务人工 PR（保证人工改动能被完整校验）；
 * 两者都在 `.github/required-checks.json` 登记（`checks[]` + `status_contexts[]`）。
 
