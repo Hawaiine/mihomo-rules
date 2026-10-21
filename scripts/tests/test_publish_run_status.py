@@ -106,6 +106,16 @@ class Stub(BaseHTTPRequestHandler):
                 for obj in Stub.remote_checks:
                     if obj["id"] == cid:
                         obj.update(body or {})
+                        if Stub.inject.get("check_patch_wrong_id"):
+                            resp = dict(obj); resp["id"] = 424242
+                            self._send(200, resp); return
+                        if Stub.inject.get("check_patch_echo_success"):
+                            resp = dict(obj); resp["conclusion"] = "success"
+                            self._send(200, resp); return
+                        if Stub.inject.get("check_patch_status_in_progress"):
+                            resp = dict(obj); resp["status"] = "in_progress"
+                            resp.pop("conclusion", None)
+                            self._send(200, resp); return
                         if Stub.inject.get("drift_after_patch"):
                             Stub.routes["GET /repos/o/r/pulls/29"] = (200, {
                                 "state": "open", "head": {"sha": "z" * 40},
@@ -156,9 +166,18 @@ class Stub(BaseHTTPRequestHandler):
                 if cgda is not None and Stub.counters["check_get"] > cgda:
                     self.close_connection = True
                     return
+                cgo = Stub.inject.get("check_get_disconnect_only")
+                if cgo is not None and Stub.counters["check_get"] == cgo:
+                    self.close_connection = True
+                    return
                 if Stub.inject.get("check_get_disconnect"):
                     self.close_connection = True
                     return
+                cros = Stub.inject.get("check_readback_override_success_after")
+                if cros is not None and Stub.counters["check_get"] > cros:
+                    objs = [dict(o, status="completed", conclusion="success")
+                            for o in Stub.remote_checks]
+                    self._send(200, {"check_runs": objs}); return
                 if Stub.inject.get("check_get"):
                     self._send(Stub.inject["check_get"], {"message": "injected check read failure"}); return
                 # optionally return a wrong app/external ID as API readback corruption
@@ -347,12 +366,10 @@ class Case(unittest.TestCase):
         self.assertFalse(self.remote_success_status())
 
     def test_compensation_success_is_reported(self):
-        self.flow(read_app_id=9999)
-        with self.assertRaises(prs.Refused) as ctx:
-            self.publish(mode="dual")
-        report = getattr(ctx.exception, "report", {})
-        self.assertTrue(report.get("compensation", {}).get("ok"), "已撤销应报告 ok=True")
-        self.assertEqual(report["compensation"]["conclusion"], "failure")
+        rep = self._publish_expect_refused(drift_after_status_post=True)
+        self.assertTrue(rep.get("compensation", {}).get("ok"), "已撤销应报告 ok=True")
+        self.assertEqual(rep["compensation"]["patch_object"]["conclusion"], "failure")
+        self.assertEqual(rep["compensation"]["readback"]["conclusion"], "failure")
 
     def test_rerun_same_run_binds_each_check_run(self):
         self.flow()
@@ -468,10 +485,18 @@ class Case(unittest.TestCase):
         self.assertTrue(rep["compensation_log"])
 
     def test_check_run_readback_disconnect_after_remote_success_compensates(self):
-        rep = self._publish_expect_refused(check_get_disconnect_after=1)
+        rep = self._publish_expect_refused(check_get_disconnect_only=2)
         self.assertEqual(self.remote_check()["conclusion"], "failure")
+        self.assertTrue(rep["compensation"]["ok"], rep["compensation"])
         self.assertFalse(rep["possible_success_evidence_remains"])
         self.assertEqual(rep["failure"]["type"], "Refused")
+
+    def test_check_run_readback_disconnect_persistent_is_unconfirmed(self):
+        """回读持续断连 → 远端虽已写入 failure，但不得算确认。"""
+        rep = self._publish_expect_refused(check_get_disconnect_after=1)
+        self.assertEqual(self.remote_check()["conclusion"], "failure")
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
 
     def test_status_publish_disconnect_is_treated_as_maybe_written(self):
         rep = self._publish_expect_refused(status_post_timeout=True)
@@ -539,6 +564,71 @@ class Case(unittest.TestCase):
         rep = self._publish_expect_refused(status_read="stale")
         self.assertFalse(rep["status_compensation"]["ok"])
         self.assertTrue(rep["possible_success_evidence_remains"])
+
+    # ── 第五轮：Check Run 补偿的对象级回读证明 ──
+
+    def test_compensation_patch_wrong_id_not_ok(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, check_patch_wrong_id=True)
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertIn("非目标", rep["compensation"]["error"])
+        self.assertEqual(Stub.remote_checks[0]["conclusion"], "failure")   # 远端确实已写 failure
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_compensation_patch_echo_success_not_ok(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           check_patch_echo_success=True)
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertIn("conclusion", rep["compensation"]["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_compensation_patch_status_not_completed_not_ok(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           check_patch_status_in_progress=True)
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertIn("非 completed", rep["compensation"]["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_compensation_readback_overwritten_to_success_not_ok(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           check_readback_override_success_after=2)
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertIn("completed/success", rep["compensation"]["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    def test_compensation_full_object_readback_confirms(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True)
+        comp = rep["compensation"]
+        self.assertTrue(comp["ok"])
+        self.assertEqual(comp["patch_object"]["id"], comp["readback"]["id"])
+        self.assertEqual(comp["readback"]["status"], "completed")
+        self.assertEqual(comp["readback"]["conclusion"], "failure")
+        self.assertEqual(comp["readback"]["app_id"], 15368)
+        self.assertEqual(comp["readback"]["head_sha"], HEAD)
+        self.assertEqual(comp["readback"]["external_id"], "route-a-run:9")
+        self.assertFalse(rep["possible_success_evidence_remains"])
+
+    def test_check_run_compensation_unconfirmed_but_status_compensation_ok(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True,
+                                           check_readback_override_success_after=2)
+        self.assertTrue(rep["status_compensation"]["ok"])
+        self.assertFalse(rep["compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual({e["channel"] for e in rep["compensation_log"]},
+                         {"check_run", "status"})
+
+    def test_check_run_compensation_ok_but_status_compensation_fails(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, comp_post=403)
+        self.assertTrue(rep["compensation"]["ok"])
+        self.assertFalse(rep["status_compensation"]["ok"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success")
+
+    def test_in_progress_only_failure_is_reported_without_success_claim(self):
+        """停在 in_progress（从未 success）时，不得把它描述成已存在 success 证据。"""
+        rep = self._publish_expect_refused(check_get=403)
+        self.assertFalse(rep["check_run_may_have_succeeded"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertTrue(rep["check_run_compensation_unconfirmed_without_success_observed"])
 
     def test_unknown_publish_mode_refused(self):
         self.base_routes()

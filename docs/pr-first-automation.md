@@ -45,10 +45,14 @@ GitHub 的两条硬事实：
 * `route-a/verify`（由默认分支的 `route-a-status.yml` 核验后发布）是**候选 PR 的唯一必需门槛**；
   发布事务为**路线 A**：先建 `in_progress` Check Run（`checks: write`，返回对象含 `app.id=15368`），
   回读校验 `app.id`/`head_sha`/`external_id` 绑定并复核 PR/head/base 后，才把该 Check Run 完成为 success；
-  最后才发布 commit status 作为兼容回退。**失败时 Check Run 会被补偿降级为 failure**（补偿失败也如实上报），
-  所以不存在"报失败却留下可满足 required context 的成功证据"。status 的 `creator=github-actions[bot]`
-  只能证明登录身份，**不能**替代 Check Run 的 `app.id` 对象级来源证据。
-* 三个 check-run 继续服务人工 PR（保证人工改动能被完整校验）；
+  最后才发布 commit status 作为兼容回退。**失败时会尽力补偿两条通道**：Check Run 降级为 failure 并做
+  对象级回读证明（`id`/`app.id`/`head_sha`/`external_id`/`completed`+`failure`），status 发 failure 并按
+  `context` 过滤后回读本次 POST 的对象。只有**回读确认**的通道才算撤销；补偿失败、回读不可读、绑定不匹配
+  或对象被并发覆盖时，事务仍然失败并置 `possible_success_evidence_remains=true`，要求人工只读核验。
+  GitHub API mutation **不具备原子回滚语义**，因此不得宣称在所有网络/API 故障下都绝对 fail-closed，
+  也不得把"已尝试补偿"写成"已确认撤销"。status 的 `creator=github-actions[bot]` 只能证明登录身份，
+  **不能**替代 Check Run 的 `app.id` 对象级来源证据。
+* 三个 check-run 继续服务人工 PR（人工改动的必需校验仍由它们承担）；
 * 两者都在 `.github/required-checks.json` 登记（`checks[]` + `status_contexts[]`）。
 
 **平台前提（2026-10-20 只读实测：已满足）**：仓库必须开启 *Settings → Actions → General →

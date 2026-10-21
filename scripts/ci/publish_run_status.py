@@ -306,17 +306,65 @@ def verify_published(client: Client, sha: str, *, attempts: int = 5, delay: floa
     raise Refused(f"发布后回读未看到可信 {CONTEXT}=success（当前 {last!r}；{last_problem}）")
 
 
-def _downgrade(client: Client, check_run_id: int, reason: str) -> dict:
-    """补偿写入：把已创建/已完成的 Check Run 降级为 failure。
+def _downgrade(client: Client, check_run_id: int, reason: str, *, head_sha: str = "",
+               run_id: str = "", attempts: int = 5) -> dict:
+    """补偿写入：把已创建/已完成的 Check Run 降级为 failure，并做**对象级回读证明**。
 
-    **不假定补偿一定成功**：失败会被如实记录到返回结构里（``compensation.ok=False``），
-    调用方据此区分"已撤销"与"可能残留 success"两种证据状态。
+    只有下列条件**全部**成立才返回 ``ok=True``：
+
+    1. PATCH 返回 2xx；
+    2. PATCH 返回对象的 ``id`` == 被补偿的 ``check_run_id``、``status == "completed"``、
+       ``conclusion == "failure"``；
+    3. 远端重新 GET 回读（``verify_check_run(expect_conclusion="failure",
+       check_run_id=...)``）确认**同一个** Check Run 仍为 completed/failure，且
+       ``app.id == 15368``、``head_sha`` 等于目标 SHA、``external_id == route-a-run:<run_id>``。
+
+    仅凭 PATCH 2xx 不算补偿成功；回读失败/超时/断连/不可见/被并发覆盖/字段不匹配
+    一律 ``ok=False`` 并记录具体原因。
     """
+    out: dict = {"attempted": True, "id": check_run_id, "http": None, "patch_object": None,
+                 "readback": None, "ok": False, "error": ""}
     try:
-        obj = finalize_check_run(client, check_run_id, "failure", summary=reason)
-        return {"ok": True, "id": obj.get("id"), "conclusion": obj.get("conclusion")}
+        code, obj = client.patch(f"/repos/{client.repo}/check-runs/{check_run_id}",
+                                 {"status": "completed", "conclusion": "failure",
+                                  "output": {"title": "Route A 受信校验未完成（已降级）",
+                                             "summary": reason or "发布事务未完成，成功证据已被撤销。"}})
+        out["http"] = code
+        if code not in (200, 201) or not isinstance(obj, dict):
+            out["error"] = f"补偿 PATCH 失败或响应畸形：HTTP {code} {str(obj)[:120]}"
+            return out
+        out["patch_object"] = {"id": obj.get("id"), "status": obj.get("status"),
+                               "conclusion": obj.get("conclusion"),
+                               "head_sha": obj.get("head_sha"),
+                               "external_id": obj.get("external_id")}
+        if obj.get("id") != check_run_id:
+            out["error"] = f"补偿 PATCH 返回的 id={obj.get('id')!r} 非目标 {check_run_id!r}"
+            return out
+        if obj.get("status") != "completed":
+            out["error"] = f"补偿 PATCH 返回 status={obj.get('status')!r}，非 completed"
+            return out
+        if obj.get("conclusion") != "failure":
+            out["error"] = f"补偿 PATCH 返回 conclusion={obj.get('conclusion')!r}，非 failure"
+            return out
     except Exception as exc:                      # noqa: BLE001 — 补偿失败必须如实记录
-        return {"ok": False, "id": check_run_id, "error": f"{type(exc).__name__}: {exc}"}
+        out["error"] = f"补偿 PATCH 异常：{type(exc).__name__}: {exc}"
+        return out
+
+    if not head_sha or not run_id:
+        out["error"] = "缺少 head_sha/run_id，无法完成对象级回读证明"
+        return out
+    try:
+        readback = verify_check_run(client, head_sha, run_id, attempts=attempts,
+                                    expect_conclusion="failure", check_run_id=check_run_id)
+        out["readback"] = {"id": readback.get("id"), "app_id": readback.get("app_id"),
+                           "status": readback.get("status"),
+                           "conclusion": readback.get("conclusion"),
+                           "head_sha": readback.get("head_sha"),
+                           "external_id": readback.get("external_id")}
+        out["ok"] = True
+    except Exception as exc:                      # noqa: BLE001
+        out["error"] = f"补偿回读未确认 failure：{type(exc).__name__}: {exc}"
+    return out
 
 
 def compensate_status_failure(client: Client, sha: str, run_id: str, reason: str,
@@ -400,9 +448,11 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
     cr_evidence = report.get("check_run") or report.get("check_run_created")
     if cr_evidence and not (check_comp or {}).get("ok"):
         try:
-            check_comp = _downgrade(client, cr_evidence["id"], reason)
+            check_comp = _downgrade(client, cr_evidence["id"], reason,
+                                    head_sha=report["run"]["head_sha"],
+                                    run_id=report["run"]["run_id"])
         except Exception as exc:                       # noqa: BLE001 — 补偿失败必须如实记录
-            check_comp = {"ok": False, "id": cr_evidence.get("id"),
+            check_comp = {"attempted": True, "ok": False, "id": cr_evidence.get("id"),
                           "error": f"{type(exc).__name__}: {exc}"}
         report["compensation"] = check_comp
         log.append({"channel": "check_run", "reason": reason, "result": check_comp})
@@ -419,7 +469,14 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
 
     report["compensations"] = {"status": status_comp, "check_run": check_comp}
     status_risky = bool(report.get("status_publish_attempted")) and not (status_comp or {}).get("ok")
-    check_risky = bool(cr_evidence) and not (check_comp or {}).get("ok")
+    # 只有"该 Check Run 可能已经完成 success"时，未确认撤销才算证据残留风险；
+    # 若它从未进入 success（例如停在 in_progress），要如实区分"无 success 观察"与"风险推断"。
+    check_may_have_succeeded = bool((report.get("check_run_created") or {}).get("may_have_succeeded")
+                                    or report.get("check_run"))
+    check_risky = bool(cr_evidence) and check_may_have_succeeded and not (check_comp or {}).get("ok")
+    report["check_run_may_have_succeeded"] = check_may_have_succeeded
+    report["check_run_compensation_unconfirmed_without_success_observed"] = bool(
+        cr_evidence and not check_may_have_succeeded and not (check_comp or {}).get("ok"))
     report["possible_success_evidence_remains"] = bool(status_risky or check_risky)
     report["compensation_is_best_effort_not_atomic"] = True
     report["operator_action"] = ("需要人工只读核验远端是否仍有 route-a/verify=success"
@@ -513,13 +570,13 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
         report["steps"].append("verify_check_run:in_progress")
         pr_info = verify_pr(client, pr, head_sha)          # 创建后复核
         report["steps"].append("verify_pr:post-create")
+        report["check_run_created"]["may_have_succeeded"] = True   # 发起前即按"可能已 success"处理
         try:
             finalized = finalize_check_run(client, cr_id, "success")
         except Refused as exc:
             # PATCH 传输异常同样按"远端可能已完成 success"处理
             _compensate_all(client, report, f"完成失败（远端可能已 success）：{exc}", target_url)
             raise Refused(f"完成 check run 为 success 失败：{exc}") from exc
-        report["check_run_created"]["may_have_succeeded"] = True
         report["steps"].append("finalize_check_run:success")
         try:
             verified = verify_check_run(client, head_sha, run_id, attempts=attempts,
@@ -530,7 +587,8 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
         report["steps"].append("verify_check_run:success")
         report["check_run"] = {"id": cr_id, "name": finalized.get("name"),
                                "head_sha": finalized.get("head_sha"),
-                               "external_id": finalized.get("external_id"), "verify": verified}
+                               "external_id": finalized.get("external_id"),
+                               "may_have_succeeded": True, "verify": verified}
 
     if publish_mode in ("status", "dual"):
         try:
