@@ -170,7 +170,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      checks: write
       statuses: write
+      actions: read
 """
 
 CANDIDATE = """name: 候选分支更新（PR-first · Route A）
@@ -241,6 +243,9 @@ jobs:
     name: verify
     needs: [gate, lock, generate, publish]
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      statuses: write
     steps:
       - id: verify
         run: echo "state=success" >> "$GITHUB_OUTPUT"
