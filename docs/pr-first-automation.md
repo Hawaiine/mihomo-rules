@@ -36,9 +36,10 @@ GitHub 的两条硬事实：
    而是**事件没有被触发**。Route A 的选择是不引入 App/PAT 去换事件，
    只把可信验证放进候选运行本身。
 
-因此 Route A 的候选 PR 拿不到 `pr-verify` 的三个 check-run。可行且不需 App 的路径是
-**commit status**：`POST /statuses/{head_sha}` 只需 `statuses: write`，而 Ruleset 的
-"Require status checks to pass" 同时接受 check-run 与 commit status。
+因此 Route A 的候选 PR 原本拿不到 `pr-verify` 的三个 check-run。自 PR #32 起，
+**commit status 和 Check Run 双发**：候选路径使用双发事务发布器（`publish_run_status.py --publish-mode=dual`），
+在精确 head SHA 上发布 `route-a/verify` 的 Check Run（`app.id=15368`）和 commit status，
+Ruleset 同时接受 check-run 与 commit status；`route-a-status.yml` 对人工 PR 继续按原事务发布。
 
 于是：
 
@@ -65,8 +66,8 @@ GitHub 的两条硬事实：
 
 | 模式 | 触发条件 | 数据源 | 适用 |
 |---|---|---|---|
-| check-run | head SHA 上存在 `checks[]` 声明的 check-run | `GET /commits/{sha}/check-runs`（app 15368） | 人工 PR（`pull_request` 触发 pr-verify） |
-| commit status | 该 SHA 上**没有任何** check-run | `GET /commits/{sha}/statuses`，要求 `creator.login == github-actions[bot]` 且 state=success | 候选 PR（GITHUB_TOKEN 创建，无 pull_request 事件、无法产生 check-run） |
+| check-run | head SHA 上存在 `checks[]` 声明的 check-run | `GET /commits/{sha}/check-runs`（app 15368） | 人工 PR（`pull_request` 触发 pr-verify）；自 PR #32 起，候选 PR 也产生 `route-a/verify` Check Run |
+| commit status | 该 SHA 上**没有任何** check-run | `GET /commits/{sha}/statuses`，要求 `creator.login == github-actions[bot]` 且 state=success | PR #31 的候选 PR 路径（双发事务发布器上线前）；自 PR #32 后，新候选 PR 不再只依赖 status |
 
 `await_checks.py` / `verify_required_checks.py` 按上述规则自动选择模式（`gate_mode` 字段），
 两者都要求：精确 head SHA、全部必需项 success、PR 仍 open、base 未漂移。
