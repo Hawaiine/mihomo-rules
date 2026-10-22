@@ -93,6 +93,30 @@ class ParseExternalIdTest(G1Base):
     def test_strict_prefix_and_digits(self):
         self.assertEqual(acc.parse_external_id(f"route-a-run:{PUB_RUN}"), PUB_RUN)
 
+    def test_accepts_minimal_and_20_digit_ids(self):
+        """协议允许正十进制 run id：最小 1 与 20 位无前导零均合法。"""
+        self.assertEqual(acc.parse_external_id("route-a-run:1"), "1")
+        self.assertEqual(acc.parse_external_id("route-a-run:123"), "123")
+        twenty = "9" * 20
+        self.assertEqual(acc.parse_external_id(f"route-a-run:{twenty}"), twenty)
+
+    def test_reject_surrounding_whitespace(self):
+        """协议第 3 条：前缀前后不得存在空白或其他字符（不得隐式 strip）。"""
+        for bad in (" route-a-run:123", "route-a-run:123 ", " route-a-run:123 ",
+                    "\troute-a-run:123", "route-a-run:123\t", "\nroute-a-run:123",
+                    "route-a-run:123\n", "\r\nroute-a-run:123"):
+            self.assertIsNone(acc.parse_external_id(bad), repr(bad))
+
+    def test_reject_non_ascii_digits_without_crashing(self):
+        """协议第 4 条：后缀只能含 ASCII 0-9；非 ASCII 数字必须拒绝且不得抛异常。"""
+        for bad in ("route-a-run:١٢٣", "route-a-run:１２３", "route-a-run:१२३",
+                    "route-a-run:²", "route-a-run:²³", "route-a-run:½"):
+            try:
+                got = acc.parse_external_id(bad)
+            except Exception as exc:  # noqa: BLE001 - 崩溃本身即缺陷
+                self.fail(f"{bad!r} 抛出 {type(exc).__name__}: {exc}；应返回 None")
+            self.assertIsNone(got, repr(bad))
+
     def test_reject_missing(self):
         self.assertIsNone(acc.parse_external_id(None))
         self.assertIsNone(acc.parse_external_id(""))
@@ -144,6 +168,39 @@ class ResolvePublisherRunTest(G1Base):
         rid, _src, _c = acc.resolve_publisher_run_id({"details_url": GH_AUTO_URL})
         self.assertIsNone(rid)
 
+    def test_malformed_external_id_present_blocks_details_url_fallback(self):
+        """存在但畸形的 external_id → fail-closed，不回退 details_url。"""
+        for bad in ("", " ", "route-a-run:", "route-a-run:0123", "route-a-run:²",
+                    " route-a-run:500", "check-run:500"):
+            rid, src, conflict = acc.resolve_publisher_run_id(
+                {"external_id": bad, "details_url": "https://github.com/o/r/actions/runs/500"})
+            self.assertIsNone(rid, repr(bad))
+            self.assertEqual(src, "malformed_external_id", repr(bad))
+            self.assertFalse(conflict, repr(bad))
+
+    def test_absent_external_id_allows_legacy_details_url(self):
+        """external_id 缺失（旧对象）→ 允许 details_url 兼容回退。"""
+        for cr in ({"details_url": "https://github.com/o/r/actions/runs/500"},
+                   {"external_id": None, "details_url": "https://github.com/o/r/actions/runs/500"}):
+            rid, src, conflict = acc.resolve_publisher_run_id(cr)
+            self.assertEqual(rid, "500")
+            self.assertEqual(src, "details_url")
+            self.assertFalse(conflict)
+
+    def test_valid_external_id_with_unparseable_details_uses_external(self):
+        rid, src, conflict = acc.resolve_publisher_run_id(
+            {"external_id": "route-a-run:500", "details_url": GH_AUTO_URL})
+        self.assertEqual(rid, "500")
+        self.assertEqual(src, "external_id")
+        self.assertFalse(conflict)
+
+    def test_both_unparseable_returns_none(self):
+        rid, src, conflict = acc.resolve_publisher_run_id(
+            {"details_url": GH_AUTO_URL})
+        self.assertIsNone(rid)
+        self.assertIsNone(src)
+        self.assertFalse(conflict)
+
 
 class G1PositiveTest(G1Base):
     """正例：external_id 生效且全部身份条件满足才 PASS。"""
@@ -169,6 +226,26 @@ class G1PositiveTest(G1Base):
 class G1NegativeTest(G1Base):
     """负例：每条都必须拒绝通过，且原因明确。"""
 
+    def test_malformed_external_id_never_crashes_or_passes(self):
+        """畸形绑定在 classify() 层必须 fail-closed 返回证据不足，不得抛异常或通过。"""
+        for bad in (" route-a-run:39713755722", "route-a-run:39713755722 ",
+                    "route-a-run:²", "route-a-run:١٢٣", "route-a-run:0123", ""):
+            e = ev(route_cr=route_a_cr(external_id=bad, details=GH_AUTO_URL))
+            try:
+                res = self.result(e)
+            except Exception as exc:  # noqa: BLE001
+                self.fail(f"{bad!r} 在 classify() 抛出 {type(exc).__name__}: {exc}")
+            self.assertNotEqual(res["verdict"], acc.PASS, bad)
+            self.assertEqual(res["verdict"], acc.EVIDENCE_INSUFFICIENT, bad)
+            self.assertIn("PUBLISHER_RUN_MALFORMED_EXTERNAL_ID", self.codes(e), bad)
+
+    def test_malformed_external_id_does_not_fall_back_to_details_url(self):
+        """畸形 external_id 存在时不得静默回退到合法的 details_url。"""
+        e = ev(route_cr=route_a_cr(external_id=" route-a-run:39713755722",
+                                   details="https://github.com/o/r/actions/runs/500"))
+        self.assertNotPass(e)
+        self.assertIn("PUBLISHER_RUN_MALFORMED_EXTERNAL_ID", self.codes(e))
+
     def test_missing_external_id_and_unparseable_details(self):
         e = ev(route_cr=route_a_cr(details=GH_AUTO_URL))
         self.assertNotPass(e)
@@ -177,18 +254,18 @@ class G1NegativeTest(G1Base):
     def test_wrong_external_id_prefix(self):
         e = ev(route_cr=route_a_cr(external_id=f"check-run:{PUB_RUN}", details=GH_AUTO_URL))
         self.assertNotPass(e)
-        self.assertIn("PUBLISHER_RUN_UNBOUND", self.codes(e))
+        self.assertIn("PUBLISHER_RUN_MALFORMED_EXTERNAL_ID", self.codes(e))
 
     def test_empty_external_id_suffix(self):
         e = ev(route_cr=route_a_cr(external_id="route-a-run:", details=GH_AUTO_URL))
         self.assertNotPass(e)
-        self.assertIn("PUBLISHER_RUN_UNBOUND", self.codes(e))
+        self.assertIn("PUBLISHER_RUN_MALFORMED_EXTERNAL_ID", self.codes(e))
 
     def test_illegal_external_id_suffix(self):
         for bad in ("route-a-run:abc", "route-a-run:0", "route-a-run:123/456"):
             e = ev(route_cr=route_a_cr(external_id=bad, details=GH_AUTO_URL))
             self.assertNotPass(e)
-            self.assertIn("PUBLISHER_RUN_UNBOUND", self.codes(e), bad)
+            self.assertIn("PUBLISHER_RUN_MALFORMED_EXTERNAL_ID", self.codes(e), bad)
 
     def test_external_id_differs_from_publisher_run(self):
         e = ev(route_cr=route_a_cr(external_id="route-a-run:111", details=GH_AUTO_URL))
