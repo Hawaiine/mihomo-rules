@@ -512,6 +512,35 @@ def inspect_route_a_status(client: Client, sha: str, *, per_page: int = STATUSES
             "pages_read": pages_read, "complete": True}
 
 
+OPERATOR_ACTION_GENERIC = "需要人工只读核验远端是否仍有 route-a/verify=success"
+OPERATOR_ACTION_NONE = "无需人工核验"
+
+
+def _derive_operator_action(report: dict) -> str:
+    """由风险事实字段推导操作员处置指引（只读字段，不修改任何风险事实）。
+
+    优先级（更具体的风险不得被通用文案覆盖）：
+      1. ``status_evidence_unknown`` ⇒ 证据未知，暂停自动流程（不得视为不存在 success）；
+      2. 同 SHA 历史 success 已观察且未确认撤销 ⇒ 区分"前置失败未处置"与"撤销未确认"；
+      3. ``possible_success_evidence_remains`` ⇒ 通用人工核验；
+      4. 其余 ⇒ 无需人工核验（仅当风险已由可靠回读解决）。
+    """
+    if report.get("status_evidence_unknown"):
+        why = report.get("status_evidence_unknown_reason") or "route-a/verify 状态不可读"
+        return (f"状态证据未知（{why}）：暂停自动流程，需人工只读核验远端 route-a/verify 状态；"
+                "不得视为不存在 success")
+    if (report.get("historical_success_observed")
+            and report.get("historical_success_revoked") is not True):
+        if report.get("historical_success_disposition") == "not_processed_pre_verification_failure":
+            return ("同 SHA 存在历史 route-a/verify=success，本轮前置核验失败且未处置；"
+                    "暂停自动流程，需人工只读核验后再决定是否合并")
+        return ("同 SHA 历史 route-a/verify=success 撤销未确认（尝试撤销不等于已撤销）；"
+                "需人工只读核验远端是否仍有 success")
+    if report.get("possible_success_evidence_remains"):
+        return OPERATOR_ACTION_GENERIC
+    return OPERATOR_ACTION_NONE
+
+
 def _compensate_all(client: Client, report: dict, reason: str, target_url: str = "") -> dict:
     """统一失败补偿：status（若已尝试发布 success）+ Check Run（若已创建/完成）。
 
@@ -565,10 +594,11 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
                   and report.get("historical_success_revoked") is not True)
     if hist_risky and not (report.get("historical_success_revocation") or {}).get("ok"):
         report["historical_success_risk"] = True
-    report["possible_success_evidence_remains"] = bool(status_risky or check_risky or hist_risky)
+    # 状态证据未知时不得因本次重算而降为"无残留"（未知 ≠ 不存在）
+    report["possible_success_evidence_remains"] = bool(status_risky or check_risky or hist_risky
+                                                       or report.get("status_evidence_unknown"))
     report["compensation_is_best_effort_not_atomic"] = True
-    report["operator_action"] = ("需要人工只读核验远端是否仍有 route-a/verify=success"
-                                 if report["possible_success_evidence_remains"] else "无需人工核验")
+    report["operator_action"] = _derive_operator_action(report)
     return report
 
 
@@ -652,23 +682,23 @@ def publish_for_run(*, repo: str, run_id: str, pr: int, head_sha: str, required:
                 if report["historical_success_observed"]:
                     report["historical_success_disposition"] = \
                         "not_processed_pre_verification_failure"
-                    report["operator_action"] = ("同 SHA 存在历史 route-a/verify=success，本轮前置核验"
-                                                 "失败且未处置；需人工只读核验后再决定是否合并")
+                    report["possible_success_evidence_remains"] = True
             else:
                 report["status_evidence_unknown"] = True
+                report["status_evidence_unknown_reason"] = f"历史状态不可读：{hist.get('error')}"
                 report["possible_success_evidence_remains"] = True
-                report["operator_action"] = ("历史状态不可读：需人工只读核验远端 route-a/verify 状态")
         elif client is None:
             # 缺少 token / Client 构造失败：无可用客户端，不伪造探查结果
             report["status_evidence_unknown"] = True
+            report["status_evidence_unknown_reason"] = "无法建立 GitHub 客户端，未执行只读探查"
             report["possible_success_evidence_remains"] = True
-            report["operator_action"] = ("无法建立 GitHub 客户端：需人工只读核验远端 "
-                                         "route-a/verify 状态")
         if (report.get("check_run") or report.get("check_run_created")
                 or report.get("status_publish_attempted")
                 or report.get("historical_success_observed")):
             _compensate_all(client, report, f"事务异常 {type(exc).__name__}: {exc}", target_url) \
                 if client is not None else None
+        # 最终处置指引只由风险事实推导，补偿后统一重算，不被通用文案覆盖
+        report["operator_action"] = _derive_operator_action(report)
         if isinstance(exc, Refused):
             exc.report = report
             raise
@@ -686,8 +716,9 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
     report["historical_status_probe"] = hist
     if not hist.get("readable"):
         report["status_evidence_unknown"] = True
+        report["status_evidence_unknown_reason"] = f"步骤 0 状态不可读：{hist.get('error')}"
         report["possible_success_evidence_remains"] = True
-        report["operator_action"] = "状态不可读：需要人工只读核验远端 route-a/verify 状态"
+        report["operator_action"] = _derive_operator_action(report)
         raise Refused(f"无法读取同 SHA 的 route-a/verify 状态（证据不确定）：{hist.get('error')}")
     report["historical_success_observed"] = bool(hist.get("observed"))
     report["historical_success_revoked"] = None
@@ -698,7 +729,7 @@ def _run_transaction(client: Client, report: dict, *, run_id: str, pr: int, head
         report["historical_success_revoked"] = bool(rev.get("ok"))
         if not rev.get("ok"):
             report["possible_success_evidence_remains"] = True
-            report["operator_action"] = "需要人工只读核验远端是否仍有 route-a/verify=success"
+            report["operator_action"] = _derive_operator_action(report)
             raise Refused(f"未能确认撤销同 SHA 历史 success（不发布任何新的成功证据）："
                           f"{rev.get('error')}")
         report["steps"].append("revoke_historical_success")

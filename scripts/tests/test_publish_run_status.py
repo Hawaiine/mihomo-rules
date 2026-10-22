@@ -1186,6 +1186,99 @@ class Case(unittest.TestCase):
         self.assertTrue(out["historical_success_observed"])
         self.assertTrue(out["historical_success_revoked"])
 
+    # ── 第八轮：operator_action 不得被通用补偿文案覆盖（风险事实与处置指引分离） ──
+
+    RISK_FIELDS = ("historical_success_observed", "historical_success_revoked",
+                   "status_publish_attempted", "status_may_have_been_published",
+                   "status_evidence_unknown", "possible_success_evidence_remains")
+
+    def test_D1_pre_failure_unprocessed_history_action_is_specific(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(seed_history="8")
+        self.assertEqual(rep["historical_success_disposition"],
+                         "not_processed_pre_verification_failure")
+        self.assertIn("未处置", rep["operator_action"])
+        self.assertIn("前置核验失败", rep["operator_action"])
+        self.assertNotIn("无需人工核验", rep["operator_action"])
+        self.assertEqual(Stub.remote_statuses[0]["state"], "success", "不得自动撤销")
+
+    def test_D2_pre_failure_status_403_action_says_unknown_and_pause(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(statuses_http=403)
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertIn("证据未知", rep["operator_action"])
+        self.assertIn("暂停自动流程", rep["operator_action"])
+
+    def test_D3_pre_failure_status_disconnect_action_says_unknown_and_pause(self):
+        Stub.run_doc_over = {"event": "push"}
+        rep = self._publish_expect_refused(statuses_disconnect=True)
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertIn("证据未知", rep["operator_action"])
+        self.assertIn("暂停自动流程", rep["operator_action"])
+
+    def test_D4_step0_unreadable_action_says_unknown_and_pause(self):
+        rep = self._publish_expect_refused(statuses_http=403)
+        self.assertTrue(rep["status_evidence_unknown"])
+        self.assertIn("证据未知", rep["operator_action"])
+        self.assertIsNone(self.remote_check())
+
+    def test_D5_missing_token_action_says_unknown_without_probe(self):
+        with self.assertRaises(prs.Refused) as ctx:
+            prs.publish_for_run(repo="o/r", run_id="9", pr=29, head_sha=HEAD, required=REQUIRED,
+                                token="", api=self.api, attempts=1, publish_mode="dual")
+        rep = ctx.exception.report
+        self.assertNotIn("historical_status_probe", rep)
+        self.assertIn("证据未知", rep["operator_action"])
+        self.assertIn("GitHub 客户端", rep["operator_action"])
+
+    def test_D6_revocation_403_action_says_revocation_unconfirmed(self):
+        rep = self._publish_expect_refused(comp_post=403, seed_history="8")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("撤销未确认", rep["operator_action"])
+        self.assertNotIn("未处置", rep["operator_action"])
+
+    def test_D7_revocation_readback_disconnect_action_says_unconfirmed(self):
+        rep = self._publish_expect_refused(status_read_disconnect_after=1, seed_history="8")
+        self.assertFalse(rep["historical_success_revoked"])
+        self.assertIn("撤销未确认", rep["operator_action"])
+
+    def test_D8_confirmed_compensation_says_no_manual_check(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, seed_history="8")
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertEqual(rep["operator_action"], "无需人工核验")
+
+    def test_D9_ordinary_failure_uses_generic_manual_check(self):
+        rep = self._publish_expect_refused(drift_after_status_post=True, status_read_fail_after=2,
+                                           status_read_fail_mode=500)
+        self.assertTrue(rep["possible_success_evidence_remains"])
+        self.assertIn("需要人工只读核验远端是否仍有 route-a/verify=success", rep["operator_action"])
+        for word in ("未处置", "证据未知", "撤销未确认"):
+            self.assertNotIn(word, rep["operator_action"])
+
+    def test_D10_compensate_all_keeps_unknown_risk_fields(self):
+        rep = {"status_evidence_unknown": True, "possible_success_evidence_remains": True,
+               "historical_success_observed": False, "historical_success_revoked": None,
+               "status_publish_attempted": False, "status_may_have_been_published": False}
+        before = {k: rep[k] for k in self.RISK_FIELDS}
+        prs._compensate_all(None, rep, "x")
+        prs._compensate_all(None, rep, "y")
+        self.assertEqual({k: rep[k] for k in self.RISK_FIELDS}, before)
+        self.assertIn("证据未知", rep["operator_action"])
+
+    def test_D11_compensate_all_keeps_unprocessed_disposition(self):
+        rep = {"status_evidence_unknown": False, "possible_success_evidence_remains": True,
+               "historical_success_observed": True, "historical_success_revoked": None,
+               "historical_success_disposition": "not_processed_pre_verification_failure",
+               "status_publish_attempted": False, "status_may_have_been_published": False}
+        before = {k: rep[k] for k in self.RISK_FIELDS}
+        prs._compensate_all(None, rep, "x")
+        self.assertEqual({k: rep[k] for k in self.RISK_FIELDS}, before)
+        self.assertEqual(rep["historical_success_disposition"],
+                         "not_processed_pre_verification_failure")
+        self.assertIn("未处置", rep["operator_action"])
+
 
 if __name__ == "__main__":
     unittest.main()
