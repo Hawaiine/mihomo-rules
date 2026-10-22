@@ -41,6 +41,9 @@
       命令解析必须落在系统根目录 / test -x / 真实运行核验 / $GITHUB_ENV 导出）并
       以 `"$PY_BIN"`、`"$GIT_BIN"` 调用守卫与辅助命令；守卫产出的 JSON 报告必须
       真实生成并通过解析核验（不得只看 exit code）。
+  P18 reusable workflow 调用方的 permissions 必须覆盖被调用 workflow 每个 job 需要的
+      权限（GitHub Actions 规则：被调用 workflow 只能保持或降低调用方授予的权限）；
+      缺少必要权限时 fail-closed。
 
 用法：
   python3 scripts/ci/verify_workflow_policy.py [--root <仓库根>] [--json <输出路径>]
@@ -506,6 +509,57 @@ def check_check_name_uniqueness(docs: dict[str, dict], required: list[str]) -> l
     return problems
 
 
+def check_workflow_call_permissions(docs: dict[str, dict]) -> list[str]:
+    """P18：reusable workflow 调用方的 permissions 必须覆盖被调用 workflow 的 job 权限需求。
+    
+    GitHub Actions 规则：被调用 workflow 只能保持或降低调用方授予的权限。
+    调用方缺少被调用 job 需要的权限时，该 job 可能无法启动或权限不足。
+    """
+    problems: list[str] = []
+    # 收集调用关系：caller_fname -> [(callee_fname, caller_job_perms)]
+    calls: dict[str, list[tuple[str, dict[str, str]]]] = {}
+    for fname, doc in docs.items():
+        for jid, job in (doc.get("jobs") or {}).items():
+            if not isinstance(job, dict):
+                continue
+            uses = job.get("uses") or ""
+            if "./.github/workflows/" in uses:
+                callee_fname = uses.split("/")[-1]
+                # 调用方 job 的权限：job-level 优先，否则顶层
+                caller_perms = _perm_map(_permissions(doc, job))
+                calls.setdefault(fname, []).append((callee_fname, caller_perms))
+    
+    for caller_fname, call_list in calls.items():
+        for callee_fname, caller_perms in call_list:
+            if callee_fname not in docs:
+                continue  # 被调用文件不在本次检查范围
+            callee_doc = docs[callee_fname]
+            for callee_jid, callee_job in (callee_doc.get("jobs") or {}).items():
+                if not isinstance(callee_job, dict):
+                    continue
+                # 被调用 job 需要的权限
+                callee_perms = _perm_map(_permissions(callee_doc, callee_job))
+                # 检查每个被调用 job 需要的权限是否在调用方授予的权限里
+                for scope, level in callee_perms.items():
+                    if scope == "__raw__":  # 无法解析的权限声明，fail-closed
+                        problems.append(
+                            f"{WORKFLOW_DIR}/{caller_fname} 调用 {callee_fname}：被调用 job '{callee_jid}' "
+                            f"的权限声明无法可靠解析（{level!r}），无法验证调用方权限是否覆盖 —— fail-closed")
+                        continue
+                    caller_level = caller_perms.get(scope, "none")
+                    # write 需要 write，read 可以接受 read 或 write
+                    if level == "write" and caller_level != "write":
+                        problems.append(
+                            f"{WORKFLOW_DIR}/{caller_fname} 调用 {callee_fname}：被调用 job '{callee_jid}' "
+                            f"需要 {scope}: {level}，但调用方只授予 {scope}: {caller_level} "
+                            f"—— 调用方必须补齐权限（GitHub Actions 规则：被调用 workflow 只能保持或降低调用方授予的权限）")
+                    elif level == "read" and caller_level not in ("read", "write"):
+                        problems.append(
+                            f"{WORKFLOW_DIR}/{caller_fname} 调用 {callee_fname}：被调用 job '{callee_jid}' "
+                            f"需要 {scope}: {level}，但调用方未授予该权限（实际 {caller_level}）")
+    return problems
+
+
 def check_daily_sync_entry(root: Path) -> list[str]:
     """P3b（Route A）：daily-sync.yml 是唯一入口，且自身不得包含任何写操作。
 
@@ -568,6 +622,8 @@ def run(root: Path) -> tuple[list[str], dict]:
         problems.extend(check_workflow(path.relative_to(root), text, doc, required,
                                        waive_legacy_patterns=(legacy_pinned and path == legacy_path)))
     problems.extend(check_check_name_uniqueness(docs, required))
+    # P18：reusable workflow 调用方权限覆盖检查
+    problems.extend(check_workflow_call_permissions(docs))
     info = {"workflows_checked": checked, "required_checks": required,
             "required_check_name_uniqueness": "P14：必需检查名仅允许出现在 pr-verify.yml",
             "command_contract": "P13：必需命令必须被真正执行（拒绝 echo/printf/true/注释/引号文本/"

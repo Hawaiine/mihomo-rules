@@ -5,10 +5,8 @@ name: 候选分支更新（PR-first · Route A）
 #     调用本文件；本文件自身不再带 schedule，避免同日双入口。
 #   * generate job 只读；publish job 用 GITHUB_TOKEN（contents: write + pull-requests: write）
 #     推送候选分支并创建/更新 PR，绝不推送默认分支；push 前有硬断言。
-#   * 因为 GITHUB_TOKEN 创建的 PR 不触发 pull_request workflow，本流程在同一次运行内用
-#     verify job（trusted 脚本来自 main，候选树只作数据）执行校验，并以
-#     POST /statuses/{head_sha} 发布 `route-a/verify` context。Ruleset 应引用该 context
-#     （check-run 无法由 GITHUB_TOKEN 创建）。
+#   * verify job 用 GITHUB_TOKEN（checks: write + statuses: write）执行受信校验，并以双发
+#     事务（Check Run + commit status）发布 `route-a/verify`。Ruleset 应引用该 context。
 #   * 平台前提：仓库必须允许 Actions 创建 PR（Settings → Actions → General →
 #     "Allow GitHub Actions to create and approve pull requests"）。未开启时 PR 创建返回
 #     403，本流程 fail-closed 并报告 BLOCKED，**绝不**回退到 App/PAT。
@@ -445,6 +443,7 @@ jobs:
     permissions:
       contents: read        # 只读候选树（tarball/compare）
       pull-requests: read
+      checks: write         # 双发发布器创建 Check Run（app.id=15368）
       statuses: write       # 仅在精确 head SHA 上发布 route-a/verify
     steps:
       - name: 📥 检出默认分支（受信脚本来源；不执行候选内容）
@@ -491,18 +490,20 @@ jobs:
             echo "description=受信校验失败（verify=$VC_RC policy=$POLICY_RC class=$CLASS）" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 🚦 在精确 head SHA 上发布 route-a/verify
+      - name: 🚦 在精确 head SHA 上发布 route-a/verify（双发：Check Run + status）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/ci/publish_status.py --repo "${GITHUB_REPOSITORY}" \
+          python3 scripts/ci/publish_run_status.py --publish-mode=dual \
+            --repo "${GITHUB_REPOSITORY}" \
             --pr "${{ needs.publish.outputs.pr_number }}" \
             --head-sha "${{ needs.publish.outputs.head_sha }}" \
+            --base-branch main \
+            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --state "${{ steps.verify.outputs.state }}" \
-            --description "${{ steps.verify.outputs.description }}" \
-            --target-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            --json "$RUNNER_TEMP/status.json"
+            --json "$RUNNER_TEMP/run-status.json"
 
       - name: 🔴 校验失败必须让 job 非零退出（失败状态已发布，不得以成功 job 收尾）
         if: steps.verify.outputs.state != 'success'
@@ -516,7 +517,7 @@ jobs:
         run: |
           set -euo pipefail
           cat "$RUNNER_TEMP/candidate-verify.json" 2>/dev/null || true
-          cat "$RUNNER_TEMP/status.json" 2>/dev/null || true
+          cat "$RUNNER_TEMP/run-status.json" 2>/dev/null || true
 
       - name: ⬆️ 上传验证证据
         if: always()
@@ -525,7 +526,7 @@ jobs:
           name: route-a-verify
           path: |
             ${{ runner.temp }}/candidate-verify.json
-            ${{ runner.temp }}/status.json
+            ${{ runner.temp }}/run-status.json
           retention-days: 7
           if-no-files-found: ignore
 

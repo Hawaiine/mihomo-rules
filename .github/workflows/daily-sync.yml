@@ -34,4 +34,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      statuses: write
+      checks: write         # 被调用 verify job 双发发布器需要创建 Check Run；request-auto-merge 只需 read，可内部降级
+      statuses: write       # 被调用 verify job 发布 commit status（兜底）
+      actions: read         # 被调用 request-auto-merge job 需要读 workflow run 来源

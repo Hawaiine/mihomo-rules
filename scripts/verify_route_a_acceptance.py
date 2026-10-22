@@ -20,6 +20,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -116,6 +117,90 @@ def parse_run_id(url: str) -> str | None:
     return tail
 
 
+EXTERNAL_ID_PREFIX = "route-a-run:"
+# run id 后缀只允许 ASCII 十进制数字。必须显式 re.ASCII：
+# 默认 \d 会匹配全角/阿拉伯-印度数字等 Unicode 数字，滥用后 int() 可能抛 ValueError，
+# 导致"畸形输入 → 崩溃"而不是 fail-closed。
+_RUN_ID_RE = re.compile(r"[0-9]+\Z", re.ASCII)
+# 本项目防御性约定（**非** GitHub 官方限制）：GitHub run id 远小于 20 位。
+EXTERNAL_ID_MAX_DIGITS = 20
+
+
+def parse_external_id(value) -> str | None:
+    """从 Check Run 的 ``external_id`` 严格提取发布器 run id。
+
+    合法形态：``route-a-run:<positive_decimal_run_id>``。
+
+    协议要求（任一不满足即返回 ``None``，交由调用层 fail-closed）：
+      1. 输入必须是 ``str``；
+      2. 必须以精确前缀 ``route-a-run:`` 开头；
+      3. 前缀前后**不得**存在空白或其它字符（不做隐式 ``strip()`` 清洗）；
+      4. 后缀只能含 ASCII ``0``-``9``；
+      5. 后缀非空；
+      6. 数值 > 0；
+      7. 不允许前导零；
+      8. 不允许符号/小数点/空白/斜线/查询串/额外后缀；
+      9. 后缀长度 ≤ ``EXTERNAL_ID_MAX_DIGITS``（20，本项目约定）。
+
+    解析器只做拒绝、不做清洗：畸形输入一律 ``None``，绝不"修正后接受"。
+    """
+    if not isinstance(value, str):
+        return None
+    # 关键：不做 strip()。前导/尾随空白属于畸形输入，必须整体拒绝。
+    if not value.startswith(EXTERNAL_ID_PREFIX):
+        return None
+    tail = value[len(EXTERNAL_ID_PREFIX):]
+    if not tail or len(tail) > EXTERNAL_ID_MAX_DIGITS:
+        return None
+    if _RUN_ID_RE.fullmatch(tail) is None:
+        return None
+    if tail[0] == "0":  # 前导零（含全零形态）
+        return None
+    # 格式与长度已收敛为 ASCII 数字，此处的 int() 不会抛出。
+    if int(tail, 10) <= 0:
+        return None
+    return tail
+
+
+def resolve_publisher_run_id(check_run: dict) -> tuple[str | None, str | None, bool]:
+    """解析发布该 Check Run 的 workflow run id。
+
+    返回 ``(run_id, source, conflict)``：
+      * ``run_id`` 为 ``None`` 表示无法确定（调用方必须按证据不足处理）。
+      * ``source`` 为 ``"external_id"`` / ``"details_url"`` / ``"malformed_external_id"`` / ``None``。
+      * ``conflict=True`` 表示两个来源都给出**可解析但不同**的 run id——
+        不得静默选择其中一个，调用方必须判证据不足。
+
+    优先级：``external_id``（发布器显式写入的对象级绑定）> ``details_url``（兼容）。
+
+    兼容策略（明确记录）：
+      * ``external_id`` **缺失**（key 不存在或为 ``None``）→ 旧对象形态，允许回退
+        ``details_url``。这是双发发布器上线前的历史 Check Run 的合法形态。
+      * ``external_id`` **存在但畸形**（空串/空白/前缀错误/非 ASCII 数字等）→
+        ``source="malformed_external_id"`` 且 ``run_id=None``，**不回退** details_url。
+        理由是畸形绑定说明对象已损坏或来源可疑；此时静默改用另一来源会掩盖问题。
+        调用方据此 fail-closed。
+      * GitHub 对 API 创建的 Check Run 会忽略 details_url，回读得到 ``/runs/<check_run_id>``；
+        该形态不含 ``/actions/runs/`` 标记，``parse_run_id`` 返回 ``None``，
+        因此不会被误当成 workflow run id。
+    """
+    if not isinstance(check_run, dict):
+        return None, None, False
+    raw_external = check_run.get("external_id")
+    from_external = parse_external_id(raw_external)
+    from_details = parse_run_id(check_run.get("details_url") or "")
+    if from_external and from_details and from_external != from_details:
+        return None, None, True
+    if from_external:
+        return from_external, "external_id", False
+    if raw_external is not None:
+        # 存在但不可解析：视为绑定损坏，fail-closed，不回退 details_url。
+        return None, "malformed_external_id", False
+    if from_details:
+        return from_details, "details_url", False
+    return None, None, False
+
+
 def fetch_statuses(client: Client, repo: str, sha: str, *, per_page: int = STATUSES_PER_PAGE,
                    max_pages: int = STATUSES_MAX_PAGES) -> dict:
     """按页读取 commit statuses（文档：reverse chronological，第一页最新）并返回目标 context。
@@ -182,8 +267,10 @@ def collect(client: Client, repo: str, pr: int, head_sha: str) -> dict:
     crs = (ev.get("check_runs") or {}).get("check_runs") or []
     ra = next((c for c in crs if isinstance(c, dict) and c.get("name") == CONTEXT), None)
     if ra is not None:
-        rid = parse_run_id(ra.get("details_url") or "")
-        if rid:
+        rid, _src, conflict = resolve_publisher_run_id(ra)
+        if conflict:
+            ev["publisher_run_binding_conflict"] = True
+        elif rid:
             try:
                 ev["publisher_run"] = client.get(f"/repos/{repo}/actions/runs/{rid}")
             except ApiError as exc:
@@ -329,13 +416,29 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                     "facts": facts}
         facts["app_identity_proof"] = "check_run.app.id"
         facts["evidence_level"] = "object_app_id"
-        run_id = parse_run_id(ra_cr.get("details_url") or "")
+        run_id, run_source, binding_conflict = resolve_publisher_run_id(ra_cr)
         facts["publisher_run_id"] = run_id
+        facts["publisher_run_id_source"] = run_source
+        if binding_conflict:
+            return {"verdict": EVIDENCE_INSUFFICIENT,
+                    "reasons": [{"code": "PUBLISHER_RUN_BINDING_CONFLICT",
+                                 "detail": (f"check run 的 external_id={ra_cr.get('external_id')!r} 与 "
+                                            f"details_url={ra_cr.get('details_url')!r} 指向不同的 run；"
+                                            f"绑定证据互相矛盾，不得静默选择其一")}], "facts": facts}
+        if run_source == "malformed_external_id":
+            return {"verdict": EVIDENCE_INSUFFICIENT,
+                    "reasons": [{"code": "PUBLISHER_RUN_MALFORMED_EXTERNAL_ID",
+                                 "detail": (f"check run 的 external_id="
+                                            f"{ra_cr.get('external_id')!r} 存在但不符合 "
+                                            f"route-a-run:<ASCII 正整数> 协议；绑定已损坏，"
+                                            f"不回退 details_url（避免掩盖来源异常）")}],
+                    "facts": facts}
         if not run_id:
             return {"verdict": EVIDENCE_INSUFFICIENT,
                     "reasons": [{"code": "PUBLISHER_RUN_UNBOUND",
-                                 "detail": "check run details_url 无法解析出 run id，"
-                                           "无法证明它由哪次 PR verify 发布"}], "facts": facts}
+                                 "detail": ("check run 既无合法 external_id（route-a-run:<run_id>）"
+                                            "也无可解析的 details_url，无法证明它由哪次 PR verify 发布")}],
+                    "facts": facts}
         pub_run = ev.get("publisher_run") or {}
         facts["publisher_run"] = {k: pub_run.get(k) for k in
                                   ("id", "name", "path", "event", "head_sha", "conclusion")}
@@ -353,6 +456,13 @@ def classify(ev: dict, required: list[str], expect_app_id: int = EXPECTED_APP_ID
                                             f"event={pub_run.get('event')} "
                                             f"conclusion={pub_run.get('conclusion')}，"
                                             f"与 PR head/事件/结论不符")}],
+                    "facts": facts}
+        if str(pub_run.get("id")) != str(run_id):
+            return {"verdict": SOURCE_MISMATCH,
+                    "reasons": [{"code": "PUBLISHER_RUN_MISMATCH",
+                                 "detail": (f"check run 绑定的 run id={run_id}"
+                                            f"（来源 {run_source}），但取回的 run 对象 id="
+                                            f"{pub_run.get('id')}；对象与绑定不一致")}],
                     "facts": facts}
     elif ra_status is not None and ra_status.get("state") == "success":
         # 只有 status：对象本身没有 app.id。唯一能证明"平台接受了该来源"的证据是 merge box。
