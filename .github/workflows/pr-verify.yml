@@ -9,8 +9,12 @@ name: General PR verification
 #     checks 中，也不满足 ruleset 必需检查（见 github/docs 的
 #     troubleshooting-required-status-checks）。因此本 workflow 不声明 workflow_dispatch，
 #     必需检查一律由 pull_request 事件产生。
-#   * Route A（固定约束，无 GitHub App、无 PAT）：候选 PR 由内置 GITHUB_TOKEN 创建，
-#     因此**不会**触发本 workflow 的 pull_request；候选 PR 的门禁由
+#   * Route A（固定约束，无 GitHub App、无 PAT）：候选 PR 由内置 GITHUB_TOKEN 创建。
+#     GITHUB_TOKEN 触发的事件默认不新建 workflow run，但 `pull_request` 的
+#     opened/synchronize/reopened 是官方例外：run 会被创建并处于**等待批准**状态，
+#     需有写权限的用户点击 "Approve workflows to run" 后才真正执行（依赖仓库允许
+#     Actions 创建 PR 的平台开关）。因此本 workflow 对候选 PR **不是"不触发"，
+#     而是"触发后等待人工批准"**；未批准时候选 PR 的门禁只能由
 #     candidate-pr-sync.yml 的 verify job 在同一受信运行内完成，并发布
 #     `route-a/verify` commit status。
 #

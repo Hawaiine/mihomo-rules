@@ -55,7 +55,8 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
                     checks_ok: bool = False, checks_problems: list | None = None,
                     lock_state: str = "idle", lock_evidence: dict | None = None,
                     platform_ok: bool = False, platform_evidence: dict | None = None,
-                    production_mode: bool = False) -> dict:
+                    production_mode: bool = False,
+                    pr_author_id: int | None = None) -> dict:
     """把可信输入折成决策。所有默认值都是 fail-closed 方向。"""
     evidence: dict = {
         "repo": repo, "pr": int(pr), "base_sha": base_sha, "head_sha": head_sha,
@@ -81,10 +82,14 @@ def evaluate_policy(*, repo: str, pr: int, base_sha: str, head_sha: str, run_id:
             approval_reasons = ["APPROVAL_POLICY_ID_ONLY_REQUIRED"]
         elif list(policy_problems or []):
             approval_reasons = list(policy_problems)
+        elif pr_author_id is None:
+            # 不知道作者是谁就无法判定「是否自审」，审批一律不可用（fail-closed）。
+            approval_reasons = ["PR_AUTHOR_UNREADABLE"]
         else:
             approval_ok, approval_reasons, ap_ev = va.verify_approvals(
                 reviews or [], head_sha=head_sha, approver_ids=approver_ids,
-                required=required_approvals, complete=review_complete)
+                required=required_approvals, complete=review_complete,
+                pr_author_id=pr_author_id)
             evidence["approval"].update(ap_ev)
 
     decision = dm.decide(change_class=change_class, checks_ok=checks_ok, head_sha_ok=True,
@@ -201,6 +206,10 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
     actual_head = (pr_obj.get("head") or {}).get("sha")
     if actual_head != head_sha:
         raise PolicyError(f"PR head 漂移：{actual_head} != {head_sha}")
+    _author = pr_obj.get("user") or {}
+    _author_raw = _author.get("id")
+    author_id = _author_raw if isinstance(_author_raw, int) and not isinstance(_author_raw, bool) \
+        and _author_raw > 0 else None
     if (pr_obj.get("base") or {}).get("sha") != base_sha:
         raise PolicyError("PR base SHA 与预期不一致（base 漂移）")
     # 审批人只能来自显式输入或仓库内显式策略；**不再**从 base.repo.owner 推断
@@ -257,7 +266,8 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
         policy_evidence=policy_evidence, policy_problems=policy_problems,
         checks_ok=checks_ok, checks_problems=checks_problems,
         lock_state=lock_state, lock_evidence=lock_ev, platform_ok=platform_ok,
-        platform_evidence=platform_ev, production_mode=production_mode)
+        platform_evidence=platform_ev, production_mode=production_mode,
+        pr_author_id=author_id)
     out["evidence"]["classification"] = classification.to_dict()
     out["evidence"]["checks_source"] = checks_source
     out["evidence"]["required_checks"] = {k: checks_report.get(k) for k in
@@ -276,7 +286,8 @@ def collect_and_evaluate(*, repo: str, pr: int, base_sha: str, head_sha: str, ru
         else:
             ok_approval, ap_reasons, _ = va.verify_approvals(
                 reviews, head_sha=head_sha, approver_ids=approver_ids,
-                required=required_approvals, complete=review_complete)
+                required=required_approvals, complete=review_complete,
+                pr_author_id=author_id)
         verification_ok = ok_approval
         verification_reasons.extend(ap_reasons)
     out["verification_ok"] = verification_ok
