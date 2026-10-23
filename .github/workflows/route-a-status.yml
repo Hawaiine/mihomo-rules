@@ -72,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.event.workflow_run.id || inputs.run-id }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha || inputs.head-sha }}
-          PR_NUM: ${{ inputs.pr || '0' }}
+          PR_NUM: ${{ github.event.workflow_run.pull_requests[0].number || inputs.pr || '0' }}
         run: |
           set -euo pipefail
           python3 scripts/ci/publish_run_status.py \
