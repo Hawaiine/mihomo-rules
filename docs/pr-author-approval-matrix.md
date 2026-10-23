@@ -12,13 +12,17 @@
 | 事实 | 来源 | 影响 |
 |---|---|---|
 | PR 作者不能批准自己创建的 PR | GitHub 原生规则 | 受信审批人自己开的 PR **在结构上无法获得有效审批** |
-| `GITHUB_TOKEN` 触发的 workflow 事件不会启动新的 workflow run | GitHub Actions 事件递归抑制 | **机器人创建的 PR 不会触发 `pull_request` 工作流** |
-| `can_approve_pull_request_reviews=true` | 仓库 Actions 设置（实测） | 平台**允许** `GITHUB_TOKEN` 创建 PR（不等于允许审批） |
+| `GITHUB_TOKEN` 触发的事件默认不新建 workflow run，**但 `pull_request` 的 `opened` / `synchronize` / `reopened` 是例外**：run 会被创建，并处于 **等待批准（approval-required）** 状态，需有写权限的用户点 "Approve workflows to run" 才会真正执行 | GitHub 官方 reusable `data/reusables/actions/actions-do-not-trigger-workflows.md`（`actions-github-token-pull-request-approval` 特性） | **机器人 PR 会触发 `pull_request`，但检查要人点一次批准才开始跑**；不会自动变绿 |
+| `can_approve_pull_request_reviews=true` | 仓库 Actions 设置（实测） | 平台**允许** `GITHUB_TOKEN` 创建 PR；该开关即上一条特性的入口 |
 | `default_workflow_permissions=read` | 同上 | 需要写权限的 job 必须显式声明 |
 
-第二条是硬约束：机器人 PR 的 `route-a/verify` 只能由**同一个受信运行内的发布器**
-（`candidate-pr-sync.yml` 的 verify job → `publish_run_status.py --publish-mode=dual`）
-发布，不能指望 `pr-verify.yml` 自然触发。
+因此机器人 PR 的两条门禁来源都存在：
+
+1. `pull_request` 触发的 `pr-verify`（需人工批准该 run 后执行），
+2. `candidate-pr-sync` 同一受信运行内的 verify job + `publish_run_status.py --publish-mode=dual`
+   （无需等待批准，但只覆盖候选同步这条路径）。
+
+两者都不能被描述为"自动闭环"：第一条要人点批准，第二条要启用候选同步。
 
 ## 2. 三类作者的行为矩阵
 
@@ -64,9 +68,9 @@ GitHub 不允许自批，因此「Hawaiine 写代码 + Hawaiine 审批」在平�
 1. **交回机器人身份创建 PR**：把分支推到目标仓库的专用分支，由现有自动化
    （`candidate-pr-sync.yml` 的 publish job，`pull-requests: write`）创建 PR；
    PR 作者变成 `github-actions[bot]`，随后由 `Hawaiine` 正式审批。
-   *限制*：该 PR 不会触发 `pull_request` 工作流，`route-a/verify` 必须由同一运行内的
-   双发发布器产生，`general-pr-verify` / `workflow-policy-guard` / `trusted-baseline-guard`
-   不会自动出现。
+   *限制*：该 PR 的 `pull_request` runs 处于**等待批准**状态，需要 `Hawaiine` 在 PR 上
+   点击 "Approve workflows to run" 后 `pr-verify` 的三项 guard 才会执行；若不批准，
+   则只能依赖同运行内的双发发布器产出的 `route-a/verify`。
 2. **新增第二位受信审批人**：需要修改 `.github/approval-policy.json` 的 `approver_ids`
    与 `required_approvals`，属治理决策，必须先获授权。
 3. **保持 PR 打开等待**：不做任何绕过（不自批、不冒充机器人、不放宽 Ruleset）。

@@ -72,11 +72,26 @@ def classify_author(pr: object, approver_ids) -> tuple[str, list[str], dict]:
     return UNKNOWN_AUTHOR, ["AUTHOR_TYPE_UNKNOWN"], evidence
 
 
+def _full_name(obj: object) -> str | None:
+    if not isinstance(obj, dict):
+        return None
+    name = obj.get("full_name")
+    return name if isinstance(name, str) and "/" in name else None
+
+
 def verify_pr_snapshot(pr: object, *, expected_head_sha: object,
-                       expected_base_sha: object) -> tuple[bool, list[str], dict]:
-    """PR 必须仍 open、未合并，且 head/base 与审查时的预期精确一致。"""
+                       expected_base_sha: object, expected_pr: object = None,
+                       expected_repo: object = None,
+                       expected_base_ref: str = "main") -> tuple[bool, list[str], dict]:
+    """PR 必须仍 open、未合并，且**编号/仓库/base 分支/head/base SHA** 与预期精确一致。
+
+    只比 SHA 不够：同一 head SHA 可以出现在另一个 PR 编号、另一个仓库（fork）或另一条
+    base 分支上，把别处的审批证据搬过来就会变成假阳性。因此身份五个维度都要绑定。
+    """
     problems: list[str] = []
-    evidence: dict = {"state": None, "merged": None, "head_sha": None, "base_sha": None}
+    evidence: dict = {"state": None, "merged": None, "number": None, "repo": None,
+                      "base_ref": None, "head_repo": None,
+                      "head_sha": None, "base_sha": None}
     if not isinstance(pr, dict):
         return False, ["PR_OBJECT_MALFORMED"], evidence
     state = pr.get("state")
@@ -87,6 +102,43 @@ def verify_pr_snapshot(pr: object, *, expected_head_sha: object,
     evidence["merged"] = merged
     if merged is True or pr.get("merged_at") is not None:
         problems.append("PR_ALREADY_MERGED")
+
+    # —— 编号绑定 ——
+    number = pr.get("number")
+    evidence["number"] = number
+    expected_number = expected_pr
+    if expected_number is not None:
+        want = expected_number if isinstance(expected_number, int) and \
+            not isinstance(expected_number, bool) and expected_number > 0 else None
+        if want is None:
+            problems.append("EXPECTED_PR_INVALID")
+        elif isinstance(number, bool) or not isinstance(number, int):
+            problems.append("PR_NUMBER_UNREADABLE")
+        elif number != want:
+            problems.append("PR_NUMBER_MISMATCH")
+
+    # —— 仓库 + base 分支绑定 ——
+    base = pr.get("base") if isinstance(pr.get("base"), dict) else {}
+    repo_name = _full_name(base.get("repo"))
+    evidence["repo"] = repo_name
+    evidence["head_repo"] = _full_name((pr.get("head") or {}).get("repo")
+                                       if isinstance(pr.get("head"), dict) else None)
+    if expected_repo is not None:
+        want_repo = expected_repo if isinstance(expected_repo, str) and "/" in expected_repo else None
+        if want_repo is None:
+            problems.append("EXPECTED_REPO_INVALID")
+        elif repo_name is None:
+            problems.append("PR_REPOSITORY_UNREADABLE")
+        elif repo_name.casefold() != want_repo.casefold():
+            problems.append("PR_REPOSITORY_MISMATCH")
+
+    base_ref = base.get("ref")
+    evidence["base_ref"] = base_ref
+    if expected_base_ref:
+        if not isinstance(base_ref, str) or not base_ref:
+            problems.append("PR_BASE_REF_UNREADABLE")
+        elif base_ref != expected_base_ref:
+            problems.append("PR_BASE_REF_MISMATCH")
 
     want_head = _sha(expected_head_sha)
     if want_head is None:
@@ -112,14 +164,21 @@ def verify_pr_snapshot(pr: object, *, expected_head_sha: object,
 
 
 def evaluate(pr: object, reviews: object, *, expected_head_sha: object,
-             expected_base_sha: object, policy, review_complete: bool = True) -> dict:
-    """组合判定：快照 + 作者类别 + 审批有效性。任一不满足即 ok=False。"""
+             expected_base_sha: object, policy, review_complete: bool = True,
+             expected_pr: object = None, expected_repo: object = None,
+             expected_base_ref: str = "main") -> dict:
+    """组合判定：PR 身份绑定 + 快照 + 作者类别 + 审批有效性。任一不满足即 ok=False。"""
     problems: list[str] = []
     evidence: dict = {"expected_head_sha": expected_head_sha,
-                      "expected_base_sha": expected_base_sha}
+                      "expected_base_sha": expected_base_sha,
+                      "expected_pr": expected_pr,
+                      "expected_repo": expected_repo,
+                      "expected_base_ref": expected_base_ref}
 
     snapshot_ok, snapshot_problems, snapshot_ev = verify_pr_snapshot(
-        pr, expected_head_sha=expected_head_sha, expected_base_sha=expected_base_sha)
+        pr, expected_head_sha=expected_head_sha, expected_base_sha=expected_base_sha,
+        expected_pr=expected_pr, expected_repo=expected_repo,
+        expected_base_ref=expected_base_ref)
     problems.extend(snapshot_problems)
     evidence["snapshot"] = snapshot_ev
 
@@ -164,6 +223,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pr", type=int, required=True)
     ap.add_argument("--head-sha", required=True)
     ap.add_argument("--base-sha", required=True)
+    ap.add_argument("--base-branch", default="main",
+                    help="PR 必须针对该 base 分支（默认 main）")
     ap.add_argument("--policy", default=".github/approval-policy.json")
     ap.add_argument("--json", type=lambda p: open(p, "w", encoding="utf-8"))
     args = ap.parse_args(argv)
@@ -188,7 +249,9 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 report = evaluate(pr, reviews, expected_head_sha=args.head_sha,
                                   expected_base_sha=args.base_sha,
-                                  policy=policy_result.policy, review_complete=complete)
+                                  policy=policy_result.policy, review_complete=complete,
+                                  expected_pr=args.pr, expected_repo=args.repo,
+                                  expected_base_ref=args.base_branch)
                 report["evidence"]["policy"] = policy_result.to_dict()
     except (OSError, json.JSONDecodeError, va.ApprovalError) as exc:
         report = {"ok": False, "verdict": "APPROVAL_GATE_FAIL",
