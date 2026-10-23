@@ -65,12 +65,28 @@ verify_approval.verify_approvals(reviews, head_sha=..., approver_ids=...,
 
 GitHub 不允许自批，因此「Hawaiine 写代码 + Hawaiine 审批」在平台层不存在。可选流程按优先级：
 
-1. **交回机器人身份创建 PR**：把分支推到目标仓库的专用分支，由现有自动化
-   （`candidate-pr-sync.yml` 的 publish job，`pull-requests: write`）创建 PR；
-   PR 作者变成 `github-actions[bot]`，随后由 `Hawaiine` 正式审批。
+1. **交回机器人身份创建 PR**（推荐，已实现为 `.github/workflows/robot-pr.yml`）：
+
+   ```bash
+   gh workflow run robot-pr.yml -f source_branch=<你的分支> -f base_branch=main \
+       -f title="..." -f body_file=docs/pr-body.md
+   ```
+
+   该 workflow 在 **main 的受信代码**上运行，只用内置 `GITHUB_TOKEN` 通过 API 读取
+   `source_branch` 的 ref/compare/body，**不检出也不执行**该分支代码；创建后回读校验
+   `user.id == 41898282`、`user.type == "Bot"`、`head.sha`/`head.ref`/`base.repo`/`base.ref`
+   全部匹配，任何不符即失败。逻辑与测试见 `scripts/ci/robot_pr.py` 与
+   `scripts/tests/test_robot_pr.py`。
+
+   随后 PR 作者是 `github-actions[bot]`，`Hawaiine` 可以正式 `APPROVED`（作者与审批者分离）。
+
    *限制*：该 PR 的 `pull_request` runs 处于**等待批准**状态，需要 `Hawaiine` 在 PR 上
    点击 "Approve workflows to run" 后 `pr-verify` 的三项 guard 才会执行；若不批准，
    则只能依赖同运行内的双发发布器产出的 `route-a/verify`。
+
+   *引导（bootstrap）约束*：`workflow_dispatch` 只对**已存在于默认分支**的 workflow 生效。
+   因此 `robot-pr.yml` 必须先经一次正常 PR 合并进 `main` 才能被调度——在那之前，
+   机器人创建 PR 的能力是「代码就绪、平台未启用」。
 2. **新增第二位受信审批人**：需要修改 `.github/approval-policy.json` 的 `approver_ids`
    与 `required_approvals`，属治理决策，必须先获授权。
 3. **保持 PR 打开等待**：不做任何绕过（不自批、不冒充机器人、不放宽 Ruleset）。
