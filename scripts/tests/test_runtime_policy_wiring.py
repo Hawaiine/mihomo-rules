@@ -197,17 +197,22 @@ class StatusPublisherIdentityTest(unittest.TestCase):
             {"creator": {"login": "github-actions[bot]", "type": "Bot"}}), "")
 
 
+BOT_AUTHOR_ID = 41898282
+
+
 class PolicyWiringTest(unittest.TestCase):
     """D-NEW-1：分类/审批/决策在运行时入口被真实执行（纯函数层）。"""
 
     def evaluate(self, change_class, *, production=False, platform=True,
-                 reviews=None, approver="", complete=True):
+                 reviews=None, approver="", complete=True, pr_author_id: int | None = BOT_AUTHOR_ID):
+        # 候选 PR 由内置 GITHUB_TOKEN 创建，作者是 github-actions[bot]。
+        # 审批有效性依赖作者身份（作者==审批人 ⇒ 自审），因此这里显式声明作者。
         return ecp.evaluate_policy(
             repo="Hawaiine/mihomo-rules", pr=29, base_sha="b" * 40, head_sha=HEAD,
             run_id=RUN_ID, generation=1, change_class=change_class, changed_files=3,
             review_complete=complete, reviews=reviews or [], approver=approver, approver_ids=[152380613],
             checks_ok=True, lock_state="held", platform_ok=platform,
-            production_mode=production)
+            production_mode=production, pr_author_id=pr_author_id)
 
     def test_existing_data_production_off_is_not_production_allowed(self):
         out = self.evaluate(cc.EXISTING_DATA_ONLY)
@@ -242,13 +247,29 @@ class PolicyWiringTest(unittest.TestCase):
         out = ecp.evaluate_policy(repo="o/r", pr=1, base_sha="b" * 40, head_sha="a" * 40,
             run_id="1-1", generation=1, change_class=cc.NEW_RULESET, changed_files=1,
             reviews=reviews, approvers=(), approver_ids=[152380613], required_approvals=2,
-            policy_evidence={"ok": True}, checks_ok=True, lock_state="held", platform_ok=True)
+            policy_evidence={"ok": True}, checks_ok=True, lock_state="held", platform_ok=True,
+            pr_author_id=BOT_AUTHOR_ID)
         self.assertEqual(out["decision"], "BLOCKED")
         self.assertTrue(any("APPROVAL" in x for x in out["reason_codes"]))
 
     def test_existing_data_does_not_require_approval(self):
         out = self.evaluate(cc.EXISTING_DATA_ONLY)
         self.assertEqual(out["decision"], "ELIGIBLE_EXISTING_DATA")
+
+    def test_new_ruleset_authored_by_approver_is_blocked(self):
+        """作者即唯一受信审批人：结构上无法获得有效审批，必须 BLOCKED。"""
+        reviews = [{"state": "APPROVED", "commit_id": HEAD, "submitted_at": "2026-10-19T00:00:00Z",
+                    "user": {"id": 152380613, "login": "Hawaiine", "type": "User"}}]
+        out = self.evaluate(cc.NEW_RULESET, reviews=reviews, production=True,
+                            pr_author_id=152380613)
+        self.assertEqual(out["decision"], "BLOCKED")
+        self.assertEqual(out["evidence"]["approval"]["valid_approver_ids"], [])
+
+    def test_new_ruleset_without_author_identity_fails_closed(self):
+        reviews = [{"state": "APPROVED", "commit_id": HEAD, "submitted_at": "2026-10-19T00:00:00Z",
+                    "user": {"id": 152380613, "login": "Hawaiine", "type": "User"}}]
+        out = self.evaluate(cc.NEW_RULESET, reviews=reviews, production=True, pr_author_id=None)
+        self.assertEqual(out["decision"], "BLOCKED")
 
     def test_platform_not_ready_blocks_and_forbids_production(self):
         out = self.evaluate(cc.EXISTING_DATA_ONLY, production=True, platform=False)
