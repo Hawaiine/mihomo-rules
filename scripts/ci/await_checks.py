@@ -50,15 +50,22 @@ STATUS_PENDING, STATUS_SUCCESS, STATUS_FAILED, STATUS_TIMEOUT, STATUS_ERROR = (
 
 
 def evaluate(check_runs: list[dict], workflow_runs: list[dict], jobs_by_id: dict, required: list[dict],
-             expected_head: str, pr_head: str = "") -> tuple[str, dict, list[str]]:
+             expected_head: str, pr_head: str = "", expected_pr_number: int = 0) -> tuple[str, dict, list[str]]:
     """纯函数判定：返回 (overall_status, per_check, problems)。
 
     overall_status ∈ {pending, success, failed}；failed 为终局（立即终止）。
     身份认证失败的**已完成**同名检查 ⇒ failed（不得由其它 workflow 的同名成功检查覆盖）。
+
+    `expected_pr_number` 必须为当前 PR 编号（无默认放行）：来源认证要求 workflow run 的
+    `pull_requests[].number` 与之相等，且必须是该 PR 最新的一次验证运行。
     """
+    if not isinstance(expected_pr_number, int) or isinstance(expected_pr_number, bool) \
+            or expected_pr_number < 1:
+        return STATUS_FAILED, {}, ["缺少当前 PR 编号：无法认证检查来源（fail-closed）"]
     per_check, problems = select_checks(check_runs=check_runs, manifest=required,
                                         workflow_runs=workflow_runs, jobs_by_id=jobs_by_id,
-                                        expected_head=expected_head, pr_head=pr_head or expected_head)
+                                        expected_head=expected_head, pr_head=pr_head or expected_head,
+                                        expected_pr_number=expected_pr_number)
     state = overall_state(per_check)
     for name, info in per_check.items():
         if info["state"] == STATE_MISSING:
@@ -219,7 +226,8 @@ class Poller:
                     report["status_contexts"] = per_check
                 else:
                     status, per_check, problems = evaluate(check_runs, workflow_runs, jobs_by_id,
-                                                           self.required, self.expected_head, pr_head)
+                                                           self.required, self.expected_head, pr_head,
+                                                           self.pr)
                 report["checks"] = per_check
                 report["problems"] = problems
                 report["provenance_state"] = overall_state(per_check)

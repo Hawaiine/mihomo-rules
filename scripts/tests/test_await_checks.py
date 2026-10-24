@@ -50,7 +50,7 @@ class EvaluateTest(unittest.TestCase):
     def _eval(self, checks, runs=None, jobs=None, head=HEAD):
         return ac.evaluate(checks, runs if runs is not None else [fx.workflow_run()],
                            fx.jobs_index(jobs if jobs is not None else fx.jobs_for(checks)),
-                           self.required, head, head)
+                           self.required, head, head, fx.PR_NUMBER)
 
     def test_all_success(self):
         checks = fx.all_checks()

@@ -220,35 +220,47 @@ def create_or_update(*, repo: str, source_branch: str, base_ref: str, title: str
     quoted = urllib.parse.quote(source_branch, safe="")
     status, ref = _call(token, "GET", f"/repos/{repo}/git/ref/heads/{quoted}", api)
     if status != 200 or not isinstance(ref, dict):
-        return {"ok": False, "problems": [f"SOURCE_BRANCH_UNREADABLE:HTTP{status}"]}
+        return {"ok": False, "write_attempted": False,
+                "problems": [f"SOURCE_BRANCH_UNREADABLE:HTTP{status}"]}
     head_sha = ((ref.get("object") or {}).get("sha"))
     if not isinstance(head_sha, str) or not SHA_RE.match(head_sha):
-        return {"ok": False, "problems": ["SOURCE_BRANCH_SHA_MALFORMED"]}
+        return {"ok": False, "write_attempted": False, "problems": ["SOURCE_BRANCH_SHA_MALFORMED"]}
     if head_sha == base_ref:
-        return {"ok": False, "problems": ["SOURCE_EQUALS_BASE"]}
+        return {"ok": False, "write_attempted": False, "problems": ["SOURCE_EQUALS_BASE"]}
 
     status, compare = _call(token, "GET",
                             f"/repos/{repo}/compare/{base_ref}...{head_sha}", api)
     if status != 200 or not isinstance(compare, dict):
-        return {"ok": False, "problems": [f"COMPARE_UNREADABLE:HTTP{status}"]}
+        return {"ok": False, "write_attempted": False,
+                "problems": [f"COMPARE_UNREADABLE:HTTP{status}"]}
     files = compare.get("files") or []
     if not files:
-        return {"ok": False, "problems": ["DIFF_EMPTY:no file changes vs base"]}
+        return {"ok": False, "write_attempted": False,
+                "problems": ["DIFF_EMPTY:no file changes vs base"]}
 
     status, existing = _call(
         token, "GET",
         f"/repos/{repo}/pulls?state=open&head={owner}:{quoted}&base={base_ref}", api)
     if status != 200:
-        return {"ok": False, "problems": [f"PR_LIST_FAILED:HTTP{status}"]}
+        return {"ok": False, "write_attempted": False,
+                "problems": [f"PR_LIST_FAILED:HTTP{status}"]}
 
     action, pr, decide_problems = choose_action(
         existing, repo=repo, source_branch=source_branch, base_ref=base_ref)
     if decide_problems:
-        return {"ok": False, "problems": decide_problems}
+        return {"ok": False, "write_attempted": False, "problems": decide_problems}
 
     payload = {"title": title, "body": body}
     if action == "update":
+        # R-1：身份保护必须**先于任何写请求**。真实事故中这里先 PATCH 了他人 PR 的
+        # 标题/正文，之后才发现作者不是机器人。因此把作者分类提前到写入之前，
+        # 且拒绝路径不发出任何写请求（zero-write）。
         number = pr.get("number")
+        author_class, author_problems = classify_author(pr)
+        if author_class != "BOT":
+            return {"ok": False, "action": "none", "write_attempted": False,
+                    "existing_pr": number,
+                    "problems": [f"PR_EXISTS_OTHER_AUTHOR:{number}"] + list(author_problems)}
         status, obj = _call(token, "PATCH", f"/repos/{repo}/pulls/{number}", api, payload)
     else:
         status, obj = _call(token, "POST", f"/repos/{repo}/pulls", api,
