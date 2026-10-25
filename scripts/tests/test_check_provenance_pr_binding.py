@@ -249,8 +249,8 @@ class StaleSuccessVsMalformedNewerRunTest(unittest.TestCase):
                            pull_requests=newer_pull_requests)
         return older, newer
 
-    def old_success_checks(self):
-        return [fx.check_run(n, suite=7001, rid=fx.JOB_IDS[n]) for n in fx.NAMES]
+    def old_success_checks(self, suite=7001):
+        return [fx.check_run(n, suite=suite, rid=fx.JOB_IDS[n]) for n in fx.NAMES]
 
     def test_case_a_newer_malformed_run_blocks_old_success(self):
         older, newer = self.runs_with_newer([{"number": PR}, "malformed"])
@@ -273,6 +273,63 @@ class StaleSuccessVsMalformedNewerRunTest(unittest.TestCase):
         older, newer = self.runs_with_newer([{"number": PR}, {"unexpected": "x"}])
         per, _ = select(self.old_success_checks(), [older, newer])
         self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_newer_same_sha_run_without_pr_association_blocks_old_success(self):
+        older, newer = self.runs_with_newer(None)
+        newer.pop("pull_requests", None)
+        per, problems = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
+        self.assertIn("更新", " ".join(problems))
+        self.assertEqual(per["general-pr-verify"].get("newest_unassociated_run_id"), newer["id"])
+
+    def test_newer_same_sha_run_with_empty_association_blocks_old_success(self):
+        older, newer = self.runs_with_newer([])
+        per, problems = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
+        self.assertTrue(any("关联" in p for p in problems), problems)
+
+    def test_newer_run_explicitly_for_other_pr_does_not_become_target_pr_run(self):
+        older = run_for_pr(PR, rid=7000021, suite=7021, created="2026-10-25T00:00:00Z")
+        newer = run_for_pr(OTHER_PR, rid=7000022, suite=7022, created="2026-10-25T02:00:00Z")
+        per, _ = select(self.old_success_checks(suite=7021), [older, newer])
+        self.assertEqual(cp.overall_state(per), "success")
+        self.assertIsNone(per["general-pr-verify"].get("newest_unassociated_run_id"))
+
+    def test_newer_run_with_wrong_head_blocks_old_success(self):
+        older = run_for_pr(PR, rid=7000031, suite=7031, created="2026-10-25T00:00:00Z")
+        newer = run_for_pr(PR, rid=7000032, suite=7032, sha=fx.OTHER_SHA,
+                           created="2026-10-25T02:00:00Z")
+        per, _ = select(self.old_success_checks(suite=7031), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_newer_declared_failure_for_same_pr_does_not_reuse_old_success(self):
+        older, newer = self.runs_with_newer([{"number": PR}])
+        newer.update(status="completed", conclusion="failure")
+        per, _ = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_newer_declared_in_progress_run_does_not_reuse_old_success(self):
+        older, newer = self.runs_with_newer([{"number": PR}])
+        newer.update(status="in_progress", conclusion=None)
+        per, _ = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_newer_declared_cancelled_run_does_not_reuse_old_success(self):
+        older, newer = self.runs_with_newer([{"number": PR}])
+        newer.update(status="completed", conclusion="cancelled")
+        per, _ = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_newer_unreadable_check_state_is_not_success(self):
+        older, _ = self.runs_with_newer([{"number": PR}])
+        checks = self.old_success_checks()
+        for check in checks:
+            check["status"] = None
+        per, _ = select(checks, [older])
+        self.assertNotEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
 
     def test_case_d_multi_association_newer_run_blocks_old_success(self):
         """多关联运行不得被当作唯一有效运行，也不得被忽略后无条件恢复旧成功。"""
