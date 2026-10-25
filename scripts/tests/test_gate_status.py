@@ -252,7 +252,7 @@ class StatusModeVerifierTest(unittest.TestCase):
         """P0-3：人工 PR 缺 check-run 时不得退回 status 模式。"""
         ok, problems, report = vrc.evaluate(
             self._pr(login="Hawaiine"), [], [], {}, [], HEAD, "main", "m" * 40,
-            statuses=[status()], contexts=["route-a/verify"])
+            statuses=[status()], contexts=["route-a/verify"], expected_pr_number=29)
         self.assertFalse(ok)
         self.assertEqual(report["gate_mode"], "check-run")
         self.assertTrue(any("拒绝降级" in p for p in problems), problems)

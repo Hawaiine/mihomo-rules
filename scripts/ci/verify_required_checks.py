@@ -45,7 +45,7 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
              required: list[dict], expected_head: str, base_branch: str = "main",
              main_sha: str | None = None, statuses: list[dict] | None = None,
              contexts: list[str] | None = None, expected_run_id: str = "",
-             expected_repo: str = "") -> tuple[bool, list[str], dict]:
+             expected_repo: str = "", expected_pr_number: int = 0) -> tuple[bool, list[str], dict]:
     """纯函数判定（便于负向测试）。返回 (ok, problems, report)。"""
     problems: list[str] = []
     report: dict = {"expected_head_sha": expected_head, "checks": {}, "stale_runs": []}
@@ -92,13 +92,19 @@ def evaluate(pr_obj: dict, check_runs: list[dict], workflow_runs: list[dict], jo
             problems.append("PR 状态/head 在门禁判定时不匹配")
         return not problems, problems, report
 
+    if not isinstance(expected_pr_number, int) or isinstance(expected_pr_number, bool) \
+            or expected_pr_number < 1:
+        problems.append("缺少当前 PR 编号：无法认证必需检查来源（fail-closed）")
+        return False, problems, report
+
     if not check_runs:
         problems.append(f"{mode} 模式要求该 head SHA 上存在必需 check-run，实际为 0（拒绝降级）")
         return False, problems, report
 
     per_check, prov_problems = select_checks(
         check_runs=check_runs, manifest=required, workflow_runs=workflow_runs,
-        jobs_by_id=jobs_by_id, expected_head=expected_head, pr_head=head_sha or "")
+        jobs_by_id=jobs_by_id, expected_head=expected_head, pr_head=head_sha or "",
+        expected_pr_number=expected_pr_number)
     report["checks"] = per_check
     state = overall_state(per_check)
     report["provenance_state"] = state
@@ -170,7 +176,7 @@ def verify(*, repo: str, pr: int, expected_head: str, required_manifest: str = D
                                         expected_head, base_branch, main_sha,
                                         statuses=statuses, contexts=contexts,
                                         expected_run_id=os.environ.get("GITHUB_RUN_ID", "").strip(),
-                                        expected_repo=repo)
+                                        expected_repo=repo, expected_pr_number=int(pr))
     report.update({"repo": repo, "pr": int(pr), "required": [c["name"] for c in required],
                    "required_manifest": required_manifest, "writes_performed": []})
     for p in eval_problems:

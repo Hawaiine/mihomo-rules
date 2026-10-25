@@ -31,7 +31,7 @@ class EvaluateTest(unittest.TestCase):
         return vrc.evaluate(pr_obj or fx.pr(), checks,
                             runs if runs is not None else [fx.workflow_run()],
                             fx.jobs_index(jobs if jobs is not None else fx.jobs_for(checks)),
-                            self.required, head, "main", main_sha)
+                            self.required, head, "main", main_sha, expected_pr_number=fx.PR_NUMBER)
 
     def test_all_success_passes(self):
         checks = fx.all_checks()

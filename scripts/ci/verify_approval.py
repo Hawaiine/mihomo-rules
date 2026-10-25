@@ -36,7 +36,8 @@ def latest_by_id(reviews: list[dict]) -> dict[int, dict]:
 
 def verify_approvals(reviews: list[dict], *, head_sha: str, approvers=None,
                      approver_ids=None, required: int = 1,
-                     complete: bool = True, allow_bots: bool = False) -> tuple[bool, list[str], dict]:
+                     complete: bool = True, allow_bots: bool = False,
+                     pr_author_id: int | None = None) -> tuple[bool, list[str], dict]:
     """多审批人版本：按显式策略名单核验，并阻断任何"请求变更"。
 
     与 `verify_approval` 的差异：
@@ -61,12 +62,19 @@ def verify_approvals(reviews: list[dict], *, head_sha: str, approvers=None,
             or required > len(id_list):
         return False, ["APPROVAL_REQUIREMENT_INVALID"], evidence
     evidence["approver_ids"] = id_list
+    evidence["pr_author_id"] = pr_author_id
     latest = latest_by_id(reviews)
     for user_id, review in latest.items():
         if review.get("state") == "CHANGES_REQUESTED" and review.get("commit_id") == head_sha:
             problems.append(f"CHANGES_REQUESTED_PRESENT:{user_id}")
     valid: list[int] = []
+    author_id = pr_author_id if isinstance(pr_author_id, int) and not isinstance(pr_author_id, bool) \
+        and pr_author_id > 0 else None
     for user_id in id_list:
+        if author_id is not None and user_id == author_id:
+            # GitHub 禁止作者自审；即便 API 因历史/异常数据返回 APPROVED，也绝不采信。
+            problems.append(f"APPROVER_IS_PR_AUTHOR:{user_id}")
+            continue
         review = latest.get(user_id)
         if review is None:
             problems.append(f"APPROVAL_MISSING_ID:{user_id}")
