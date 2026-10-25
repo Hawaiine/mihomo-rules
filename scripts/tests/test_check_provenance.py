@@ -36,7 +36,7 @@ def select(check_runs, workflow_runs=None, jobs=None, head=fx.HEAD, pr_head=fx.H
     return cp.select_checks(check_runs=check_runs, manifest=manifest(),
                             workflow_runs=workflow_runs if workflow_runs is not None else [fx.workflow_run()],
                             jobs_by_id=fx.jobs_index(jobs if jobs is not None else fx.all_jobs()),
-                            expected_head=head, pr_head=pr_head)
+                            expected_head=head, pr_head=pr_head, expected_pr_number=fx.PR_NUMBER)
 
 
 class ProvenanceAcceptanceTest(unittest.TestCase):
@@ -282,7 +282,8 @@ class JobIdentityFieldCompletenessTest(unittest.TestCase):
         index[fx.JOB_IDS[name]] = job
         return cp.select_checks(check_runs=fx.all_checks(), manifest=manifest(),
                                 workflow_runs=[fx.workflow_run()], jobs_by_id=index,
-                                expected_head=fx.HEAD, pr_head=fx.HEAD)
+                                expected_head=fx.HEAD, pr_head=fx.HEAD,
+                                expected_pr_number=fx.PR_NUMBER)
 
     def assert_fail_closed(self, per, problems, needle: str, name: str = "general-pr-verify"):
         self.assertNotEqual(per[name]["state"], "success", f"{name} 不应被判定成功：{per[name]}")

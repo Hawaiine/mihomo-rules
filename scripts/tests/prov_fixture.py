@@ -24,6 +24,7 @@ JOB_IDS = {
 }
 NAMES = list(JOB_IDS)
 HEAD = "d129e4526b0dac83297cb98df1e8c6b7ebba1b6c"
+PR_NUMBER = 29
 OTHER_SHA = "b" * 40
 MAIN_SHA = "f4447b73023474cb2f62de51277397fb8df911f0"
 APP = {"slug": "github-actions", "id": 15368}
@@ -38,9 +39,23 @@ def check_run(name, conclusion="success", status="completed", sha=HEAD, app=None
             "details_url": f"https://github.com/o/r/runs/{rid if rid is not None else JOB_IDS.get(name, 1)}"}
 
 
-def workflow_run(rid=RUN_ID, path=PR_VERIFY_PATH, event="pull_request", sha=HEAD, suite=SUITE):
-    return {"id": rid, "path": path, "event": event, "head_sha": sha, "check_suite_id": suite,
-            "status": "completed", "conclusion": "success"}
+def workflow_run(rid=RUN_ID, path=PR_VERIFY_PATH, event="pull_request", sha=HEAD, suite=SUITE,
+                 pr_number=PR_NUMBER, pull_requests="default", created="2026-10-13T00:00:00Z",
+                 attempt=1):
+    """真实形状：run 携带 `pull_requests[]`（来源认证据此绑定当前 PR）。
+
+    `pull_requests="default"` 生成一条属于 `pr_number` 的关联；传 None 表示字段缺失，
+    传列表则原样使用（用于负例）。
+    """
+    run = {"id": rid, "path": path, "event": event, "head_sha": sha, "check_suite_id": suite,
+           "status": "completed", "conclusion": "success",
+           "created_at": created, "run_attempt": attempt}
+    if pull_requests == "default":
+        run["pull_requests"] = [{"number": pr_number, "head": {"sha": sha},
+                                 "base": {"ref": "main"}}]
+    elif pull_requests is not None:
+        run["pull_requests"] = pull_requests
+    return run
 
 
 def job(name, job_id=None, sha=HEAD, status="completed", conclusion="success"):
