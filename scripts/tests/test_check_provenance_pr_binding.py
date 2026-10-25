@@ -372,6 +372,38 @@ class PrNumberValidationTest(unittest.TestCase):
                     self.assertEqual(per[name]["state"], cp.STATE_UNVERIFIED, name)
                 self.assertTrue(any("无效" in p for p in problems), problems)
 
+    def test_select_checks_invalid_pr_precedes_malformed_workflow_run(self):
+        """入口编号错误时，必须先 fail-closed；不得先对畸形 workflow run 做 int 转换。"""
+        manifest = cp.load_manifest(MANIFEST)
+        malformed_run = {"check_suite_id": "not-an-integer", "id": "also-not-an-integer",
+                         "pull_requests": [{"number": 36}]}
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                per, problems = cp.select_checks(
+                    check_runs=fx.all_checks(), manifest=manifest,
+                    workflow_runs=[malformed_run], jobs_by_id=fx.jobs_index(fx.all_jobs()),
+                    expected_head=fx.HEAD, pr_head=fx.HEAD, expected_pr_number=bad)
+                self.assertNotEqual(cp.overall_state(per), "success")
+                self.assertEqual(sorted(per), sorted(fx.NAMES))
+                self.assertTrue(all(v["state"] == cp.STATE_UNVERIFIED for v in per.values()))
+                self.assertTrue(any("编号无效" in p for p in problems), problems)
+
+    def test_belongs_invalid_pr_precedes_source_parsing(self):
+        malformed_run = {"pull_requests": 35}
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                belongs, reason = cp.run_belongs_to_pr(malformed_run, bad)
+                self.assertFalse(belongs)
+                self.assertIn("编号无效", reason)
+
+    def test_claims_invalid_pr_precedes_source_parsing(self):
+        class ExplodingSource(dict):
+            def get(self, key, default=None):
+                raise AssertionError("invalid expected PR must be rejected before reading run data")
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                self.assertFalse(cp.run_claims_pr(ExplodingSource(), bad))
+
     def test_select_checks_normal_positive_number_unchanged(self):
         per, problems = select(fx.all_checks(), [run_for_pr(PR)], pr_number=PR)
         self.assertEqual(problems, [])

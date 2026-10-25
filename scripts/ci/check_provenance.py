@@ -211,22 +211,12 @@ def run_pr_numbers(run: dict) -> list[int]:
 
 
 def run_claims_pr(run: dict, expected_pr_number: int) -> bool:
-    """原始 `pull_requests[]` 是否**明确提及**目标 PR（只用于检测，不用于认证）。
-
-    与 `run_pr_numbers()` 的分工必须严格区分：
-
-    * `run_pr_numbers()` 决定「整条关联是否**可验证**」，只有它可验证且恰为
-      `[expected_pr_number]` 时才算该 PR 的有效运行；
-    * 本函数只回答「原始数据有没有提到目标 PR」，用于识别
-      「更新、声称与本 PR 有关、但关联整体不可验证（含畸形元素或多关联）」的运行——
-      这类运行必须**阻断旧成功**，但绝不能被认证为有效运行。
-
-    严格性：不把 `"36"` 当数字、不把 `True` 当 1；只有严格正整数且等于目标 PR 才算提及。
-    """
+    """只检测原始 pull_requests[] 是否明确提及目标 PR，不负责认证。"""
+    # 参数边界先于任何来源对象读取：无效目标不触碰 run 数据，也不可能参与相等比较。
+    if not is_valid_pr_number(expected_pr_number):
+        return False
     raw = run.get("pull_requests")
     if not isinstance(raw, list):
-        return False
-    if not is_valid_pr_number(expected_pr_number):
         return False
     for item in raw:
         if not isinstance(item, dict):
@@ -247,10 +237,11 @@ def run_belongs_to_pr(run: dict, expected_pr_number: int) -> tuple[bool, str]:
     两条 run 的 event 都是 `pull_request`、head_sha 也相同，只有 `pull_requests[].number`
     能区分它们。缺字段即拒绝，不做任何推断。
     """
-    nums = run_pr_numbers(run)
+    # 必须先校验目标编号，再读取/解析来源数据，保证异常编号立即 fail-closed。
     if not is_valid_pr_number(expected_pr_number):
         return False, (f"目标 PR 编号无效：{expected_pr_number!r}；"
                        f"必须是严格正整数（fail-closed）")
+    nums = run_pr_numbers(run)
     if not nums:
         return False, "workflow run 缺少 pull_requests 关联（无法证明属于当前 PR）"
     if len(nums) != 1:
@@ -410,13 +401,10 @@ def select_checks(*, check_runs: list[dict], manifest: list[dict], workflow_runs
     返回 (per_check, problems)。per_check[name] = {state, ...}，
     state ∈ {success, not-success, in-progress, unverified, missing}。
     """
-    runs_by_suite = index_by_suite(workflow_runs)
-    per_check: dict[str, dict] = {}
-    problems: list[str] = []
-    # 共享生产入口不能只依赖上游传入有效编号：编号无效即 fail-closed，
-    # 不尝试对任何编号做来源认证（Python 中 True == 1、0 == 0 会让相等比较失真）。
     if not is_valid_pr_number(expected_pr_number):
         detail = (f"目标 PR 编号无效：{expected_pr_number!r}；必须是严格正整数（fail-closed）")
+        per_check: dict[str, dict] = {}
+        problems: list[str] = [detail]
         for entry in manifest:
             per_check[entry["name"]] = {
                 "found": False, "verified": 0, "rejected": [],
@@ -424,7 +412,12 @@ def select_checks(*, check_runs: list[dict], manifest: list[dict], workflow_runs
                 "expected_workflow": entry["workflow"], "expected_job_id": entry["job_id"],
                 "state": STATE_UNVERIFIED, "detail": detail,
             }
-        return per_check, [detail]
+        return per_check, problems
+
+    # 只有目标 PR 编号经严格验证后，才可解析 workflow runs（其中的 suite/id 会做 int 转换）。
+    runs_by_suite = index_by_suite(workflow_runs)
+    per_check: dict[str, dict] = {}
+    problems: list[str] = []
     for entry in manifest:
         name = entry["name"]
         candidates = [r for r in check_runs if r.get("name") == name]
