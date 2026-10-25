@@ -308,6 +308,76 @@ class StaleSuccessVsMalformedNewerRunTest(unittest.TestCase):
         self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=None), PR))
 
 
+class PrNumberValidationTest(unittest.TestCase):
+    """目标 PR 编号必须是**严格正整数**：bool/零/负数/字符串/浮点/None 一律 fail-closed。
+
+    Python 中 `True == 1`、`0 == 0` 都成立，因此若不在入口校验编号参数本身，
+    布尔值或 0 可能通过相等比较而进入来源认证调用链。这不是说真实 PR #36 触发过该问题，
+    而是用负向测试把参数边界封闭。
+
+    每个断言都作用于**生产函数**（`run_claims_pr` / `run_belongs_to_pr` / `select_checks`），
+    不只测试辅助函数或夹具。
+    """
+
+    INVALID_NUMBERS = (True, False, 0, -1, "36", 36.0, None)
+    INVALID_SOURCES = ({"number": True}, {"number": False}, {"number": 0},
+                       {"number": -1}, {"number": "36"}, {"number": 36.0})
+
+    def test_claims_rejects_invalid_expected_pr_number(self):
+        run = run_for_pr(PR)                      # 原始关联明确含 35
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                self.assertFalse(cp.run_claims_pr(run, bad))
+
+    def test_claims_ignores_invalid_source_numbers(self):
+        for item in self.INVALID_SOURCES:
+            with self.subTest(item=item):
+                run = run_for_pr(PR, pull_requests=[item])
+                self.assertFalse(cp.run_claims_pr(run, PR))
+                self.assertFalse(cp.run_claims_pr(run, 1))     # True 不得被当作 1
+
+    def test_claims_keeps_detection_semantics(self):
+        self.assertTrue(cp.run_claims_pr(run_for_pr(PR), PR))
+        self.assertTrue(cp.run_claims_pr(run_for_pr(PR, pull_requests=[{"number": PR}, "malformed"]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=[]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=None), PR))
+
+    def test_belongs_to_pr_rejects_invalid_expected_number(self):
+        run = run_for_pr(1, pull_requests=[{"number": 1}])
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                belongs, reason = cp.run_belongs_to_pr(run, bad)
+                self.assertFalse(belongs)
+                self.assertIn("无效", reason)
+
+    def test_belongs_to_pr_keeps_strict_association(self):
+        ok, why = cp.run_belongs_to_pr(run_for_pr(PR), PR)
+        self.assertTrue(ok, why)
+        for raw in ([{"number": PR}, {"number": 36}], [{"number": PR}, "malformed"],
+                    [], [{"number": "36"}], [{"number": True}]):
+            with self.subTest(raw=raw):
+                run = run_for_pr(PR, pull_requests=raw)
+                belongs, why = cp.run_belongs_to_pr(run, PR)
+                self.assertFalse(belongs, f"{raw!r} 不应通过：{why}")
+        belongs, why = cp.run_belongs_to_pr(run_for_pr(OTHER_PR), PR)
+        self.assertFalse(belongs, why)
+
+    def test_select_checks_rejects_invalid_expected_number(self):
+        for bad in self.INVALID_NUMBERS:
+            with self.subTest(expected=bad):
+                per, problems = select(fx.all_checks(), [run_for_pr(PR)], pr_number=bad)
+                self.assertNotEqual(cp.overall_state(per), "success")
+                self.assertEqual(sorted(per), sorted(fx.NAMES))
+                for name in fx.NAMES:
+                    self.assertEqual(per[name]["state"], cp.STATE_UNVERIFIED, name)
+                self.assertTrue(any("无效" in p for p in problems), problems)
+
+    def test_select_checks_normal_positive_number_unchanged(self):
+        per, problems = select(fx.all_checks(), [run_for_pr(PR)], pr_number=PR)
+        self.assertEqual(problems, [])
+        self.assertEqual(cp.overall_state(per), "success")
+
+
 class ProvenanceReportFieldsTest(unittest.TestCase):
     def test_report_exposes_pr_binding(self):
         per, _ = select(fx.all_checks(), [run_for_pr(PR)])
