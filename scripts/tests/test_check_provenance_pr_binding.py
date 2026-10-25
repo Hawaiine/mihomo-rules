@@ -163,6 +163,73 @@ class ActionRequiredCurrentEventTest(unittest.TestCase):
                              expected_head=fx.HEAD, pr_head=fx.HEAD)
 
 
+class MalformedAssociationTest(unittest.TestCase):
+    """malformed `pull_requests[]` 必须**整条**失效，不得丢弃异常元素后继续采信。
+
+    真实风险：若输入同时含一条有效关联和一个畸形元素，宽容实现会丢掉畸形元素、只返回有效编号，
+    于是 `run_belongs_to_pr()` 会把「本已不完整/格式异常的关联信息」当成唯一关联而放行。
+    因此 `run_pr_numbers()` 必须严格：任一元素不可验证 ⇒ 返回 []，由上层 fail-closed。
+
+    每个用例都同时断言 (a) 解析结果 与 (b) **经过生产来源认证调用链**的判定，
+    不只测试孤立 helper。
+    """
+
+    def assert_rejected(self, pull_requests):
+        run = run_for_pr(PR, pull_requests=pull_requests)
+        self.assertEqual(cp.run_pr_numbers(run), [], f"malformed 关联必须整条失效：{pull_requests!r}")
+        per, _ = select(fx.all_checks(), [run])
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED,
+                         f"malformed 关联不得通过来源认证：{pull_requests!r}")
+        self.assertNotEqual(cp.overall_state(per), "success")
+        belongs, why = cp.run_belongs_to_pr(run, PR)
+        self.assertFalse(belongs, why)
+
+    def test_valid_plus_non_object_element(self):
+        """用例 A：有效关联 + 非对象元素。"""
+        self.assert_rejected([{"number": PR}, "malformed"])
+
+    def test_valid_plus_object_without_number(self):
+        """用例 B：有效关联 + 缺少编号的对象。"""
+        self.assert_rejected([{"number": PR}, {"unexpected": "missing number"}])
+
+    def test_valid_plus_string_number(self):
+        """用例 C：有效关联 + 字符串编号（不得自动转成整数留下有效编号）。"""
+        self.assert_rejected([{"number": PR}, {"number": "36"}])
+
+    def test_valid_plus_boolean_number(self):
+        """用例 D：有效关联 + 布尔编号（True 不得被当作 1）。"""
+        self.assert_rejected([{"number": PR}, {"number": True}])
+
+    def test_valid_plus_zero_and_negative(self):
+        """正整数的边界：0 与负数必须整条失效。"""
+        self.assert_rejected([{"number": PR}, {"number": 0}])
+        self.assert_rejected([{"number": PR}, {"number": -1}])
+
+    def test_non_list_and_empty_are_invalid(self):
+        for raw in ({}, {"number": PR}, "35", 35, None, []):
+            with self.subTest(raw=raw):
+                run = run_for_pr(PR, pull_requests=raw)
+                self.assertEqual(cp.run_pr_numbers(run), [])
+
+    def test_multiple_valid_numbers_preserved_for_rejection(self):
+        """用例 E：多个有效编号必须**保留多编号**，由上层判为多关联并拒绝。"""
+        run = run_for_pr(PR, pull_requests=[{"number": PR}, {"number": 36}])
+        self.assertEqual(cp.run_pr_numbers(run), [PR, 36], "不得静默缩减为单一编号")
+        belongs, why = cp.run_belongs_to_pr(run, PR)
+        self.assertFalse(belongs)
+        self.assertIn("多个 PR", why)
+        per, _ = select(fx.all_checks(), [run])
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
+
+    def test_normal_single_association_not_regressed(self):
+        """用例 F：正常单一关联不得回归。"""
+        run = run_for_pr(PR)
+        self.assertEqual(cp.run_pr_numbers(run), [PR])
+        per, problems = select(fx.all_checks(), [run])
+        self.assertEqual(problems, [])
+        self.assertEqual(cp.overall_state(per), "success")
+
+
 class ProvenanceReportFieldsTest(unittest.TestCase):
     def test_report_exposes_pr_binding(self):
         per, _ = select(fx.all_checks(), [run_for_pr(PR)])

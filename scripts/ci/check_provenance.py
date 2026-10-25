@@ -170,17 +170,32 @@ def needed_run_ids(check_runs: list[dict], manifest: list[dict], workflow_runs: 
 # ------------------------------------------------------------------- 身份认证
 
 def run_pr_numbers(run: dict) -> list[int]:
-    """workflow run 关联的 PR 编号列表（真实 API 字段 `pull_requests[]`）。
+    """严格读取 workflow run 的 `pull_requests[]` 关联（真实 API 字段）。
 
-    只接受正整数；缺失、空列表、非对象一律返回 []，由调用方 fail-closed。
+    严格口径（整条关联一起判定，不做元素级宽容）：
+
+    * 字段缺失、空列表、非列表 ⇒ ``[]``；
+    * 任一元素不是对象 ⇒ ``[]``；
+    * 任一元素缺失 `number`、`number` 为布尔/非整数/小于 1 ⇒ ``[]``
+      （**不**把 `"35"` 转成整数，**不**把 `True` 当 1）；
+    * 只在**全部**元素都可验证时返回编号列表。
+
+    多个有效编号必须**原样保留**（不得只挑其中一个）：由 `run_belongs_to_pr()` 与
+    `_newest_verification_run()` 判定为「多关联」并拒绝。
+
+    为什么必须整条失效：若同时存在一条有效关联和一个畸形元素，元素级宽容会丢掉畸形项、
+    只返回那一个有效编号，于是上层会把「本就不完整/格式异常的关联信息」当成唯一关联放行。
     """
+    raw = run.get("pull_requests")
+    if not isinstance(raw, list) or not raw:
+        return []
     out: list[int] = []
-    for item in run.get("pull_requests") or []:
+    for item in raw:
         if not isinstance(item, dict):
-            continue
+            return []
         num = item.get("number")
         if isinstance(num, bool) or not isinstance(num, int) or num < 1:
-            continue
+            return []
         out.append(num)
     return out
 
