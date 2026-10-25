@@ -230,6 +230,84 @@ class MalformedAssociationTest(unittest.TestCase):
         self.assertEqual(cp.overall_state(per), "success")
 
 
+class StaleSuccessVsMalformedNewerRunTest(unittest.TestCase):
+    """更新的运行**明确提及目标 PR**但关联不可验证/非唯一时，不得忽略它并沿用旧成功。
+
+    缺口：`_newest_verification_run()` 只把 `run_pr_numbers(run) == [expected_pr]` 的运行列为候选。
+    若更新的运行原始 `pull_requests` 里明明含目标 PR（如 `[{"number":36}, "malformed"]`），
+    整条解析为 `[]` 后被完全排除，于是更旧的、已验证成功的运行仍被当成「最新」，
+    旧 success 被沿用——与既有 R-2 语义（更新运行尚未产出有效检查时旧成功不得沿用）冲突。
+
+    语义边界（不得越界）：仅凭相同 SHA / 相同 workflow path / 相同 event，**不能**把一条属于
+    其他 PR 的正常运行当成目标 PR 的运行；只有原始数据**明确提及**目标 PR 才进入本判定。
+    """
+
+    def runs_with_newer(self, newer_pull_requests, *, newer_created="2026-10-25T02:00:00Z",
+                        older_created="2026-10-25T00:00:00Z", older_pr=PR):
+        older = run_for_pr(older_pr, rid=7000001, suite=7001, created=older_created)
+        newer = run_for_pr(PR, rid=7000002, suite=7002, created=newer_created,
+                           pull_requests=newer_pull_requests)
+        return older, newer
+
+    def old_success_checks(self):
+        return [fx.check_run(n, suite=7001, rid=fx.JOB_IDS[n]) for n in fx.NAMES]
+
+    def test_case_a_newer_malformed_run_blocks_old_success(self):
+        older, newer = self.runs_with_newer([{"number": PR}, "malformed"])
+        per, problems = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success",
+                            "更新的畸形关联运行不得被忽略")
+        state = per["general-pr-verify"]["state"]
+        self.assertEqual(state, cp.STATE_UNVERIFIED)
+        joined = " ".join(problems)
+        self.assertTrue("关联" in joined or "不可验证" in joined, problems)
+        info = per["general-pr-verify"]
+        # 判定必须能区分「有更新但关联畸形」与「根本没有运行」：两者都不可采信，
+        # 但审计字段必须指明被考虑过的旧检查与更新的声明运行。
+        self.assertEqual(info.get("newest_claiming_run_id"), 7000002)
+        self.assertEqual(info.get("considered_workflow_run_id"), 7000001)
+        self.assertIsNotNone(info.get("considered_check_run_id"))
+        self.assertIn("7000002", info.get("detail", ""))
+
+    def test_case_a2_newer_missing_number_element_blocks_old_success(self):
+        older, newer = self.runs_with_newer([{"number": PR}, {"unexpected": "x"}])
+        per, _ = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+
+    def test_case_d_multi_association_newer_run_blocks_old_success(self):
+        """多关联运行不得被当作唯一有效运行，也不得被忽略后无条件恢复旧成功。"""
+        older, newer = self.runs_with_newer([{"number": PR}, {"number": 37}])
+        per, problems = select(self.old_success_checks(), [older, newer])
+        self.assertNotEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
+
+    def test_case_b_runs_belonging_to_other_pr_are_not_borrowed(self):
+        """同 SHA 但只属于 PR #33 的运行，不得被判为目标 PR #35 的运行。"""
+        older = run_for_pr(33, rid=7000011, suite=7011, created="2026-10-25T00:00:00Z")
+        ignored_newer = run_for_pr(33, rid=7000012, suite=7012, created="2026-10-25T02:00:00Z")
+        per, problems = select(self.old_success_checks(), [older, ignored_newer],
+                               pr_number=PR)          # PR=35
+        self.assertNotEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["state"], cp.STATE_UNVERIFIED)
+        self.assertIsNone(per["general-pr-verify"].get("newest_claiming_run_id"))
+
+    def test_case_c_normal_newest_run_still_passes(self):
+        older, newer = self.runs_with_newer([{"number": PR}])
+        checks = [fx.check_run(n, suite=7002, rid=fx.JOB_IDS[n]) for n in fx.NAMES]
+        per, problems = select(checks, [older, newer])
+        self.assertEqual(problems, [])
+        self.assertEqual(cp.overall_state(per), "success")
+        self.assertEqual(per["general-pr-verify"]["newest_pr_run_id"], 7000002)
+
+    def test_claims_helper_is_strict(self):
+        self.assertTrue(cp.run_claims_pr(run_for_pr(PR), PR))
+        self.assertTrue(cp.run_claims_pr(run_for_pr(PR, pull_requests=[{"number": PR}, "x"]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=[{"number": "36"}]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=[{"number": True}]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=[]), PR))
+        self.assertFalse(cp.run_claims_pr(run_for_pr(PR, pull_requests=None), PR))
+
+
 class ProvenanceReportFieldsTest(unittest.TestCase):
     def test_report_exposes_pr_binding(self):
         per, _ = select(fx.all_checks(), [run_for_pr(PR)])

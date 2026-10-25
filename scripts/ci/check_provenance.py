@@ -200,6 +200,33 @@ def run_pr_numbers(run: dict) -> list[int]:
     return out
 
 
+def run_claims_pr(run: dict, expected_pr_number: int) -> bool:
+    """原始 `pull_requests[]` 是否**明确提及**目标 PR（只用于检测，不用于认证）。
+
+    与 `run_pr_numbers()` 的分工必须严格区分：
+
+    * `run_pr_numbers()` 决定「整条关联是否**可验证**」，只有它可验证且恰为
+      `[expected_pr_number]` 时才算该 PR 的有效运行；
+    * 本函数只回答「原始数据有没有提到目标 PR」，用于识别
+      「更新、声称与本 PR 有关、但关联整体不可验证（含畸形元素或多关联）」的运行——
+      这类运行必须**阻断旧成功**，但绝不能被认证为有效运行。
+
+    严格性：不把 `"36"` 当数字、不把 `True` 当 1；只有严格正整数且等于目标 PR 才算提及。
+    """
+    raw = run.get("pull_requests")
+    if not isinstance(raw, list):
+        return False
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        num = item.get("number")
+        if isinstance(num, bool) or not isinstance(num, int):
+            continue
+        if num == expected_pr_number:
+            return True
+    return False
+
+
 def run_belongs_to_pr(run: dict, expected_pr_number: int) -> tuple[bool, str]:
     """证明该 workflow run 确实属于**当前 PR**。
 
@@ -319,11 +346,35 @@ def verify_check_run_provenance(*, check_run: dict, entry: dict, runs_by_suite: 
     return (not problems), problems, info
 
 
+def _run_order_key(run: dict) -> tuple[str, int, int]:
+    """运行新旧排序键（与既有 `_newest_verification_run` 口径一致）。"""
+    return (str(run.get("created_at") or ""), int(run.get("run_attempt") or 1),
+            int(run.get("id") or 0))
+
+
+def _newest_claiming_run(workflow_runs: list[dict], entry: dict,
+                         expected_pr_number: int) -> dict | None:
+    """该 PR 在预期 workflow 上**声称与本 PR 有关**的最新运行。
+
+    「声称有关」= 原始 `pull_requests[]` 明确提及目标 PR（`run_claims_pr`）。
+    这包括两种情况：关联可验证且唯一（正常），以及关联整体不可验证（畸形元素 / 多关联）。
+    正是后者曾被完全排除，导致更旧的成功运行被当成「最新」而沿用。
+    """
+    candidates = [run for run in workflow_runs
+                  if run.get("path") == entry["workflow"]
+                  and run.get("event") == ALLOWED_WORKFLOW_EVENT
+                  and run_claims_pr(run, expected_pr_number)]
+    if not candidates:
+        return None
+    return max(candidates, key=_run_order_key)
+
+
 def _newest_verification_run(workflow_runs: list[dict], entry: dict,
                              expected_pr_number: int) -> dict | None:
     """该 PR 在预期 workflow 上的**最新** pull_request 运行（按 created_at/attempt/id）。
 
     用于阻止「同一 PR 已有更新运行、但新运行尚未产出成功检查时，沿用旧运行的 success」。
+    只统计**来源可验证**（`run_pr_numbers(run) == [expected_pr_number]`）的运行。
     """
     candidates = [run for run in workflow_runs
                   if run.get("path") == entry["workflow"]
@@ -388,7 +439,28 @@ def select_checks(*, check_runs: list[dict], manifest: list[dict], workflow_runs
                                                               t[0].get("id") or 0))[-1]
         # R-2b：即使来源通过认证，也必须是该 PR **最新**的一次验证运行；否则拒绝。
         newest = _newest_verification_run(workflow_runs, entry, expected_pr_number)
+        # R-2c：更新的运行可能**明确提及本 PR 但关联整体不可验证**（畸形元素 / 多关联）。
+        # 这类运行不得被认证为有效运行，但**更不得被悄悄忽略后继续沿用旧成功**——
+        # 否则「更新运行尚未产出有效检查时旧成功不得沿用」的语义会被绕过。
+        newest_claim = _newest_claiming_run(workflow_runs, entry, expected_pr_number)
         info_out["newest_pr_run_id"] = newest.get("id") if newest else None
+        info_out["newest_claiming_run_id"] = newest_claim.get("id") if newest_claim else None
+        if newest_claim is not None and (newest is None
+                                         or _run_order_key(newest_claim) > _run_order_key(newest)):
+            claimed_ids = run_pr_numbers(newest_claim)
+            shape = "多关联" if len(claimed_ids) > 1 else "关联不可验证"
+            # 审计字段：明确指出「被考虑但不得沿用的旧检查」与「更新的声明运行」
+            info_out["considered_check_run_id"] = latest.get("id")
+            info_out["considered_workflow_run_id"] = latest_info.get("workflow_run_id")
+            info_out["state"] = STATE_UNVERIFIED
+            info_out["detail"] = (f"存在更新并声称属于本 PR 的运行 {newest_claim.get('id')}"
+                                 f"（{shape}：原始 pull_requests 提及本 PR 但整条不可采信），"
+                                 f"不得沿用旧运行 "
+                                 f"{latest_info.get('workflow_run_id') or 'n/a'} 的 "
+                                 f"{latest.get('conclusion')!r} 检查")
+            problems.append(f"{name}: {info_out['detail']}")
+            per_check[name] = info_out
+            continue
         if newest is None:
             info_out["state"] = STATE_UNVERIFIED
             info_out["detail"] = ("该 PR 没有任何可识别的 pull_request 验证运行"
