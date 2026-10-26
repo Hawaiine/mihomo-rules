@@ -104,26 +104,43 @@ def load_required(path: str) -> list[str]:
     return names
 
 
+# run id 只能是 ASCII 十进制数字。必须显式 re.ASCII：默认 \d 会匹配全角/阿拉伯-印度数字，
+# 随后 int() 对 Unicode 上标（如 '²'）会抛 ValueError，导致"畸形输入 → 崩溃"而非 fail-closed。
+_RUN_ID_RE = re.compile(r"[0-9]+\Z", re.ASCII)
+
+# 本项目防御性约定（**非** GitHub 官方限制，也不声称是官方最大长度）：真实 run id 远小于 20 位。
+# 该上限**同时**用于 external_id 与 details_url 两个来源，保证同一对象不会出现两种解析口径。
+EXTERNAL_ID_MAX_DIGITS = 20
+
+
 def parse_run_id(url: str) -> str | None:
-    """从 details_url/target_url 严格提取 run id（拒绝畸形与前缀碰撞）。"""
+    """从 details_url/target_url 严格提取 run id（拒绝畸形与前缀碰撞）。
+
+    语义：
+      * 必须含 ``/actions/runs/`` 标记；取其后第一段；
+      * 先剥离 ``?`` 查询串与 ``#`` 片段，再剥离尾斜杠；
+      * 只接受 ASCII 十进制数字、无前导零、数值 ≥ 1；
+      * 长度 ≤ ``EXTERNAL_ID_MAX_DIGITS``（20 位）：这是**本项目的防御性约定**，
+        不是 GitHub 官方的 run id 长度上限；与 ``parse_external_id()`` 保持同一口径。
+      * 其余一律返回 ``None``（畸形输入不得抛异常）。
+    """
     if not isinstance(url, str):
         return None
     marker = "/actions/runs/"
     if marker not in url:
         return None
     tail = url.split(marker, 1)[1].split("?", 1)[0].split("#", 1)[0].rstrip("/")
-    if not tail.isdigit() or tail != str(int(tail)) or int(tail) < 1:
+    # 先做 ASCII 格式校验，再谈数值——避免 int() 对 Unicode 数字抛未捕获异常。
+    if _RUN_ID_RE.fullmatch(tail) is None:
+        return None
+    if len(tail) > EXTERNAL_ID_MAX_DIGITS:   # 与 external_id 共用同一上限
+        return None
+    if tail[0] == "0":  # 前导零（含全零形态）一律拒绝
         return None
     return tail
 
 
 EXTERNAL_ID_PREFIX = "route-a-run:"
-# run id 后缀只允许 ASCII 十进制数字。必须显式 re.ASCII：
-# 默认 \d 会匹配全角/阿拉伯-印度数字等 Unicode 数字，滥用后 int() 可能抛 ValueError，
-# 导致"畸形输入 → 崩溃"而不是 fail-closed。
-_RUN_ID_RE = re.compile(r"[0-9]+\Z", re.ASCII)
-# 本项目防御性约定（**非** GitHub 官方限制）：GitHub run id 远小于 20 位。
-EXTERNAL_ID_MAX_DIGITS = 20
 
 
 def parse_external_id(value) -> str | None:

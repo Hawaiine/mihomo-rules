@@ -219,6 +219,91 @@ class ParseRunIdTest(unittest.TestCase):
         self.assertEqual(
             acc.parse_run_id("https://github.com/o/r/actions/runs/77?check_suite_focus=true#x"), "77")
 
+    # --- F-A：Unicode 数字不得导致未捕获异常 ---
+    def test_unicode_digits_rejected_without_crashing(self):
+        """上标/全角/混合数字必须返回 None，不得抛 ValueError 造成 CLI traceback。"""
+        for bad in ("²", "²³", "１２３", "١٢٣", "१२३", "½", "5²", "1２"):
+            url = f"https://github.com/o/r/actions/runs/{bad}"
+            try:
+                got = acc.parse_run_id(url)
+            except Exception as exc:  # noqa: BLE001 - 崩溃本身即缺陷
+                self.fail(f"{bad!r} 抛出 {type(exc).__name__}: {exc}；应返回 None")
+            self.assertIsNone(got, repr(bad))
+
+    def test_trailing_slash_and_valid_ids_preserved(self):
+        for good, want in (("https://github.com/o/r/actions/runs/1", "1"),
+                           ("https://github.com/o/r/actions/runs/500/", "500"),
+                           ("https://github.com/o/r/actions/runs/39713755722?x=1", "39713755722")):
+            self.assertEqual(acc.parse_run_id(good), want)
+
+    # --- 审阅补强：details_url 解析必须与 external_id 共用 20 位防御性上限 ---
+    def test_twenty_digit_run_id_accepted(self):
+        rid = "1" + "0" * 19                     # 20 位：项目约定上限，仍接受
+        self.assertEqual(acc.parse_run_id(f"https://github.com/o/r/actions/runs/{rid}"), rid)
+
+    def test_twenty_one_digit_run_id_rejected(self):
+        rid = "1" + "0" * 20                     # 21 位：超出上限，必须拒绝
+        self.assertIsNone(acc.parse_run_id(f"https://github.com/o/r/actions/runs/{rid}"))
+
+    def test_absurdly_long_digits_rejected_without_crashing(self):
+        rid = "9" * 5000
+        try:
+            got = acc.parse_run_id(f"https://github.com/o/r/actions/runs/{rid}")
+        except Exception as exc:  # noqa: BLE001 - 崩溃本身即缺陷
+            self.fail(f"超长数字抛出 {type(exc).__name__}: {exc}；应返回 None")
+        self.assertIsNone(got)
+
+    def test_zero_forms_and_unicode_rejected_under_length_cap(self):
+        for bad in ("0", "00", "0" * 20, "0" * 21, "１２３", "١٢٣", "5²", "1２", "²"):
+            with self.subTest(bad=bad):
+                self.assertIsNone(acc.parse_run_id(f"https://github.com/o/r/actions/runs/{bad}"))
+
+    def test_resolve_rejects_oversized_details_run_id(self):
+        rid = "1" + "0" * 20
+        got, src, conflict = acc.resolve_publisher_run_id(
+            {"details_url": f"https://github.com/o/r/actions/runs/{rid}"})
+        self.assertIsNone(got)
+        self.assertIsNone(src)
+        self.assertFalse(conflict)
+
+    def test_classify_oversized_details_run_id_is_evidence_insufficient(self):
+        e = ev()
+        ra = next(c for c in e["check_runs"]["check_runs"] if c["name"] == "route-a/verify")
+        ra.pop("external_id", None)
+        ra["details_url"] = "https://github.com/o/r/actions/runs/" + "1" + "0" * 20
+        try:
+            result = acc.classify(e, REQUIRED)
+        except Exception as exc:  # noqa: BLE001
+            self.fail(f"classify 抛出 {type(exc).__name__}: {exc}")
+        self.assertEqual(result["verdict"], acc.EVIDENCE_INSUFFICIENT)
+        self.assertIn("PUBLISHER_RUN_UNBOUND", [r["code"] for r in result["reasons"]])
+
+    def test_invalid_details_url_does_not_bypass_external_id_binding(self):
+        """details_url 畸形时，若 external_id 合法仍以 external_id 绑定；两者都坏则 fail-closed。"""
+        rid, src, conflict = acc.resolve_publisher_run_id(
+            {"external_id": "route-a-run:500",
+             "details_url": "https://github.com/o/r/actions/runs/²"})
+        self.assertEqual((rid, src, conflict), ("500", "external_id", False))
+        rid2, src2, conflict2 = acc.resolve_publisher_run_id(
+            {"details_url": "https://github.com/o/r/actions/runs/²"})
+        self.assertIsNone(rid2)
+        self.assertIsNone(src2)
+        self.assertFalse(conflict2)
+
+    def test_classify_malformed_details_url_fails_closed_without_traceback(self):
+        """无 external_id 且 details_url 畸形时，classify 返回证据不足，不冒 PASS、不崩溃。"""
+        e = ev()
+        ra = next(c for c in e["check_runs"]["check_runs"] if c["name"] == "route-a/verify")
+        ra.pop("external_id", None)
+        ra["details_url"] = "https://github.com/o/r/actions/runs/²"
+        try:
+            result = acc.classify(e, REQUIRED)
+        except Exception as exc:  # noqa: BLE001 - CLI 路径异常不得逸出
+            self.fail(f"classify 抛出 {type(exc).__name__}: {exc}")
+        self.assertEqual(result["verdict"], acc.EVIDENCE_INSUFFICIENT)
+        self.assertIn("PUBLISHER_RUN_UNBOUND", [r["code"] for r in result["reasons"]])
+
+
 
 class Stub(BaseHTTPRequestHandler):
     routes: dict = {}
