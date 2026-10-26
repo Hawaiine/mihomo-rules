@@ -80,19 +80,26 @@ class TestBrandCatalog(unittest.TestCase):
             export = subprocess.run([sys.executable, str(clone / "scripts/export-brand-relationships.py")],
                                     cwd=clone, text=True, capture_output=True)
             if export.returncode:
-                return export.returncode, export.stdout + export.stderr
+                raise AssertionError(
+                    "test fixture preparation failed at pinned upstream exporter; "
+                    f"brand_catalog CLI NOT EXECUTED (rc={export.returncode}): "
+                    + (export.stdout + export.stderr)
+                )
             subprocess.run(["git", "-C", str(clone), "add", "config/brands.json", "config/brand-relationships.json"], check=True)
             subprocess.run(["git", "-C", str(clone), "commit", "-m", "test invalid catalog"],
                            check=True, capture_output=True, text=True)
             revision = subprocess.check_output(["git", "-C", str(clone), "rev-parse", "HEAD"], text=True).strip()
             result = self.run_cli("--refresh", "--repo", str(clone), "--commit", revision,
                                   "--candidate-dir", str(Path(tmp) / "candidate"))
-            return result.returncode, result.stdout + result.stderr
+            return {"phase": "brand_catalog_cli", "cli_executed": True,
+                    "returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr}
 
     def assert_mutation_fails(self, mutation, marker):
-        code, output = self.make_mutated_commit(mutation)
-        self.assertNotEqual(code, 0, output)
-        self.assertIn(marker, output.lower(), output)
+        result = self.make_mutated_commit(mutation)
+        self.assertTrue(result["cli_executed"], result)
+        self.assertEqual(result["phase"], "brand_catalog_cli", result)
+        self.assertNotEqual(result["returncode"], 0, result["stdout"] + result["stderr"])
+        self.assertIn(marker, (result["stdout"] + result["stderr"]).lower(), result)
 
     def test_missing_display_name_fails(self):
         self.assert_mutation_fails(lambda d: d["brands"][0].pop("display_name"), "display_name")
@@ -126,23 +133,28 @@ class TestBrandCatalog(unittest.TestCase):
             root.pop("icon_path", None)
             root["icon_status"] = "pending"
             root["canonical"] = True
-        code, output = self.make_mutated_commit(mutate)
-        self.assertEqual(code, 0, output)
-        self.assertIn("Candidate written", output)
+        result = self.make_mutated_commit(mutate)
+        self.assertTrue(result["cli_executed"], result)
+        self.assertEqual(result["phase"], "brand_catalog_cli", result)
+        self.assertEqual(result["returncode"], 0, result["stdout"] + result["stderr"])
+        self.assertIn("Candidate written", result["stdout"])
 
     def test_duplicate_brand_id_fails_closed(self):
         def duplicate(data):
             data["brands"].append(dict(data["brands"][0]))
-        code, output = self.make_mutated_commit(duplicate)
-        self.assertNotEqual(code, 0)
-        self.assertIn("duplicate canonical brand ID", output)
+        result = self.make_mutated_commit(duplicate)
+        self.assertTrue(result["cli_executed"], result)
+        self.assertNotEqual(result["returncode"], 0)
+        self.assertIn("duplicate canonical brand ID", result["stdout"] + result["stderr"])
 
     def test_missing_icon_resource_fails_closed(self):
         def remove_resource(data):
             target = next(x for x in data["brands"] if x.get("icon_path"))
             target["icon_path"] = "icons/invalid/missing.png"
-        code, output = self.make_mutated_commit(remove_resource)
-        self.assertNotEqual(code, 0)
+        result = self.make_mutated_commit(remove_resource)
+        self.assertTrue(result["cli_executed"], result)
+        self.assertNotEqual(result["returncode"], 0)
+        output = result["stdout"] + result["stderr"]
         self.assertTrue("icon" in output.lower() or "relationship" in output.lower(), output)
 
     def test_unknown_commit_fails_closed(self):
@@ -171,6 +183,24 @@ class TestBrandCatalog(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("categories.json: malformed JSON", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
+
+    def test_upstream_exporter_failure_is_not_counted_as_catalog_cli_failure(self):
+        source = Path(self.icon_repo())
+        with tempfile.TemporaryDirectory() as tmp:
+            clone = Path(tmp) / "icons"
+            subprocess.run(["git", "clone", "--shared", "--no-hardlinks", str(source), str(clone)],
+                           check=True, capture_output=True, text=True)
+            subprocess.run(["git", "-C", str(clone), "config", "user.name", "Catalog Test"], check=True)
+            subprocess.run(["git", "-C", str(clone), "config", "user.email", "catalog-test@example.invalid"], check=True)
+            brands_path = clone / "config/brands.json"
+            data = json.loads(brands_path.read_text(encoding="utf-8"))
+            next(x for x in data["brands"] if x.get("parent_brand"))["parent_brand"] = []
+            brands_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            export = subprocess.run([sys.executable, str(clone / "scripts/export-brand-relationships.py")],
+                                    cwd=clone, text=True, capture_output=True)
+            self.assertNotEqual(export.returncode, 0)
+            self.assertIn("TypeError", export.stdout + export.stderr)
+            # This is explicitly an upstream-exporter test; it never invokes brand_catalog CLI.
 
     def test_refresh_failure_does_not_change_last_good_files(self):
         lock = ROOT / "config" / "brand-catalog.lock.json"
