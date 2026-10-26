@@ -961,6 +961,16 @@ def main() -> int:
     problems += pinned_checkout_problems(icon_repo)
     results.append(("oasisic-authority-guard", expected, problems))
 
+    expected = "pinned Oasisic brand/catalog input digests and generated deterministic projection match the PR head"
+    catalog_cmd = [sys.executable, str(Path(__file__).resolve().parents[1] / "brand_catalog.py"),
+                   "--check", "--repo", str(icon_repo)]
+    try:
+        check = subprocess.run(catalog_cmd, cwd=ROOT, capture_output=True, text=True, timeout=120)
+        problems = [] if check.returncode == 0 else [f"brand catalog check failed (rc={check.returncode}): {(check.stdout + check.stderr).strip()}"]
+    except (OSError, subprocess.SubprocessError) as exc:
+        problems = [f"brand catalog check could not run: {exc}"]
+    results.append(("oasisic-brand-catalog-guard", expected, problems))
+
     expected = "production icon URLs use /main/icons/ (consumer ref); discovery/validation stays on the pinned SHA"
     problems = []
     for path in PRODUCTION_CONFIGS:

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "repository": "Hawaiine/Oasisic-Icons",
+  "commit": "f0f3bc2a44616885682ee5f0e5921540b964e2d8",
+  "files": {
+    "config/brands.json": {
+      "sha256": "09315c0aef302389f2a80af1c4cf5f831ff5dc707903fafb1ff0769822adf64c"
+    },
+    "config/brand-relationships.json": {
+      "sha256": "4c9643bf2da6db99ccd4c8685602fb840a8871f1665b8564528adfae26a2a386"
+    },
+    "config/categories.json": {
+      "sha256": "c679da396af3f3801547985ea8865efabb6bdfcc180728e66c15cb0dbce1a4b0"
+    }
+  },
+  "previous_commit": null,
+  "update_policy": "explicit reviewed PR only; refresh never writes production lock/projection"
+}

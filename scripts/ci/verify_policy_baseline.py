@@ -34,6 +34,8 @@ SENSITIVE_PREFIXES = (
     "scripts/ci/",
     "scripts/verify_configs.py",
     "scripts/verify_rulesets.py",
+    "scripts/brand_catalog.py",
+    "config/brand-catalog.",
     "scripts/readme_stats.py",
     "scripts/lib/policy.py",
     "scripts/lib/validators.py",
@@ -455,7 +457,7 @@ REQUIRED_JOB_COMMANDS: dict[str, dict] = {
     },
 }
 EXECUTABLE_SCRIPT_COMMANDS = {"verify_general_pr.py", "verify_configs.py", "verify_rulesets.py",
-                              "icon_urls.py", "readme_stats.py", "verify_workflow_policy.py",
+                              "brand_catalog.py", "icon_urls.py", "readme_stats.py", "verify_workflow_policy.py",
                               "verify_policy_baseline.py"}
 
 
