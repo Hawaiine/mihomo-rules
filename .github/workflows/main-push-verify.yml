@@ -1,0 +1,109 @@
+# main 合入后只读内容校验（main post-merge verification）
+#
+# 为什么需要它：仓库现有 7 个 workflow 的 `on:` 都不含 `push`。PR 校验只发生在
+# `pull_request` 事件上，必需检查 `route-a/verify` 也只按 PR head SHA 发布；
+# 因此 squash merge 之后的 main 提交本身**没有任何内容校验记录**（实测：
+# merge SHA 78e8b197… 上只有发布器自身的 publish-status check，commit status 为空）。
+#
+# 本 workflow 只做一件事：对每次 push 到 main 的**实际提交**（github.sha）跑一遍
+# 只读的内容一致性校验，并发布一个**独立命名**的检查上下文。
+#
+# 明确边界：
+#   * 不使用、不冒充必需检查 `route-a/verify`（其身份属于 PR head 校验，见 pr-verify.yml）；
+#   * 不做任何写操作：不提交、不推送、不创建 PR、不改 refs、不请求 auto-merge；
+#   * 不修改 daily-sync.yml，也不启用任何生产同步工作流；
+#   * 权限为最小只读（contents: read）；
+#   * 图标仓库检出使用已批准 pin（与 pr-verify.yml 同一来源
+#     scripts/config_contract/oasisic_revision.json 的 revision）。
+#
+# 注意：本 workflow 无法追溯性地为历史提交补验证记录。它是从首次运行起，
+# 为**其运行时 main 的实际 SHA** 提供可审计的校验证据。
+
+name: Main push verification（main 合入后只读校验）
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-push-verify-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  main-push-verify:
+    name: main-push-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 🧭 记录本次 push 的 base/head SHA
+        id: rev
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+          printf '%s' "$BASE" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ before SHA 非法：$BASE"; exit 1; }
+          printf '%s' "$HEAD" | grep -Eq '^[0-9a-f]{40}$' || { echo "❌ head SHA 非法：$HEAD"; exit 1; }
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "❌ 无法确定 push 前的 main 提交（before 为全零）——base/head 对比类校验不可用，fail-closed"
+            exit 1
+          fi
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "head=${HEAD}" >> "$GITHUB_OUTPUT"
+          echo "PR_BASE_SHA=${BASE}" >> "$GITHUB_ENV"
+          echo "PR_HEAD_SHA=${HEAD}" >> "$GITHUB_ENV"
+          echo "✅ 本次校验对象：head=${HEAD}（base=${BASE}）"
+
+      - name: 📥 检出 main push commit（完整历史）
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🐍 配置 Python 环境
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 📦 安装依赖
+        run: 'python3 -m pip install pyyaml'
+
+      - name: 🎨 拉取固定版本 Oasisic-Icons（已批准 pin）
+        uses: actions/checkout@v7
+        with:
+          repository: Hawaiine/Oasisic-Icons
+          ref: f0f3bc2a44616885682ee5f0e5921540b964e2d8
+          path: Oasisic-Icons
+          persist-credentials: false
+
+      - name: 🛡️ 通用只读 guard（config/ruleset 树自洽 / pin / Oracle / 图标基线 / workflow 安全）
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: 'python3 scripts/ci/verify_general_pr.py'
+
+      - name: 🔍 workflow 策略 guard
+        run: 'python3 scripts/ci/verify_workflow_policy.py'
+
+      - name: 🔍 verify_configs（四份生产配置）
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: 'python3 scripts/verify_configs.py'
+
+      - name: 🔍 verify_rulesets
+        run: 'python3 scripts/verify_rulesets.py'
+
+      - name: 🧪 单元测试（scripts/tests 全量）
+        env:
+          MIHOMO_ICON_REPO: ${{ github.workspace }}/Oasisic-Icons
+        run: 'python3 -m unittest discover -s scripts/tests'
+
+      - name: 🧾 代码可编译性检查
+        run: 'python3 -m compileall -q scripts'

@@ -44,6 +44,9 @@
   P18 reusable workflow 调用方的 permissions 必须覆盖被调用 workflow 每个 job 需要的
       权限（GitHub Actions 规则：被调用 workflow 只能保持或降低调用方授予的权限）；
       缺少必要权限时 fail-closed。
+  P19 声明 `push` 触发的 workflow 必须是**只读**的：顶层 permissions 恰为
+      {contents: read}，且任何 job 都不得持有写权限。该类 workflow 的职责是对已合入的
+      提交做内容校验，写权限只会扩大攻击面（合并/发布必须留在 PR 流程中）。
 
 用法：
   python3 scripts/ci/verify_workflow_policy.py [--root <仓库根>] [--json <输出路径>]
@@ -227,6 +230,17 @@ def check_workflow(path: Path, text: str, doc: dict, required: list[str],
                 problems.append(
                     f"{name}: job '{jid}' 定时触发且持有写权限，其 job-level if 必须门控于 "
                     f"vars.{ENABLE_GATE} / {GATE_OUTPUT}（实际 if={cond!r}）")
+
+    # P19：push 触发的 workflow 必须只读（顶层与每个 job 都不得有写权限）
+    if "push" in triggers:
+        if _perm_map(top_perm) != {"contents": "read"}:
+            problems.append(f"{name}: push 触发的 workflow 顶层 permissions 必须恰为 "
+                            f"{{'contents': 'read'}}（实际 {top_perm!r}）")
+        for jid, job in jobs.items():
+            job_write = _write_scopes(_permissions(doc, job))
+            if job_write:
+                problems.append(f"{name}: push 触发的 workflow job '{jid}' 不得持有写权限 "
+                                f"（实际 {_perm_map(_permissions(doc, job))!r}）")
 
     # P4b：必需检查清单
     # （由 check_required_checks_file 负责，此处仅校验 job 侧一致性）
