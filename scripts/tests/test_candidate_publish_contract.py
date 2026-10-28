@@ -28,6 +28,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 _ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(_ROOT))
@@ -389,10 +390,6 @@ class CompensationBindingTest(unittest.TestCase):
         self.assertFalse(any(s.get("state") == "success" for s in Stub.remote_statuses))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class _TamperingClient(prs.Client):
     """只篡改回读端点的 status id（模拟并发覆盖 / 历史状态冒充），其余逻辑不动。"""
 
@@ -569,3 +566,184 @@ class ObjectLevelStatusReadbackTest(unittest.TestCase):
                              for s in prs_case.Stub.remote_statuses))
         self.assertFalse(rep["possible_success_evidence_remains"])
         self.assertEqual(rep["operator_action"], "无需人工核验")
+
+
+class _CrossPageRaceClient(prs.Client):
+    """第 1 页被重读时注入一条更新的 route-a/verify（模拟跨页扫描期间的并发写入）。"""
+
+    NEWER_ID = 9100
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.page1_reads = 0
+
+    def call(self, path):
+        code, body = super().call(path)
+        query = parse_qs(urlparse(path).query)          # 不能用 "page=1" 子串匹配：
+        if "statuses" in path and query.get("page") == ["1"]:   # per_page=100 也含 page=1
+            self.page1_reads += 1
+            if self.page1_reads >= 2 and isinstance(body, list):
+                newer = {"id": self.NEWER_ID, "context": "route-a/verify", "state": "success",
+                         "target_url": "https://github.com/o/r/actions/runs/9",
+                         "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                return code, [newer] + body
+        return code, body
+
+
+class PaginationAndIdentityEdgeCaseTest(unittest.TestCase):
+    """Round 12 复审补齐：分页边界、对象选择、creator 身份、POST id 类型。
+
+    这些用例覆盖的是「证据不足时不得宣称成功」的边界，而不是顺序成功路径：
+
+      * 目标在第 1 页满页 / 第 2 页 / 完整扫完不存在 / 达分页上限；
+      * 同 SHA 上存在**多个** route-a/verify 时只允许采信最新一条，不得回退到旧对象；
+      * 第 2 页命中但第 1 页已出现更新的并发状态 ⇒ 证据不可用（跨页无原子快照）；
+      * creator 的 login 与 type 必须双向匹配；POST 返回的 id 必须是正整数。
+    """
+
+    RUN_ID = "40611534778"
+
+    @classmethod
+    def setUpClass(cls):
+        prs_case.Case.setUpClass()
+        cls.api = prs_case.Case.api
+
+    @classmethod
+    def tearDownClass(cls):
+        prs_case.Case.tearDownClass()
+
+    def setUp(self):
+        self._helper = prs_case.Case(methodName="runTest")
+        self._helper.setUp()
+        prs_case.Stub.stateful = True      # 启用分页/有状态分支（pages 只在 stateful 下生效）
+        self.client = prs.Client("o/r", "tok", api=self.api)
+
+    # ── 工具 ──
+
+    @staticmethod
+    def _other(i: int) -> dict:
+        return {"id": 8000 + i, "context": "other/check", "state": "success",
+                "target_url": "https://github.com/o/r/actions/runs/9",
+                "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+
+    def _target(self, sid: int = 9001, **over) -> dict:
+        obj = {"id": sid, "context": "route-a/verify", "state": "success",
+               "target_url": f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+               "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+        obj.update(over)
+        return obj
+
+    # ── 分页边界 ──
+
+    def test_target_on_first_full_page_found(self):
+        prs_case.Stub.pages = {1: [self._target()] + [self._other(i) for i in range(99)]}
+        found, err = pc._scan_route_a_statuses(self.client, HEAD)
+        self.assertIsNone(err)
+        self.assertEqual(found["id"], 9001)
+
+    def test_target_on_second_page_found(self):
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
+                               2: [self._target()]}
+        found, err = pc._scan_route_a_statuses(self.client, HEAD)
+        self.assertIsNone(err, err)
+        self.assertEqual(found["id"], 9001)
+
+    def test_second_page_match_with_concurrent_newer_status_is_evidence_unavailable(self):
+        """跨页扫描期间第 1 页出现更新的 route-a/verify ⇒ 无法证明对象仍是最新。"""
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
+                               2: [self._target()]}
+        client = _CrossPageRaceClient("o/r", "tok", api=self.api)
+        found, err = pc._scan_route_a_statuses(client, HEAD)
+        self.assertIsNone(found, "并发更新时不得返回任何对象")
+        self.assertIn("并发更新", err or "")
+        # 端到端：verify_published_state 必须拒绝，而不是宣称本次写入已验证
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.verify_published_state(_CrossPageRaceClient("o/r", "tok", api=self.api), HEAD,
+                                      "success", attempts=1, expect_status_id=9001,
+                                      expect_run_id=self.RUN_ID)
+        self.assertIn("并发更新", str(ctx.exception))
+
+    def test_pagination_cap_is_evidence_unavailable(self):
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
+                               2: [self._other(i) for i in range(100, 200)]}
+        found, err = pc._scan_route_a_statuses(self.client, HEAD, max_pages=2)
+        self.assertIsNone(found)
+        self.assertIn("分页上限", err or "")
+
+    def test_complete_scan_absence_is_not_an_error(self):
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(3)]}
+        found, err = pc._scan_route_a_statuses(self.client, HEAD)
+        self.assertIsNone(found)
+        self.assertIsNone(err, "完整扫完确认不存在不是『证据不可用』")
+
+    # ── 多个匹配对象：只认最新，不回退 ──
+
+    def test_multiple_matches_only_newest_is_accepted(self):
+        prs_case.Stub.pages = {1: [self._target(9001), self._target(8000)]}
+        found, err = pc._scan_route_a_statuses(self.client, HEAD)
+        self.assertIsNone(err)
+        self.assertEqual(found["id"], 9001, "必须返回最新一条（GitHub 状态列表最新在前）")
+        ok = pc.verify_published_state(self.client, HEAD, "success", attempts=1,
+                                       expect_status_id=9001, expect_run_id=self.RUN_ID)
+        self.assertTrue(ok["verified"])
+        # 期望 id 是旧对象时，绝不能因为「同为 route-a/verify 且 URL 相同」而采信
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.verify_published_state(self.client, HEAD, "success", attempts=1,
+                                      expect_status_id=8000, expect_run_id=self.RUN_ID)
+        self.assertIn("非本次 POST 对象", str(ctx.exception))
+
+    # ── creator 身份双向校验 ──
+
+    def test_creator_login_mismatch_refused(self):
+        prs_case.Stub.pages = {1: [self._target(
+            creator={"login": "mallory", "type": "Bot"})]}
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.verify_published_state(self.client, HEAD, "success", attempts=1,
+                                      expect_status_id=9001, expect_run_id=self.RUN_ID)
+        self.assertIn("不在可信名单", str(ctx.exception))
+
+    def test_creator_type_mismatch_refused(self):
+        prs_case.Stub.pages = {1: [self._target(
+            creator={"login": "github-actions[bot]", "type": "User"})]}
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.verify_published_state(self.client, HEAD, "success", attempts=1,
+                                      expect_status_id=9001, expect_run_id=self.RUN_ID)
+        self.assertIn("非 Bot", str(ctx.exception))
+
+    # ── POST 返回 id 的类型/取值 ──
+
+    def test_post_id_wrong_type_or_non_positive_refused(self):
+        prs_case.Stub.stateful = False
+        for bad in ({"id": "9001"}, {"id": 0}, {"id": -7}, {"id": None}, {}):
+            with self.subTest(payload=bad):
+                prs_case.Stub.routes = {f"POST /repos/o/r/statuses/{HEAD}": (201, bad)}
+                client = prs.Client("o/r", "tok", api=self.api)
+                with self.assertRaises(prs.Refused) as ctx:
+                    pc.publish_status_state(client, HEAD, "success", "x",
+                                            f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+                self.assertIn("id", str(ctx.exception))
+
+    # ── 同一 run 的 attempt 递增：旧 success 先撤销，新对象才是证据 ──
+
+    def test_previous_attempt_success_revoked_before_new_attempt(self):
+        self._helper.flow()
+        # 上一 attempt（-1）留下的 success 仍在远端
+        prs_case.Stub.remote_statuses = [{
+            "id": 8000, "context": "route-a/verify", "state": "success",
+            "target_url": f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+            "creator": {"login": "github-actions[bot]", "type": "Bot"}}]
+        rep = pc.publish_candidate_result(
+            repo="o/r", pr=29, head_sha=HEAD, state="success", token="tok",
+            run_id=self.RUN_ID, run_attempt="2", api=self.api,
+            target_url=f"https://github.com/o/r/actions/runs/{self.RUN_ID}", attempts=1)
+        self.assertTrue(rep["ok"])
+        self.assertTrue(rep["historical_success_observed"])
+        self.assertTrue(rep["historical_success_revoked"])
+        self.assertEqual(rep["check_run"]["external_id"], f"route-a-run:{self.RUN_ID}-2")
+        self.assertNotEqual(rep["status"]["id"], 8000)
+        self.assertEqual(rep["verify"]["id"], rep["status"]["id"])
+        self.assertEqual(prs_case.Stub.remote_statuses[0]["id"], rep["status"]["id"])
+
+
+if __name__ == "__main__":
+    unittest.main()

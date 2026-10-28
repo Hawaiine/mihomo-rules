@@ -120,8 +120,12 @@ def _scan_route_a_statuses(client: prs.Client, sha: str, *,
     """按页扫描同 SHA 的状态，返回**最新的** ``route-a/verify`` 对象。
 
     返回 ``(obj, None)`` 找到；``(None, None)`` 完整扫完确认不存在；
-    ``(None, error)`` 证据不可用（读取异常 / HTTP 非 200 / 畸形条目 / 达分页上限）。
-    任何不可用都必须由调用方 fail-closed，绝不能当成"不存在"或"已确认"。
+    ``(None, error)`` 证据不可用（读取异常 / HTTP 非 200 / 畸形条目 / 达分页上限 /
+    跨页并发更新）。任何不可用都必须由调用方 fail-closed，绝不能当成"不存在"或"已确认"。
+
+    命中在第 2 页及以后时，会重读第 1 页确认没有更新的 ``route-a/verify``：状态列表没有
+    跨页原子快照，若不重读，扫描期间出现的并发写入会让"命中的对象"不再是当前最新，
+    从而把旧状态当作本次证据。
     """
     for page in range(1, max_pages + 1):
         try:
@@ -135,6 +139,26 @@ def _scan_route_a_statuses(client: prs.Client, sha: str, *,
             return None, f"第 {page} 页存在畸形条目"
         for item in items:
             if prs.is_route_a_context(item.get("context")):
+                if page > 1:
+                    # 跨页扫描没有原子快照：命中发生在第 2 页及以后时，必须重读第 1 页，
+                    # 证明扫描期间没有出现更新的 route-a/verify（否则命中的可能已不是最新，
+                    # 拿旧对象冒充当前状态）。与 inspect_route_a_status 采用同一保守语义。
+                    try:
+                        code1, first = client.call(
+                            f"/repos/{client.repo}/commits/{sha}/statuses"
+                            f"?per_page={per_page}&page=1")
+                    except Exception as exc:          # noqa: BLE001
+                        return None, f"跨页一致性重读异常：{type(exc).__name__}: {exc}"
+                    if code1 != 200 or not isinstance(first, list):
+                        return None, f"跨页一致性重读不可用：HTTP {code1}"
+                    if any(not isinstance(i, dict) for i in first):
+                        return None, "跨页一致性重读存在畸形条目"
+                    newer = next((i for i in first
+                                  if prs.is_route_a_context(i.get("context"))), None)
+                    if newer is not None and newer.get("id") != item.get("id"):
+                        return None, (f"并发更新：重读第 1 页发现更新的 {CONTEXT}"
+                                      f"（id={newer.get('id')!r}，命中 id={item.get('id')!r}），"
+                                      f"跨页无原子快照，无法确认命中对象仍是当前最新")
                 return item, None
         if len(items) < per_page:
             return None, None                          # 完整扫完，确实没有
