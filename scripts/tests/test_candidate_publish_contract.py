@@ -569,24 +569,31 @@ class ObjectLevelStatusReadbackTest(unittest.TestCase):
 
 
 class _CrossPageRaceClient(prs.Client):
-    """第 1 页被重读时注入一条更新的 route-a/verify（模拟跨页扫描期间的并发写入）。"""
+    """第 1 页被重读时注入异常行为（模拟跨页扫描期间的并发写入 / 重读失败）。"""
 
     NEWER_ID = 9100
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, mode: str = "newer", **kw):
         super().__init__(*a, **kw)
+        self.mode = mode
         self.page1_reads = 0
 
     def call(self, path):
-        code, body = super().call(path)
         query = parse_qs(urlparse(path).query)          # 不能用 "page=1" 子串匹配：
         if "statuses" in path and query.get("page") == ["1"]:   # per_page=100 也含 page=1
             self.page1_reads += 1
-            if self.page1_reads >= 2 and isinstance(body, list):
-                newer = {"id": self.NEWER_ID, "context": "route-a/verify", "state": "success",
-                         "target_url": "https://github.com/o/r/actions/runs/9",
-                         "creator": {"login": "github-actions[bot]", "type": "Bot"}}
-                return code, [newer] + body
+            if self.page1_reads >= 2:
+                if self.mode == "http403":
+                    return 403, {"message": "injected reread failure"}
+                if self.mode == "disconnect":
+                    raise prs.Refused("injected reread disconnect")
+        code, body = super().call(path)
+        if ("statuses" in path and query.get("page") == ["1"]
+                and self.page1_reads >= 2 and self.mode == "newer" and isinstance(body, list)):
+            newer = {"id": self.NEWER_ID, "context": "route-a/verify", "state": "success",
+                     "target_url": "https://github.com/o/r/actions/runs/9",
+                     "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+            return code, [newer] + body
         return code, body
 
 
@@ -662,6 +669,23 @@ class PaginationAndIdentityEdgeCaseTest(unittest.TestCase):
                                       "success", attempts=1, expect_status_id=9001,
                                       expect_run_id=self.RUN_ID)
         self.assertIn("并发更新", str(ctx.exception))
+
+    def test_second_page_match_with_unreadable_page1_reread_is_evidence_unavailable(self):
+        """跨页一致性重读拿到非 200 ⇒ 证据不可用（不得当成"没有并发"）。"""
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
+                               2: [self._target()]}
+        client = _CrossPageRaceClient("o/r", "tok", api=self.api, mode="http403")
+        found, err = pc._scan_route_a_statuses(client, HEAD)
+        self.assertIsNone(found)
+        self.assertIn("跨页一致性重读不可用", err or "")
+
+    def test_second_page_match_with_page1_reread_disconnect_is_evidence_unavailable(self):
+        prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
+                               2: [self._target()]}
+        client = _CrossPageRaceClient("o/r", "tok", api=self.api, mode="disconnect")
+        found, err = pc._scan_route_a_statuses(client, HEAD)
+        self.assertIsNone(found)
+        self.assertIn("跨页一致性重读异常", err or "")
 
     def test_pagination_cap_is_evidence_unavailable(self):
         prs_case.Stub.pages = {1: [self._other(i) for i in range(100)],
