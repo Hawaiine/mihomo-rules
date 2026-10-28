@@ -347,6 +347,7 @@ class CompensationBindingTest(unittest.TestCase):
         client = prs.Client("o/r", "tok", api=self.api)
         with self.assertRaises(prs.Refused) as ctx:
             pc.verify_published_state(client, HEAD, "success", attempts=1,
+                                      expect_status_id=7001,
                                       expect_run_id=self.RUN_ID)
         self.assertIn("run_id=1", str(ctx.exception))
 
@@ -390,3 +391,181 @@ class CompensationBindingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _TamperingClient(prs.Client):
+    """只篡改回读端点的 status id（模拟并发覆盖 / 历史状态冒充），其余逻辑不动。"""
+
+    def call(self, path):
+        code, body = super().call(path)
+        if "/statuses" in path and isinstance(body, list):
+            out = []
+            for item in body:
+                if (isinstance(item, dict)
+                        and str(item.get("context", "")).casefold() == "route-a/verify"):
+                    out.append({**item, "id": 8999})
+                else:
+                    out.append(item)
+            body = out
+        return code, body
+
+
+class ObjectLevelStatusReadbackTest(unittest.TestCase):
+    """Round 11 P0：commit status 必须做**对象 ID 级**回读。
+
+    同一 Actions run 的不同 attempt 共享同一个数字 run id 与 URL，所以"URL 绑定正确"
+    不能证明回读对象就是本次 POST 创建的那一条；必须比对 POST 返回的 status id。
+    """
+
+    RUN_ID = "40611534778"
+    ATTEMPT = "2"
+
+    @classmethod
+    def setUpClass(cls):
+        prs_case.Case.setUpClass()
+        cls.api = prs_case.Case.api
+
+    @classmethod
+    def tearDownClass(cls):
+        prs_case.Case.tearDownClass()
+
+    def setUp(self):
+        self._helper = prs_case.Case(methodName="runTest")
+        self._helper.setUp()
+        self._helper.flow()
+
+    def _publish(self, client_cls=None, state="success"):
+        old = pc.prs.Client
+        if client_cls is not None:
+            pc.prs.Client = client_cls
+        try:
+            return pc.publish_candidate_result(
+                repo="o/r", pr=29, head_sha=HEAD, state=state, token="tok",
+                run_id=self.RUN_ID, run_attempt=self.ATTEMPT, api=self.api,
+                target_url=f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+                attempts=1)
+        finally:
+            pc.prs.Client = old
+
+    # ── 1. 正常：POST id == 回读 id，才允许通过 ──
+
+    def test_post_id_equals_readback_id_and_all_fields_match(self):
+        rep = self._publish()
+        self.assertTrue(rep["ok"])
+        self.assertEqual(rep["status"]["id"], 9001)
+        self.assertEqual(rep["verify"]["id"], 9001)
+        self.assertTrue(rep["verify"]["verified"])
+        self.assertEqual(rep["verify"]["state"], "success")
+        self.assertEqual(rep["verify"]["creator"], "github-actions[bot]")
+        self.assertEqual(rep["verify"]["creator_type"], "Bot")
+        self.assertEqual(rep["verify"]["target_url"],
+                         f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+        # attempt-aware 绑定与数字 URL 绑定仍分别成立
+        self.assertEqual(rep["check_run"]["external_id"],
+                         f"route-a-run:{self.RUN_ID}-{self.ATTEMPT}")
+        self.assertEqual(rep["run"]["url_run_id"], self.RUN_ID)
+
+    # ── 2/3. 回读 id 不符（并发覆盖 / 历史状态冒充）必须失败 ──
+
+    def test_readback_id_mismatch_refused_even_if_creator_state_url_match(self):
+        with self.assertRaises(prs.Refused) as ctx:
+            self._publish(client_cls=_TamperingClient)
+        msg = str(ctx.exception)
+        self.assertIn("非本次 POST 对象", msg)
+        self.assertIn("8999", msg)
+
+    def test_readback_id_mismatch_sets_risk_and_operator_action(self):
+        with self.assertRaises(prs.Refused) as ctx:
+            self._publish(client_cls=_TamperingClient)
+        rep = ctx.exception.report
+        self.assertFalse(rep["ok"])
+        self.assertTrue(rep["status_publish_attempted"])
+        # 失败后两路补偿都必须尝试；本用例里补偿读回同样被篡改 → 不得宣称已撤销
+        self.assertIn("compensation_log", rep)
+        self.assertTrue(rep["possible_success_evidence_remains"],
+                        "status 撤销未确认时必须 fail-closed")
+        self.assertIn("人工只读核验", rep["operator_action"])
+        self.assertNotEqual(rep["operator_action"], "无需人工核验")
+
+    # ── 4. 回读缺失 / 分页失败 / 畸形 / 断连都不得误报成功 ──
+
+    def _verify(self, expect_id=9001, attempts=1):
+        client = prs.Client("o/r", "tok", api=self.api)
+        return pc.verify_published_state(client, HEAD, "success", attempts=attempts,
+                                         expect_status_id=expect_id,
+                                         expect_run_id=self.RUN_ID)
+
+    def test_missing_target_object_refused(self):
+        prs_case.Stub.inject["status_read"] = "hide"
+        with self.assertRaises(prs.Refused) as ctx:
+            self._verify()
+        self.assertIn("未找到", str(ctx.exception))
+
+    def test_page_two_unreadable_refused(self):
+        prs_case.Stub.pages = {
+            1: [{"id": 8000 + i, "context": "other/check", "state": "success",
+                 "target_url": f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+                 "creator": {"login": "github-actions[bot]", "type": "Bot"}}
+                for i in range(100)]}
+        prs_case.Stub.inject["page_http"] = {2: 403}
+        with self.assertRaises(prs.Refused) as ctx:
+            self._verify()
+        self.assertIn("第 2 页", str(ctx.exception))
+
+    def test_malformed_page_refused(self):
+        prs_case.Stub.pages = {1: [{"id": 1, "context": "other/check", "state": "success"},
+                                   "not-a-dict"]}
+        with self.assertRaises(prs.Refused) as ctx:
+            self._verify()
+        self.assertIn("畸形", str(ctx.exception))
+
+    def test_readback_disconnect_refused(self):
+        prs_case.Stub.inject["status_read_disconnect_after"] = 0
+        with self.assertRaises(prs.Refused):
+            self._verify()
+
+    def test_post_without_id_refused(self):
+        prs_case.Stub.stateful = False
+        prs_case.Stub.routes = {
+            f"POST /repos/o/r/statuses/{HEAD}": (201, {"state": "success"})}
+        client = prs.Client("o/r", "tok", api=self.api)
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.publish_status_state(client, HEAD, "success", "x",
+                                    f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+        self.assertIn("缺少合法 id", str(ctx.exception))
+
+    # ── 5. POST 成功但回读仍是历史状态 ──
+
+    def test_post_ok_but_readback_is_historical_state(self):
+        prs_case.Stub.pages = {1: [{
+            "id": 7777, "context": "route-a/verify", "state": "success",
+            "target_url": f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+            "creator": {"login": "github-actions[bot]", "type": "Bot"}}]}
+        with self.assertRaises(prs.Refused) as ctx:
+            self._verify()
+        self.assertIn("7777", str(ctx.exception))
+
+    # ── 6. 补偿也必须校验 POST id 与回读 id 一致 ──
+
+    def test_compensation_status_verifies_post_object_id(self):
+        """补偿 POST 成功但回读到的 failure 不是本次对象（URL 正确、ID 被篡改）→ 未确认。"""
+        with self.assertRaises(prs.Refused) as ctx:
+            self._publish(client_cls=_TamperingClient)
+        rep = ctx.exception.report
+        comp = rep["status_compensation"]
+        self.assertFalse(comp["ok"], comp)
+        self.assertIn("并非本次补偿 POST 对象", comp["error"])
+        self.assertTrue(rep["possible_success_evidence_remains"])
+
+    # ── 9/10. failure 绝不报 success，风险字段与处置指引成立 ──
+
+    def test_failure_state_never_reported_as_success(self):
+        rep = self._publish(state="failure")
+        self.assertEqual(rep["state"], "failure")
+        self.assertEqual(rep["verify"]["state"], "failure")
+        self.assertFalse(any(c.get("conclusion") == "success"
+                             for c in prs_case.Stub.remote_checks))
+        self.assertFalse(any(s.get("state") == "success"
+                             for s in prs_case.Stub.remote_statuses))
+        self.assertFalse(rep["possible_success_evidence_remains"])
+        self.assertEqual(rep["operator_action"], "无需人工核验")

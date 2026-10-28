@@ -91,44 +91,105 @@ def finalize_check_run(client: prs.Client, check_run_id: int, conclusion: str,
 
 def publish_status_state(client: prs.Client, sha: str, state: str, description: str,
                          target_url: str) -> dict:
+    """创建 commit status，并**保留本次 POST 返回的对象 ID**。
+
+    没有这个 ID 就无法证明"回读到的状态就是本次写入的那一条"：同一 Actions run 的不同
+    attempt 共享同一个数字 run id 与 URL，单靠 URL 绑定无法区分 attempt，也无法发现
+    并发覆盖。因此 ID 是对象级证据的必需字段，缺失即拒绝。
+    """
     status, body = client.post(f"/repos/{client.repo}/statuses/{sha}", {
         "state": state, "context": CONTEXT, "description": description[:140],
         "target_url": target_url})
     if status not in (200, 201):
         raise prs.Refused(f"发布状态失败: HTTP {status} {body}")
-    return {"posted": True, "sha": sha, "context": CONTEXT, "state": state}
+    if not isinstance(body, dict):
+        raise prs.Refused(f"发布状态响应畸形（非对象）: {str(body)[:160]}")
+    posted_id = body.get("id")
+    if not isinstance(posted_id, int) or posted_id <= 0:
+        raise prs.Refused(f"发布状态响应缺少合法 id，无法做对象级回读: {str(body)[:160]}")
+    return {"posted": True, "id": posted_id, "sha": sha, "context": CONTEXT, "state": state}
+
+
+STATUSES_PER_PAGE = 100
+STATUSES_MAX_PAGES = 10
+
+
+def _scan_route_a_statuses(client: prs.Client, sha: str, *,
+                           per_page: int = STATUSES_PER_PAGE,
+                           max_pages: int = STATUSES_MAX_PAGES) -> tuple[dict | None, str | None]:
+    """按页扫描同 SHA 的状态，返回**最新的** ``route-a/verify`` 对象。
+
+    返回 ``(obj, None)`` 找到；``(None, None)`` 完整扫完确认不存在；
+    ``(None, error)`` 证据不可用（读取异常 / HTTP 非 200 / 畸形条目 / 达分页上限）。
+    任何不可用都必须由调用方 fail-closed，绝不能当成"不存在"或"已确认"。
+    """
+    for page in range(1, max_pages + 1):
+        try:
+            code, items = client.call(
+                f"/repos/{client.repo}/commits/{sha}/statuses?per_page={per_page}&page={page}")
+        except Exception as exc:                      # noqa: BLE001 — 读不到 = 不确定
+            return None, f"第 {page} 页读取异常：{type(exc).__name__}: {exc}"
+        if code != 200 or not isinstance(items, list):
+            return None, f"第 {page} 页响应不可用：HTTP {code}"
+        if any(not isinstance(i, dict) for i in items):
+            return None, f"第 {page} 页存在畸形条目"
+        for item in items:
+            if prs.is_route_a_context(item.get("context")):
+                return item, None
+        if len(items) < per_page:
+            return None, None                          # 完整扫完，确实没有
+    return None, f"达到分页上限 {max_pages} 页仍未找到 {CONTEXT}，无法证明其存在/不存在"
 
 
 def verify_published_state(client: prs.Client, sha: str, expect_state: str, *,
-                           attempts: int = 5, delay: float = 1.0,
+                           expect_status_id: int, attempts: int = 5, delay: float = 1.0,
                            expect_run_id: str = "") -> dict:
-    """回读 status：creator、state、target_url 的 run 绑定全部核对。"""
+    """对象级回读：**本次 POST 的 status ID** + creator + state + URL run 绑定。
+
+    五项缺一不可：
+      1. 精确 SHA（调用方传入的 ``sha``，回读端点即按该 SHA 查询）；
+      2. context 精确为 ``route-a/verify``（大小写不敏感，见 ``is_route_a_context``）；
+      3. 回读对象 ``id`` == 本次 POST 返回的 ``expect_status_id``
+         —— 这是"不是历史状态、没有被并发覆盖"的唯一直接证据；
+      4. creator 满足既有信任约束（login + type 双向）；
+      5. ``target_url`` 可解析且数字 run id 与当前运行一致。
+
+    分页读取失败、响应畸形、网络断连、未找到对象、ID 不符，一律不得宣称发布成功。
+    """
+    if not isinstance(expect_status_id, int) or expect_status_id <= 0:
+        raise prs.Refused("缺少本次 POST 返回的合法 status id，拒绝做无对象的回读")
     last, last_problem = None, ""
     for i in range(attempts):
-        status, items = client.call(
-            f"/repos/{client.repo}/commits/{sha}/statuses?per_page=100")
-        if status == 200 and isinstance(items, list):
-            ours = [s for s in items if prs.is_route_a_context(s.get("context"))]
-            if ours:
-                last = ours[0]
-                problem = prs._creator_problem(last)
-                target = str(last.get("target_url") or "")
-                if not problem and expect_run_id:
-                    err = prs.parse_run_url(target)
-                    if err is None:
-                        problem = f"status target_url 不可解析为合法 run URL: {target!r}"
-                    elif err.get("run_id") != str(expect_run_id):
-                        problem = (f"status target_url run_id={err.get('run_id')}"
-                                   f" 非 {expect_run_id}（拒绝模糊匹配）")
-                if not problem and last.get("state") == expect_state:
-                    creator = last.get("creator") or {}
-                    return {"verified": True, "creator": creator.get("login"),
-                            "creator_type": creator.get("type"),
-                            "state": last["state"], "target_url": target}
-                last_problem = problem or f"state={last.get('state')!r}"
+        found, scan_error = _scan_route_a_statuses(client, sha)
+        if scan_error:
+            last_problem = scan_error
+        elif found is None:
+            last_problem = f"回读未找到 {CONTEXT} 状态（完整扫描后确认不存在）"
+        else:
+            last = found
+            problem = prs._creator_problem(found)
+            if not problem and found.get("id") != expect_status_id:
+                problem = (f"回读 status id={found.get('id')!r} 非本次 POST 对象 "
+                           f"{expect_status_id!r}（可能被并发状态覆盖；拒绝用历史状态冒充"
+                           f"本次证据）")
+            target = str(found.get("target_url") or "")
+            if not problem and expect_run_id:
+                parsed = prs.parse_run_url(target)
+                if parsed is None:
+                    problem = f"status target_url 不可解析为合法 run URL: {target!r}"
+                elif parsed.get("run_id") != str(expect_run_id):
+                    problem = (f"status target_url run_id={parsed.get('run_id')}"
+                               f" 非 {expect_run_id}（拒绝模糊匹配）")
+            if not problem and found.get("state") == expect_state:
+                creator = found.get("creator") or {}
+                return {"verified": True, "id": found.get("id"),
+                        "creator": creator.get("login"),
+                        "creator_type": creator.get("type"),
+                        "state": found["state"], "target_url": target}
+            last_problem = problem or f"state={found.get('state')!r}"
         time.sleep(delay * (i + 1))
-    raise prs.Refused(f"发布后回读未看到可信 {CONTEXT}={expect_state}"
-                      f"（当前 {last!r}；{last_problem}）")
+    raise prs.Refused(f"发布后回读未确认本次写入的 {CONTEXT}={expect_state}"
+                      f"（期望 status id={expect_status_id}；当前 {last!r}；{last_problem}）")
 
 
 def publish_candidate_result(*, repo: str, pr: int, head_sha: str, state: str,
@@ -244,8 +305,11 @@ def publish_candidate_result(*, repo: str, pr: int, head_sha: str, state: str,
             posted = publish_status_state(
                 client, head_sha, state,
                 description or f"候选路径受信校验 {state}", target_url)
+            # 对象级回读：必须证明回读到的就是本次 POST 创建的这条 status，
+            # 否则同一 run 的其它 attempt 或并发覆盖都会被误当成本次证据。
             verified_status = verify_published_state(
-                client, head_sha, state, attempts=attempts, expect_run_id=run_id)
+                client, head_sha, state, attempts=attempts,
+                expect_status_id=posted["id"], expect_run_id=run_id)
             report["status"] = {**posted, "verify": verified_status}
             report.update({k: v for k, v in posted.items() if k in ("sha", "context", "state")})
             report["verify"] = verified_status
@@ -256,6 +320,8 @@ def publish_candidate_result(*, repo: str, pr: int, head_sha: str, state: str,
 
         report["after"] = prs.verify_pr(client, pr, head_sha, base_branch)
         report["steps"].append("verify_pr:final")
+        # 成功路径也给出统一的处置指引字段（"无需人工核验"），避免调用方按字段是否存在分支
+        report["operator_action"] = prs._derive_operator_action(report)
     except Exception as exc:                       # noqa: BLE001
         report["ok"] = False
         report["failure"] = {"type": type(exc).__name__, "reason": str(exc)}
