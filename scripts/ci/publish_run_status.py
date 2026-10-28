@@ -559,9 +559,12 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
     if cr_evidence and not (check_comp or {}).get("ok"):
         try:
             run_info = report.get("run") or {}
+            # Check Run 的 external_id 是 **attempt-aware** 绑定（route-a-run:<run>-<attempt>），
+            # 与 commit status 校验用的纯数字 URL run id 是**两个不同字段**，不得混用。
             check_comp = _downgrade(client, cr_evidence["id"], reason,
                                     head_sha=run_info.get("head_sha", ""),
-                                    run_id=run_info.get("run_id", ""))
+                                    run_id=(run_info.get("check_run_binding_id")
+                                            or run_info.get("run_id", "")))
         except Exception as exc:                       # noqa: BLE001 — 补偿失败必须如实记录
             check_comp = {"attempted": True, "ok": False, "id": cr_evidence.get("id"),
                           "error": f"{type(exc).__name__}: {exc}"}
@@ -571,8 +574,12 @@ def _compensate_all(client: Client, report: dict, reason: str, target_url: str =
     if report.get("status_publish_attempted") and not (status_comp or {}).get("ok"):
         try:
             run_info = report.get("run") or {}
+            # commit status 的 target_url 绑定校验只接受**纯数字** Actions run id；
+            # 传入拼接值会让回读永远判「未绑定」，从而把已撤销的通道误报为未撤销。
             status_comp = compensate_status_failure(client, run_info.get("head_sha", ""),
-                                                    run_info.get("run_id", ""), reason, target_url)
+                                                    (run_info.get("url_run_id")
+                                                     or run_info.get("run_id", "")),
+                                                    reason, target_url)
         except Exception as exc:                       # noqa: BLE001
             status_comp = {"attempted": True, "ok": False,
                            "error": f"{type(exc).__name__}: {exc}"}

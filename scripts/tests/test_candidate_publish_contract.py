@@ -36,6 +36,7 @@ sys.path.insert(0, str(_ROOT / "scripts" / "ci"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import publish_candidate_status as pc  # noqa: E402
+import publish_run_status as prs  # noqa: E402
 import test_publish_run_status as prs_case  # noqa: E402
 
 HEAD = prs_case.HEAD
@@ -213,6 +214,178 @@ class LiveTransactionTest(unittest.TestCase):
         self.assertEqual(doc["check_run"]["external_id"], "route-a-run:9-3")
         self.assertEqual(doc["status"]["verify"]["target_url"],
                          "https://github.com/o/r/actions/runs/9")
+
+
+class CompensationBindingTest(unittest.TestCase):
+    """PR #39 复审缺陷：失败补偿把「拼接 run_id」当成数字 URL run id。
+
+    RED：`report["run"]["run_id"] = "<numeric>-<attempt>"` 被 `_compensate_all()` 原样传给
+    `compensate_status_failure()`，后者要求 commit status 的 `target_url` 里是**纯数字**
+    run id，于是 status 补偿回读必然判失败（`回读 target_url 未绑定 run 40611534778-2`）。
+    GREEN：Check Run 通道用 attempt-aware 绑定 id，status 通道用数字 `url_run_id`，两路独立。
+    """
+
+    RUN_ID = "40611534778"
+    ATTEMPT = "2"
+
+    @classmethod
+    def setUpClass(cls):
+        prs_case.Case.setUpClass()
+        cls.api = prs_case.Case.api
+
+    @classmethod
+    def tearDownClass(cls):
+        prs_case.Case.tearDownClass()
+
+    def setUp(self):
+        self._helper = prs_case.Case(methodName="runTest")
+        self._helper.setUp()
+
+    def _run(self, inject=None, state="success", attempt=None):
+        self._helper.flow(**(inject or {}))
+        out = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        out.close()
+        argv = ["--repo", "o/r", "--pr", "29", "--head-sha", HEAD,
+                "--state", state, "--run-id", self.RUN_ID,
+                "--run-attempt", attempt or self.ATTEMPT,
+                "--base-branch", "main",
+                "--run-url", f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+                "--description", "compensation-binding-test", "--json", out.name]
+        old = {k: os.environ.get(k) for k in ("GITHUB_TOKEN", "GITHUB_API_URL")}
+        os.environ["GITHUB_TOKEN"] = "tok"
+        os.environ["GITHUB_API_URL"] = self.api
+        try:
+            rc = pc.main(argv)
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+        try:
+            doc = json.loads(Path(out.name).read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            doc = None
+        os.unlink(out.name)
+        return rc, doc
+
+    # ── 1. external_id 必须是 attempt-aware，URL 必须是纯数字 ──
+
+    def test_external_id_is_attempt_aware_but_url_run_id_is_numeric(self):
+        rc, doc = self._run()
+        self.assertEqual(rc, 0, doc)
+        self.assertEqual(doc["check_run"]["external_id"],
+                         f"route-a-run:{self.RUN_ID}-{self.ATTEMPT}")
+        self.assertEqual(doc["run"]["url_run_id"], self.RUN_ID)
+        self.assertEqual(doc["status"]["verify"]["target_url"],
+                         f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+
+    # ── 2. status 补偿必须用数字 id 才能回读通过 ──
+
+    def test_status_compensation_reads_back_with_numeric_run_id(self):
+        rc, doc = self._run({"drift_after_status_post": True})
+        self.assertEqual(rc, 1, doc)                     # 收尾复核失败 → 事务失败
+        self.assertFalse(doc["ok"])
+        ev = doc["evidence"]
+        comp = ev["status_compensation"]
+        self.assertTrue(comp["ok"],
+                        f"status 补偿必须用数字 url_run_id 才能回读通过：{comp}")
+        self.assertEqual(comp["readback"]["state"], "failure")
+        self.assertEqual(comp["readback"]["target_url"],
+                         f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+        self.assertTrue(ev["compensation"]["ok"], ev["compensation"])
+        self.assertEqual(ev["compensation"]["readback"]["external_id"],
+                         f"route-a-run:{self.RUN_ID}-{self.ATTEMPT}")
+        self.assertFalse(ev["possible_success_evidence_remains"])
+
+    # ── 3. 两路补偿互相独立 ──
+
+    def test_status_compensation_failure_does_not_block_check_run(self):
+        rc, doc = self._run({"drift_after_status_post": True, "comp_post": 403})
+        self.assertEqual(rc, 1, doc)
+        ev = doc["evidence"]
+        self.assertFalse(ev["status_compensation"]["ok"])
+        self.assertTrue(ev["compensation"]["ok"], ev["compensation"])
+        self.assertEqual({e["channel"] for e in ev["compensation_log"]},
+                         {"status", "check_run"})
+        self.assertTrue(ev["possible_success_evidence_remains"],
+                        "status 撤销未确认时必须 fail-closed")
+
+    def test_check_run_compensation_failure_does_not_block_status(self):
+        rc, doc = self._run({"drift_after_status_post": True,
+                             "check_patch_fail_after": 1})
+        self.assertEqual(rc, 1, doc)
+        ev = doc["evidence"]
+        self.assertTrue(ev["status_compensation"]["ok"], ev["status_compensation"])
+        self.assertFalse(ev["compensation"]["ok"])
+        self.assertTrue(ev["possible_success_evidence_remains"])
+
+    # ── 4. 回读对象 ID / URL 不符必须失败 ──
+
+    def test_status_compensation_wrong_object_id_rejected(self):
+        """URL 绑定正确、但回读到的 failure 不是本次 POST 的对象 → 必须判未确认。"""
+        prs_case.Stub.routes = {
+            f"POST /repos/o/r/statuses/{HEAD}": (201, {"id": 9002}),
+            f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [{
+                "id": 9999, "context": "route-a/verify", "state": "failure",
+                "target_url": f"https://github.com/o/r/actions/runs/{self.RUN_ID}",
+                "creator": {"login": "github-actions[bot]", "type": "Bot"}}])}
+        client = prs.Client("o/r", "tok", api=self.api)
+        out = prs.compensate_status_failure(
+            client, HEAD, self.RUN_ID, "id-binding-test",
+            f"https://github.com/o/r/actions/runs/{self.RUN_ID}")
+        self.assertFalse(out["ok"])
+        self.assertIn("并非本次补偿 POST 对象", out["error"])
+
+    def test_verify_published_state_rejects_wrong_run_url(self):
+        """status 的 target_url 指向别的 run → 发布后回读必须拒绝。"""
+        prs_case.Stub.routes = {
+            f"GET /repos/o/r/commits/{HEAD}/statuses": (200, [{
+                "id": 7001, "context": "route-a/verify", "state": "success",
+                "target_url": "https://github.com/o/r/actions/runs/1",
+                "creator": {"login": "github-actions[bot]", "type": "Bot"}}])}
+        client = prs.Client("o/r", "tok", api=self.api)
+        with self.assertRaises(prs.Refused) as ctx:
+            pc.verify_published_state(client, HEAD, "success", attempts=1,
+                                      expect_run_id=self.RUN_ID)
+        self.assertIn("run_id=1", str(ctx.exception))
+
+    # ── 5. 传输异常 / 回读断连不得算成功 ──
+
+    def test_compensation_post_disconnect_is_not_success(self):
+        rc, doc = self._run({"drift_after_status_post": True,
+                             "comp_post_disconnect_no_write": True})
+        self.assertEqual(rc, 1, doc)
+        ev = doc["evidence"]
+        self.assertFalse(ev["status_compensation"]["ok"])
+        self.assertTrue(ev["possible_success_evidence_remains"])
+        self.assertIn("人工只读核验", ev["operator_action"])
+
+    def test_compensation_readback_disconnect_is_not_success(self):
+        rc, doc = self._run({"drift_after_status_post": True,
+                             "status_read_disconnect_after": 2})
+        self.assertEqual(rc, 1, doc)
+        ev = doc["evidence"]
+        self.assertFalse(ev["status_compensation"]["ok"])
+        self.assertTrue(ev["possible_success_evidence_remains"])
+
+    def test_compensation_readback_overwritten_to_success_is_not_success(self):
+        rc, doc = self._run({"drift_after_status_post": True,
+                             "check_readback_override_success_after": 2})
+        self.assertEqual(rc, 1, doc)
+        ev = doc["evidence"]
+        self.assertFalse(ev["compensation"]["ok"])
+        self.assertTrue(ev["possible_success_evidence_remains"])
+
+    # ── 6. failure 状态绝不能变成 success ──
+
+    def test_failure_state_with_drift_never_leaves_success(self):
+        # state=failure 的 status POST 会被 stub 当作补偿（is_comp），改用 PATCH 后漂移
+        rc, doc = self._run({"drift_after_patch": True}, state="failure")
+        self.assertEqual(rc, 1, doc)
+        Stub = prs_case.Stub
+        self.assertFalse(any(c.get("conclusion") == "success" for c in Stub.remote_checks))
+        self.assertFalse(any(s.get("state") == "success" for s in Stub.remote_statuses))
 
 
 if __name__ == "__main__":

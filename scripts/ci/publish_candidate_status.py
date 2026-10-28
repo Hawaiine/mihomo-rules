@@ -158,7 +158,12 @@ def publish_candidate_result(*, repo: str, pr: int, head_sha: str, state: str,
     try:
         client = prs.Client(repo, token, api)
         report["pr"] = prs.verify_pr(client, pr, head_sha, base_branch)
-        report["run"] = {"run_id": binding_id, "url_run_id": run_id,
+        # 三个字段严格分开，禁止互相替代：
+        #   run_id               —— 纯数字 Actions run id（canonical）
+        #   url_run_id           —— 同一数字值，专用于 commit status 的 target_url 绑定校验
+        #   check_run_binding_id —— attempt-aware，专用于 Check Run 的 external_id
+        report["run"] = {"run_id": run_id, "url_run_id": run_id,
+                         "check_run_binding_id": binding_id,
                          "run_attempt": run_attempt, "head_sha": head_sha,
                          "source": "candidate_self_verification",
                          "jobs": [], "note": ("候选路径无 pr-verify run；证据为 "
