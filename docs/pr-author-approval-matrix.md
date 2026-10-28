@@ -19,7 +19,7 @@
 因此机器人 PR 的两条门禁来源都存在：
 
 1. `pull_request` 触发的 `pr-verify`（需人工批准该 run 后执行），
-2. `candidate-pr-sync` 同一受信运行内的 verify job + `publish_run_status.py --publish-mode=dual`
+2. `candidate-pr-sync` 同一受信运行内的 verify job + `publish_candidate_status.py`
    （无需等待批准，但只覆盖候选同步这条路径）。
 
 两者都不能被描述为"自动闭环"：第一条要人点批准，第二条要启用候选同步。

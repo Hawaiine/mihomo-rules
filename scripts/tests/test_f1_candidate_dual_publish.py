@@ -2,7 +2,7 @@
 """F1 RED/GREEN：候选 PR verify job 必须调用双发发布器，并产出符合契约的运行时报告。
 
 RED：候选 workflow 调用 publish_status.py，缺 checks: write，artifact 中无 check_run。
-GREEN：切换到 publish_run_status.py --publish-mode=dual 后，报告含 check_run/steps/风险字段。
+GREEN：候选路径改由 publish_candidate_status.py 发布后，报告含 check_run/steps/风险字段。
 
 本文件的 schema 断言不是"字段名出现在源码文本里"，而是**真实运行** dual 发布事务
 （复用 test_publish_run_status 的本地 HTTP stub 与调用脚手架）、读取其返回的运行时
@@ -134,10 +134,16 @@ class TestCandidatePublisherIntegration(unittest.TestCase):
         self.candidate_workflow = self.repo_root / ".github/workflows/candidate-pr-sync.yml"
 
     def test_candidate_verify_job_uses_dual_publisher(self):
-        """验证 candidate-pr-sync.yml verify job 调用了 publish_run_status.py --publish-mode=dual。"""
+        """候选 verify job 必须调用候选专用双发发布器。
+
+        注意：这里只断言入口名，**不**证明参数契约成立——参数契约由
+        ``test_candidate_publish_contract.py`` 用真实 argparse + HTTP stub 验证。
+        """
         content = self.candidate_workflow.read_text()
-        self.assertIn("publish_run_status.py --publish-mode=dual", content,
-                      "候选 verify job 必须调用双发发布器（publish_run_status.py --publish-mode=dual）")
+        self.assertIn("publish_candidate_status.py", content,
+                      "候选 verify job 必须调用 publish_candidate_status.py")
+        self.assertNotIn("publish_run_status.py --publish-mode=dual", content,
+                         "候选路径不得复用 run 级核验发布器（其前提是 pr-verify run）")
 
     def test_candidate_verify_job_has_checks_write(self):
         """验证 candidate-pr-sync.yml verify job 拥有 checks: write 权限。"""
