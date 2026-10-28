@@ -37,7 +37,7 @@ GitHub 的两条硬事实：
    只把可信验证放进候选运行本身。
 
 因此 Route A 的候选 PR 原本拿不到 `pr-verify` 的三个 check-run。自 PR #32 起，
-**commit status 和 Check Run 双发**：候选路径使用双发事务发布器（`publish_run_status.py --publish-mode=dual`），
+**commit status 和 Check Run 双发**：候选路径使用候选专用双发事务发布器（`publish_candidate_status.py`；其前提不是 `pr-verify` run，而是本次候选验证的退出码），
 在精确 head SHA 上发布 `route-a/verify` 的 Check Run（`app.id=15368`）和 commit status，
 Ruleset 同时接受 check-run 与 commit status；`route-a-status.yml` 对人工 PR 继续按原事务发布。
 

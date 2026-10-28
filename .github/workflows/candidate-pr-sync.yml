@@ -495,14 +495,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/ci/publish_run_status.py --publish-mode=dual \
+          python3 scripts/ci/publish_candidate_status.py \
             --repo "${GITHUB_REPOSITORY}" \
             --pr "${{ needs.publish.outputs.pr_number }}" \
             --head-sha "${{ needs.publish.outputs.head_sha }}" \
             --base-branch main \
-            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --run-attempt "${GITHUB_RUN_ATTEMPT}" \
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --state "${{ steps.verify.outputs.state }}" \
+            --description "${{ steps.verify.outputs.description }}" \
             --json "$RUNNER_TEMP/run-status.json"
 
       - name: 🔴 校验失败必须让 job 非零退出（失败状态已发布，不得以成功 job 收尾）
